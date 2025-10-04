@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ai-workflow
+  ai:
+    ollama:
+      chat:
+        options:
+          model: codellama:7b
+scanner:
+  url: /Users/hayde/OneDrive/Documents/GitHub/opencv-02-ball-detection
