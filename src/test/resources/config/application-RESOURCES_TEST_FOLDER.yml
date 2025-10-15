@@ -9,15 +9,18 @@ spring:
           read-timeout: 60s
           connection-timeout: 60s
   datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/mydb
+    driver-class-name: org.h2.Driver #org.postgresql.Driver
+    url: jdbc:h2:mem:testdb #jdbc:postgresql://localhost:5432/test-db
     username: app_user
     password: mysecretpassword
   jpa:
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
 
 scanner:
-  url: file:${EXTERNAL_CONFIG_DIR}
+  url: file:src/test/resources/test-files
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
+  #/Users/hayde/workspace_25/ai-workflow

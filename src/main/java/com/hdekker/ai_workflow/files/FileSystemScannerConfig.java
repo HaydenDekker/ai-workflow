@@ -1,9 +1,10 @@
-package com.hdekker.ai_workflow;
+package com.hdekker.ai_workflow.files;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 
 import jakarta.annotation.PostConstruct;
 
@@ -13,19 +14,32 @@ public class FileSystemScannerConfig {
 	
 	Logger log = LoggerFactory.getLogger(FileSystemScannerConfig.class);
 	
-	String url;
+	Resource url;
 
-	public String getUrl() {
+	public Resource getUrl() {
 		return url;
 	}
 
-	public void setUrl(String url) {
+	public void setUrl(Resource url) {
 		this.url = url;
 	}
 	
+	String outputFolder;
+	
+	
+	
+	public String getOutputFolder() {
+		return outputFolder;
+	}
+
+	public void setOutputFolder(String outputFolder) {
+		this.outputFolder = outputFolder;
+	}
+
 	@PostConstruct
 	public void log() {
-		log.info(url);
+		log.info(url.getFilename());
+		log.info(outputFolder);
 	}
 
 }
