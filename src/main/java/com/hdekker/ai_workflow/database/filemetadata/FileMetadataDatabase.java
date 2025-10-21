@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database;
+package com.hdekker.ai_workflow.database.filemetadata;
 
 import java.util.Optional;
 
@@ -18,6 +18,14 @@ public class FileMetadataDatabase implements FileMetaDatabaseSearcher{
 	public Optional<FileMetadata> findById(String url) {
 		return fileMetaRepository.findById(url)
 					.map(e->new FileMetadata(e.url, "", e.hash));
+	}
+
+	public void save(FileMetadata file) {
+		
+		FileMetadataEntity entity = new FileMetadataEntity();
+		entity.setHash(file.hash());
+		entity.setUrl(file.url());
+		fileMetaRepository.save(entity);
 	}
 	
 	

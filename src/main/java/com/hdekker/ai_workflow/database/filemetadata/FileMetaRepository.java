@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database;
+package com.hdekker.ai_workflow.database.filemetadata;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

@@ -1,11 +1,15 @@
 package com.hdekker.ai_workflow;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -14,8 +18,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.hdekker.ai_workflow.database.FileMetaRepository;
+import com.hdekker.ai_workflow.database.filemetadata.FileMetaRepository;
+import com.hdekker.ai_workflow.database.filemetadata.FileMetadataEntity;
+import com.hdekker.ai_workflow.database.solid.SolidComplianceEntity;
+import com.hdekker.ai_workflow.database.solid.SolidComplianceRepository;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
+import com.hdekker.ai_workflow.reports.ReportRestController;
 
 import reactor.core.publisher.Flux;
 
@@ -71,23 +80,29 @@ public class SOLIDPromtCaller {
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
 	
+	@Autowired
+	SolidComplianceRepository solidComplianceRepository;
+	
+	@Autowired
+	ReportRestController reportRestController;
+	
 	@Test
-	public void givenNewFileAndPrompt_ExpectLLMOutputStoredInDatabase() throws IOException {
+	public void givenNewFileAndPrompt_ExpectLLMOutputStoredInDatabase() throws IOException, InterruptedException {
 		
-		log.info("adding file");
 		File directory = fileSystemScannerConfig.getUrl().getFile();
 		Path path = directory.toPath();
 		Path filePath = path.resolve("test-file.java");
 		Files.write(filePath, testFile.getBytes(StandardCharsets.UTF_8));
 		
-		Flux.interval(Duration.ofSeconds(1))
-			.filter(l-> {
-				Integer size = fileMetaRepository.findAll().size();
-				log.info("" + size);
-				return size>0;
-			})
-			.timeout(Duration.ofSeconds(20))
-			.blockFirst();
+		Thread.sleep(2000);
+		
+		List<SOLIDCompliance> reportItems = reportRestController.complianceReport()
+				.collectList()
+				.block();
+		
+		assertThat(reportItems)
+			.hasSizeGreaterThan(0);
+		
 		
 	}
 	

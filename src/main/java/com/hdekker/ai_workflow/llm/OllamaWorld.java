@@ -9,7 +9,7 @@ import reactor.core.publisher.Flux;
 
 
 @Configuration
-public class OllamaWorld {
+public class OllamaWorld implements Prompter{
 	
 	Logger log = LoggerFactory.getLogger(OllamaWorld.class);
 	

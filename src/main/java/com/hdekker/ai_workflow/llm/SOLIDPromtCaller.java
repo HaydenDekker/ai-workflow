@@ -1,13 +1,26 @@
 package com.hdekker.ai_workflow.llm;
 
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
 
 @Component
 public class SOLIDPromtCaller {
 	
+	Logger log = LoggerFactory.getLogger(SOLIDPromtCaller.class);
+	
 	@Autowired
-	OllamaWorld ollamaWorld;
+	Prompter prompter;
+	
+	ObjectMapper om = new ObjectMapper();
 	
 	//String prompt = "Given the code, provide a short summary of each function, only if there is an implemeneted function. It must be human readable and as high level as possible.";
 	String prompt = 
@@ -21,16 +34,32 @@ public class SOLIDPromtCaller {
 	//String conciseOutput = "The output must be a list of json objects with schema, {\"className\":String, \"function\": String, \"description\": String";
 	String conciseOutput = "Output json, as {className:String, compliance: YES|NO, principle:String, task:String, reason:String}";
 	
-	public String prompt(String fileBody) {
+	public List<SOLIDCompliance> prompt(String fileBody) {
 		
-		String aiResult = ollamaWorld.call(prompt + "\n\r\n\r" + conciseOutput + fileBody)
+		return prompter.call(prompt + "\n\r\n\r" + conciseOutput + fileBody)
 				.collectList()
 				.block()
 				.stream()
 				.reduce((a,b)-> a+b)
-				.orElse("");
-		
-		return aiResult;
+				.map(s->
+					s.replaceFirst("(?s)```json\\s*", "")
+				    // Remove the closing markdown fence and any trailing whitespace
+				    .replaceFirst("(?s)\\s*```$", "")
+				    // Trim any remaining leading/trailing whitespace
+				    .trim()
+				)
+				.map(s-> {
+					List<SOLIDCompliance> list = List.of();
+					try {
+						list = om.readValue(s, new TypeReference<List<SOLIDCompliance>>() {});
+					} catch (JsonProcessingException e) {
+						log.error("Unexpected LLM response " + s);
+						e.printStackTrace();
+					}
+					return list;
+				})
+				.orElse(List.of());
+	
 	}
 
 }

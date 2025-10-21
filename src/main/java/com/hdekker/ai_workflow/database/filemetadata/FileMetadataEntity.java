@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database;
+package com.hdekker.ai_workflow.database.filemetadata;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

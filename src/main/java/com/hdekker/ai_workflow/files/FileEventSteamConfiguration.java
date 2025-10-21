@@ -5,9 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
-import com.hdekker.ai_workflow.database.FileMetadataDatabase;
+import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.database.solid.SolidComplianceDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.SOLIDPromtCaller;
+
+import reactor.util.function.Tuples;
 
 @Configuration
 public class FileEventSteamConfiguration {
@@ -23,12 +26,13 @@ public class FileEventSteamConfiguration {
 	@Autowired
 	SOLIDPromtCaller solidPromptCaller;
 	
+	@Autowired
+	SolidComplianceDatabase solidComplianceDatabase;
+	
 	public FileEventSteamConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			FileMetadataDatabase fileMetadataDatabase,
 			SOLIDPromtCaller solidPromptCaller) {
-		
-		log.info("subscribing");
 		
 		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
 		FileHash fileHash = new FileHash();
@@ -46,14 +50,13 @@ public class FileEventSteamConfiguration {
 			})
 			.map(fileComparator::matches)
 			.filter(fh->!fh.hashMatches())
+			.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
 			.map(fh-> {
-				log.info("calling llm.");
-				return solidPromptCaller.prompt(fh.currentFile().body());
+				return Tuples.of(fh.currentFile().hash(), solidPromptCaller.prompt(fh.currentFile().body()));
 			})
+			.doOnNext(s-> s.getT2().forEach(sc->solidComplianceDatabase.save(sc, s.getT1())))
 			.subscribe(s->{
-			
-				log.info(s.toString());
-			
+				log.info(s.getT2().toString());
 		});
 		
 	}
