@@ -28,15 +28,19 @@ import com.hdekker.ai_workflow.reports.ReportRestController;
 
 import reactor.core.publisher.Flux;
 
+/**
+ * Pre-written prompt chains can target any 
+ * information source. Useful to provide guidance
+ * while allowing the user to take the lead, i.e a sidekick.
+ * 
+ */
 @SpringBootTest
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
-public class PromptRunnerTest {
+public class PromptPipelineTest {
 	
-	Logger log = LoggerFactory.getLogger(PromptRunnerTest.class);
+	Logger log = LoggerFactory.getLogger(PromptPipelineTest.class);
 	
-	@Autowired
-	FileMetaRepository fileMetaRepository;
-	
+
 	public static final String TEST_FILES_DIR = "src/test/resources/test-files";
 	
 	String testFile = """
@@ -79,9 +83,6 @@ public class SOLIDPromtCaller {
 	
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
-	
-	@Autowired
-	SolidComplianceRepository solidComplianceRepository;
 	
 	@Autowired
 	ReportRestController reportRestController;

@@ -13,7 +13,7 @@ public class FileComparator implements InputStreamHashChangedMatcher{
 	
 	FileMetaDatabaseSearcher repository;
 	
-	FileComparator(FileMetaDatabaseSearcher repository){
+	public FileComparator(FileMetaDatabaseSearcher repository){
 		this.repository = repository;
 	}
 

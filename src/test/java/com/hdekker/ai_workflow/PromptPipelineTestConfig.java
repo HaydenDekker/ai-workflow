@@ -11,7 +11,7 @@ import reactor.core.publisher.Flux;
 
 @Configuration
 @Profile(TestProfiles.RESOURCES_TEST_FOLDER)
-public class PromptRunnerTestConfig {
+public class PromptPipelineTestConfig {
 	
 	String stub = "```json [{\r\n"
 			+ "  \"className\": \"LogSubscriberPort\",\r\n"
