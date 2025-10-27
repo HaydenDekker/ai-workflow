@@ -6,6 +6,6 @@ import org.springframework.messaging.Message;
 
 import reactor.core.publisher.Flux;
 
-public interface PromptMapped {
-	PromptPipelineBuilder prompting(Function<Flux<Message<String>>, Flux<String>> prompt);
+public interface PromptMapped<T,K> {
+	PromptPipelineBuilder<T,K> prompting(Function<Flux<T>, Flux<K>> prompt);
 }

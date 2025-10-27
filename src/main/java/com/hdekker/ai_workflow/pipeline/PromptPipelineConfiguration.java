@@ -39,39 +39,15 @@ public class PromptPipelineConfiguration {
 			SOLIDPromtCaller solidPromptCaller) {
 		
 		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
-		FileHash fileHash = new FileHash();
 		
 		this.fileScanner = fileScanner;
 		this.fileMetadataDatabase = fileMetadataDatabase;
 		this.solidPromptCaller = solidPromptCaller;
 		
-//		fileScanner.flux()
-//			.map(m-> {
-//				String s = m.getPayload();
-//				String hash = fileHash.hash(s);
-//				String file = (String) m.getHeaders().get("file_relativePath");
-//				return new FileMetadata(file, s, hash);
-//		})
-//			.map(fileComparator::matches)
-//			.filter(fh->!fh.hashMatches())
-//			.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
-//			.map(fh-> {
-//				return Tuples.of(fh.currentFile().hash(), solidPromptCaller.prompt(fh.currentFile().body()));
-//			})
-//			.doOnNext(s-> s.getT2().forEach(sc->solidComplianceDatabase.save(sc, s.getT1())))
-//			.subscribe(s->{
-//				log.info(s.getT2().toString());
-//		});
-		
-		Flux<String> fs = PromptPipelineBuilder.instance()
+		Flux<String> fs = PromptPipelineBuilder.<FileMetadata, String> instance()
 			.withTrigger(fileScanner.flux())
 			.prompting(f->{
-				return f.map(m-> {
-					String s = m.getPayload();
-					String hash = fileHash.hash(s);
-					String file = (String) m.getHeaders().get("file_relativePath");
-					return new FileMetadata(file, s, hash);
-				})
+				return f
 				.map(fileComparator::matches)
 				.filter(fh->!fh.hashMatches())
 				.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))

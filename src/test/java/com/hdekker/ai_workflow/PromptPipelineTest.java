@@ -7,9 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -18,15 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetaRepository;
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataEntity;
-import com.hdekker.ai_workflow.database.solid.SolidComplianceEntity;
-import com.hdekker.ai_workflow.database.solid.SolidComplianceRepository;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
 import com.hdekker.ai_workflow.reports.ReportRestController;
-
-import reactor.core.publisher.Flux;
 
 /**
  * Pre-written prompt chains can target any 

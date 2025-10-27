@@ -22,6 +22,7 @@ import org.springframework.integration.util.IntegrationReactiveUtils;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
+import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.OllamaWorld;
 
 import reactor.core.publisher.Flux;
@@ -41,7 +42,7 @@ public class FileSystemRecursiveFileScannerAdapter{
 	
 	BufferedWriter bw = null;
 	
-	Flux<Message<String>> flux = Flux.empty();
+	Flux<FileMetadata> flux = Flux.empty();
 	
 	@Autowired
 	ApplicationContext applicationContext;
@@ -88,35 +89,20 @@ public class FileSystemRecursiveFileScannerAdapter{
 		FluxMessageChannel filesChannel = this.applicationContext
 	            .getBean("fileInboundFluxChannel", FluxMessageChannel.class);
 		
-		flux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel);
+		FileHash fileHash = new FileHash();
 		
-		
-		//flux = Flux.from(filesChannel).map(m->(Message<String>)m);
-
-//		
-//		.handle((f)->{
-//			
-//			String payload = (String) f.getPayload();
-//			try {
-//				//bw.wkrite(payload);
-//				bw.flush();
-//			} catch (IOException e1) {
-//				// TODO Auto-generated catch block
-//				e1.printStackTrace();
-//			}
-			//log.info("message");
-			
-			
-		//});
-//			
-		//IntegrationFlowRegistrationBuilder reg = context.registration(flow.get());
-//		
-		//reg.register().start();
+		flux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel)
+					.map(m->{
+						String s = (String) m.getPayload();
+						String hash = fileHash.hash(s);
+						String file = (String) m.getHeaders().get("file_relativePath");
+						return new FileMetadata(file, s, hash);	
+					});
 		
 		
 	}
 	
-	public Flux<Message<String>> flux() {
+	public Flux<FileMetadata> flux() {
 		return flux;
 	}
 
