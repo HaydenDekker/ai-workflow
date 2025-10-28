@@ -19,7 +19,6 @@ import org.springframework.integration.dsl.StandardIntegrationFlow;
 import org.springframework.integration.dsl.context.IntegrationFlowContext;
 import org.springframework.integration.file.dsl.Files;
 import org.springframework.integration.util.IntegrationReactiveUtils;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
 import com.hdekker.ai_workflow.files.domain.FileMetadata;

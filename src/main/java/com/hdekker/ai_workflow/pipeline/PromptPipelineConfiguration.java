@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,10 +10,10 @@ import org.springframework.context.annotation.Configuration;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.database.solid.SolidComplianceDatabase;
 import com.hdekker.ai_workflow.files.FileComparator;
-import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.SOLIDPromtCaller;
+import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
 
 import reactor.core.publisher.Flux;
 import reactor.util.function.Tuples;
@@ -33,6 +35,8 @@ public class PromptPipelineConfiguration {
 	@Autowired
 	SolidComplianceDatabase solidComplianceDatabase;
 	
+	record FilePromptEvent(FileMetadata event, SOLIDCompliance result) {}
+	
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			FileMetadataDatabase fileMetadataDatabase,
@@ -44,22 +48,26 @@ public class PromptPipelineConfiguration {
 		this.fileMetadataDatabase = fileMetadataDatabase;
 		this.solidPromptCaller = solidPromptCaller;
 		
-		Flux<String> fs = PromptPipelineBuilder.<FileMetadata, String> instance()
+		Flux<FilePromptEvent> fs = PromptPipelineBuilder.<FileMetadata, FilePromptEvent> instance()
 			.withTrigger(fileScanner.flux())
 			.prompting(f->{
 				return f
 				.map(fileComparator::matches)
 				.filter(fh->!fh.hashMatches())
 				.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
-				.map(fh-> {
-					return Tuples.of(fh.currentFile().hash(), solidPromptCaller.prompt(fh.currentFile().body()));
-				})
-				.doOnNext(s-> s.getT2().forEach(sc->solidComplianceDatabase.save(sc, s.getT1())))
-				.map(s->s.getT2().toString());
+				.flatMap(fh-> {
+					return Flux.fromStream(solidPromptCaller.prompt(fh.currentFile().body()).stream())
+						.map(sc-> {
+							return new FilePromptEvent(fh.currentFile(), sc);
+						});
+				});
+			})
+			.persist(s->{
+				solidComplianceDatabase.save(s.result(), s.event.hash());
 			})
 			.build();
 		
-		fs.subscribe(s-> log.info(s));
+		fs.subscribe(s-> log.info(s.toString()));
 		
 	}
 
