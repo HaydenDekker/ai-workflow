@@ -2,12 +2,15 @@ spring:
   application:
     name: ai-workflow
   ai:
-    ollama:
-      chat:
-        options:
-          model: gemma3:4b
-          read-timeout: 60s
-          connection-timeout: 60s
+    chat:
+      client:
+        enabled: false
+#    ollama:
+#       chat:
+#        options:
+#          model: gemma3:4b
+#          read-timeout: 60s
+#          connection-timeout: 60s
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/mydb

@@ -11,6 +11,7 @@ public class PromptPipelineBuilder<T, K> implements
 	PromptMapped<T, K>,
 	Persistable<T, K> {
 	
+	// check event will trigger 
 	Flux<T> trigger;
 	Function<Flux<T>, Flux<K>> prompt;
 	Consumer<K> outputConsumer;

@@ -35,6 +35,7 @@ public class PromptPipelineConfiguration {
 	@Autowired
 	SolidComplianceDatabase solidComplianceDatabase;
 	
+	// should trigger update
 	record FilePromptEvent(FileMetadata event, SOLIDCompliance result) {}
 	
 	public PromptPipelineConfiguration(

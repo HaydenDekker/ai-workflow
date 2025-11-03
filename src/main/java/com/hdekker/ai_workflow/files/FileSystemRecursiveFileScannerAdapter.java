@@ -17,6 +17,7 @@ import org.springframework.integration.dsl.IntegrationFlowBuilder;
 import org.springframework.integration.dsl.Pollers;
 import org.springframework.integration.dsl.StandardIntegrationFlow;
 import org.springframework.integration.dsl.context.IntegrationFlowContext;
+import org.springframework.integration.file.FileReadingMessageSource.WatchEventType;
 import org.springframework.integration.file.dsl.Files;
 import org.springframework.integration.util.IntegrationReactiveUtils;
 import org.springframework.stereotype.Component;
@@ -71,7 +72,12 @@ public class FileSystemRecursiveFileScannerAdapter{
 		IntegrationFlowBuilder flowBuilder = IntegrationFlow.from(
 				Files.inboundAdapter(folder)
 					.recursive(true)
-					.patternFilter("*.java"),
+					.patternFilter("*.java")
+					.useWatchService(true)
+					.watchEvents(
+							WatchEventType.CREATE, 
+							WatchEventType.MODIFY, 
+							WatchEventType.DELETE),
 				e-> e.poller(
 						Pollers.fixedRate(Duration.ofSeconds(1), Duration.ofSeconds(2)))
 			)
