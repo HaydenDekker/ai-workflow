@@ -21,6 +21,6 @@ spring:
       ddl-auto: create-drop
 
 scanner:
-  url: file:src/test/resources/test-files
+  url: file:/test/project-root
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
   #/Users/hayde/workspace_25/ai-workflow

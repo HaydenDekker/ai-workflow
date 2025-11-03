@@ -57,14 +57,11 @@ public class FileSystemRecursiveFileScannerAdapter{
 		this.config = config;
 		this.applicationContext = applicationContext;
 		
-		//DateTimeFormatter form = DateTimeFormatter.ofPattern("ddMMHHSS");
-		//File logFile = new File(config.getOutputFolder() + "/log_" + LocalDateTime.now().format(form) + ".json");
 		File folder = null;
 		try {
-			//bw = new BufferedWriter(new FileWriter(logFile));
-			folder = config.url.getFile();
+			folder = config.url.getFile().getAbsoluteFile();
+			log.info("Absolute path for project root: " + folder.getPath());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return;
 		}

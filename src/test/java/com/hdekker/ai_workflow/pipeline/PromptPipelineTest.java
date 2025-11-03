@@ -1,10 +1,9 @@
-package com.hdekker.ai_workflow;
+package com.hdekker.ai_workflow.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.hdekker.ai_workflow.TestFiles;
+import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
 import com.hdekker.ai_workflow.reports.ReportRestController;
@@ -35,7 +36,7 @@ public class PromptPipelineTest {
 	Logger log = LoggerFactory.getLogger(PromptPipelineTest.class);
 	
 	public static final String TEST_FILES_DIR = "src/test/resources/test-files-init/";
-	
+
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
 	
@@ -58,7 +59,6 @@ public class PromptPipelineTest {
 		
 		assertThat(reportItems)
 			.hasSizeGreaterThan(0);
-		
 		
 	}
 	

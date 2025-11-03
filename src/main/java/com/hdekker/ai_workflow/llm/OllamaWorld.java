@@ -4,15 +4,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
+
 import reactor.core.publisher.Flux;
 
 
-@Configuration
+@Service
 public class OllamaWorld implements Prompter{
 	
 	Logger log = LoggerFactory.getLogger(OllamaWorld.class);
 	
+	@Autowired
 	OllamaChatModel ollamaChatModel;
 	
 	ChatClient client;
