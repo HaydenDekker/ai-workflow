@@ -11,11 +11,14 @@ public class GenericPromptCaller {
 	@Autowired
 	Prompter prompter;
 	
-	public PromptResponse call(String file, String prompt) {
+	public PromptResponse call(String promptTitle, String file, String prompt) {
 		
 		return prompter.call(file + prompt)
-				.map(s-> new PromptResponse(s))
-				.blockFirst();
+				.reduce((a,b)-> a+b)
+				.map(s-> new PromptResponse(promptTitle, s))
+				.block();
+				
+				
 		
 	}
 

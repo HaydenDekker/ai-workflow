@@ -16,15 +16,23 @@ public class PromptResponseDatabase {
 	public List<PromptResponse> responseList(){
 		return repository.findAll()
 				.stream()
-				.map(e-> new PromptResponse(e.response))
+				.map(e-> new PromptResponse(e.getPromptTitle(), e.response))
 				.toList();
 	}
 	
 	public void save(PromptResponse response) {
 		
 		PromptResponseEntity pre = new PromptResponseEntity();
-		pre.setResponse(response.result());
+		pre.setResponse(response.promptTitle());
+		pre.setPromptTitle(response.promptTitle());
 		repository.save(pre);
+	}
+
+	public List<PromptResponse> findAllByPromptTitle(String prompt) {
+		return repository.findAllByPromptTitle(prompt)
+				.stream()
+				.map(pre->new PromptResponse(pre.getPromptTitle(), pre.getResponse()))
+				.toList();
 	}
 	
 }

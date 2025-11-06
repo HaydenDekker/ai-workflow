@@ -14,9 +14,9 @@ import com.hdekker.ai_workflow.files.FileComparator;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
-import com.hdekker.ai_workflow.llm.PromptConfiguration;
-import com.hdekker.ai_workflow.llm.SOLIDPromtCaller;
 import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
+import com.hdekker.ai_workflow.prompt.PromptConfiguration;
+import com.hdekker.ai_workflow.prompt.SOLIDPromtCaller;
 
 import reactor.core.publisher.Flux;
 
@@ -75,7 +75,7 @@ public class PromptPipelineConfiguration {
 				.doOnNext(fpe-> log.info(fpe.toString()));
 			})
 			.persist(s->{
-				solidComplianceDatabase.save(s.result(), s.event.hash());
+				promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
 			})
 			.build();
 		
@@ -84,7 +84,7 @@ public class PromptPipelineConfiguration {
 		Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent, PromptResponse> instance()
 			.withTrigger(fs.window(Duration.ofSeconds(5)).flatMap(f->f))
 			.prompting(flux->{
-				return flux.map(fpe-> genericPromptCaller.call(PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), fpe.result.toString()));	
+				return flux.map(fpe-> genericPromptCaller.call(PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE, PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), fpe.result.toString()));	
 			})
 			.persist(pr-> {
 				promptResponseDatabase.save(pr);

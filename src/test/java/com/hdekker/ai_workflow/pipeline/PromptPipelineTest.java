@@ -21,6 +21,7 @@ import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
+import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.reports.ReportRestController;
 
 /**
@@ -41,7 +42,7 @@ public class PromptPipelineTest {
 	FileSystemScannerConfig fileSystemScannerConfig;
 	
 	@Autowired
-	ReportRestController reportRestController; 
+	ReportRestController reportRestController;
 	
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
@@ -52,20 +53,20 @@ public class PromptPipelineTest {
 		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
 		
 		Thread.sleep(2000);
-		
-		List<SOLIDCompliance> reportItems = reportRestController.complianceReport()
+		 
+		List<PromptResponse> reportItems = reportRestController.resultsForPrompt(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE)
 				.collectList()
 				.block();
-		
+
 		assertThat(reportItems)
 			.hasSizeGreaterThan(0);
 		
-		List<PromptResponse> results = reportRestController.results()
+		List<PromptResponse> results = reportRestController.resultsForPrompt(PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE)
 				.collectList()
 				.block();
 		
 		assertThat(results)
-			.hasSizeGreaterThan(1);
+			.hasSizeGreaterThan(0);
 		
 	}
 	

@@ -6,6 +6,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 
+/**
+ * 
+ */
+/**
+ * 
+ */
 @Entity
 public class PromptResponseEntity {
 
@@ -13,8 +19,19 @@ public class PromptResponseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	public Integer id;
 	
+	String promptTitle;
+	
 	@Lob
 	public String response;
+	
+
+	public String getPromptTitle() {
+		return promptTitle;
+	}
+
+	public void setPromptTitle(String promptTitle) {
+		this.promptTitle = promptTitle;
+	}
 
 	public Integer getId() {
 		return id;

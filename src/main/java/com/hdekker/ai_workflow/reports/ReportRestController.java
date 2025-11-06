@@ -30,5 +30,10 @@ public class ReportRestController {
 		return Flux.fromStream(promptResponseDatabase.responseList().stream());
 	}
 	
+	@GetMapping(path = "/results/{prompt}")
+	public Flux<PromptResponse> resultsForPrompt(String prompt){
+		return Flux.fromStream(promptResponseDatabase.findAllByPromptTitle(prompt).stream());
+	}
+	
 
 }
