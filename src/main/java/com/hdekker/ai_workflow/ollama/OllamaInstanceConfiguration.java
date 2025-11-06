@@ -10,14 +10,19 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OllamaInstanceConfiguration {
 
+	public static final String LOCAL_TEST_ENDPOINT = "http://127.0.0.1:11434";
 	public static final String TEST_ENDPOINT_OLLAMA = "http://192.168.2.108:11434";
 	public static final String TARGET_MODEL = "gemma3:27b"; 
+	public static final String TARGET_MODEL_LOCAL = "gemma3:4b";
 	
 	@Bean
 	public OllamaChatModel ollamaChatModel() {
-		OllamaApi api = OllamaInstanceAdapterUtils.createAPI(TEST_ENDPOINT_OLLAMA);
+		OllamaApi api = OllamaInstanceAdapterUtils.createAPI(LOCAL_TEST_ENDPOINT);
 		List<OllamaChatModel> models = OllamaInstanceAdapterUtils.getModel(api);
-		return models.get(0);
+		return models.stream()
+				.filter(m-> m.getDefaultOptions().getModel().equals(TARGET_MODEL_LOCAL))
+				.findFirst()
+				.orElseThrow();
 	}
 	
 }

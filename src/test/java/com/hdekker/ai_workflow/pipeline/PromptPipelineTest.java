@@ -44,7 +44,7 @@ public class PromptPipelineTest {
 	ReportRestController reportRestController; 
 	
 	@Test
-	public void givenNewFileAndPrompt_ExpectLLMOutputStoredInDatabase() throws IOException, InterruptedException {
+	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		
 		File configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
 		Path destination = configuredDirectory.toPath().resolve(TestFiles.POOR_SOLID_COMPLIANCE);
@@ -60,27 +60,12 @@ public class PromptPipelineTest {
 		assertThat(reportItems)
 			.hasSizeGreaterThan(0);
 		
-	}
-	
-	public static final String secondPromptStage = "TOP-2-Priority";
-	
-	@Test
-	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
-		
-		File configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
-		Path destination = configuredDirectory.toPath().resolve(TestFiles.POOR_SOLID_COMPLIANCE);
-		Path source = Paths.get(TEST_FILES_DIR + TestFiles.POOR_SOLID_COMPLIANCE);
-		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-		
-		Thread.sleep(2000);
-		
 		List<PromptResponse> results = reportRestController.results()
 				.collectList()
 				.block();
 		
 		assertThat(results)
 			.hasSizeGreaterThan(1);
-		
 		
 	}
 	

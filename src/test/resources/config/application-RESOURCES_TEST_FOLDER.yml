@@ -2,12 +2,9 @@ spring:
   application:
     name: ai-workflow
   ai:
-    ollama:
-      chat:
-        options:
-          model: gemma3:4b
-          read-timeout: 60s
-          connection-timeout: 60s
+    chat:
+      client:
+        enabled: false
   datasource:
     driver-class-name: org.h2.Driver #org.postgresql.Driver
     url: jdbc:h2:mem:testdb #jdbc:postgresql://localhost:5432/test-db
@@ -19,7 +16,6 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
-
 scanner:
   url: file:/test/project-root
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
