@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import com.hdekker.ai_workflow.files.FileComparator;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
+import com.hdekker.ai_workflow.llm.PromptResponseConverter;
 import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.prompt.SOLIDPromtCaller;
@@ -67,7 +69,7 @@ public class PromptPipelineConfiguration {
 				.filter(fh->!fh.hashMatches())
 				.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
 				.flatMap(fh-> {
-					return Flux.fromStream(solidPromptCaller.prompt(fh.currentFile().body()).stream())
+					return Flux.fromStream(solidPromptCaller.prompt(fh.currentFile().body(), PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT).stream())
 						.map(sc-> {
 							return new FilePromptEvent(fh.currentFile(), sc);
 						});
@@ -81,10 +83,21 @@ public class PromptPipelineConfiguration {
 		
 		//fs.subscribe(s-> log.info(s.toString()));
 		
+		PromptResponseConverter prc = (r) -> List.of(r);
+		
 		Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent, PromptResponse> instance()
 			.withTrigger(fs.window(Duration.ofSeconds(5)).flatMap(f->f))
 			.prompting(flux->{
-				return flux.map(fpe-> genericPromptCaller.call(PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE, PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), fpe.result.toString()));	
+				return flux.flatMap(fpe-> 
+					Flux.fromStream(
+						genericPromptCaller.call(
+							PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE, 
+							PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), 
+							fpe.result.toString(),
+							PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
+							prc
+							).stream())
+						);	
 			})
 			.persist(pr-> {
 				promptResponseDatabase.save(pr);

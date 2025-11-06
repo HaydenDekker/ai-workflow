@@ -14,7 +14,9 @@ import reactor.core.publisher.Flux;
 @Profile(TestProfiles.RESOURCES_TEST_FOLDER)
 public class PromptPipelineTestConfig {
 	
-	String stub = "```json [{\r\n"
+	String stub = ""
+			+ " Just a simple test response as if its from the raw output of the LLM "
+			+ "```json [{\r\n"
 			+ "  \"className\": \"LogSubscriberPort\",\r\n"
 			+ "  \"compliance\": \"YES\",\r\n"
 			+ "  \"principle\": \"Single Responsibility Principle\",\r\n"
@@ -25,7 +27,7 @@ public class PromptPipelineTestConfig {
 	@Bean
 	@Primary
 	Prompter prompter() {
-		return (s) -> Flux.just(stub);
+		return (s, structure) -> Flux.just(stub);
 	}
 	
 }

@@ -3,6 +3,7 @@ package com.hdekker.ai_workflow.llm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -31,11 +32,11 @@ public class OllamaWorld implements Prompter{
 		
 	}
 	
-	
-	public Flux<String> call(String prompt) {
-		return client.prompt(prompt)
+	public Flux<String> call(String prompt, String structure) {
+		return client.prompt(prompt + " \n + " + structure)
 				.stream()
 				.content();
+				
 			
 	}
 

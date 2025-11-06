@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.llm;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,11 +13,12 @@ public class GenericPromptCaller {
 	@Autowired
 	Prompter prompter;
 	
-	public PromptResponse call(String promptTitle, String file, String prompt) {
+	public List<PromptResponse> call(String promptTitle, String file, String prompt, String outputStructure, PromptResponseConverter responseConverter) {
 		
-		return prompter.call(file + prompt)
+		return prompter.call(file + prompt, outputStructure)
 				.reduce((a,b)-> a+b)
 				.map(s-> new PromptResponse(promptTitle, s))
+				.map(s-> responseConverter.convert(s))
 				.block();
 				
 				
