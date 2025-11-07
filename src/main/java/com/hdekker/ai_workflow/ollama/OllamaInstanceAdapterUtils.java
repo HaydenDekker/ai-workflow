@@ -6,7 +6,6 @@ import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaApi.Model;
 import org.springframework.ai.ollama.api.OllamaOptions;
-import org.springframework.stereotype.Service;
 
 public class OllamaInstanceAdapterUtils {
 

@@ -20,7 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.llm.output.SOLIDCompliance;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.reports.ReportRestController;
 

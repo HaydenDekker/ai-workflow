@@ -16,7 +16,12 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: create
-
+app:
+  ai:
+    endpoint: http://127.0.0.1:11434
+    model: gemma3:4b
+    #endpoint: http://192.168.2.108:11434
+    #model: gemma3:27b
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests

@@ -13,9 +13,9 @@ public class GenericPromptCaller {
 	@Autowired
 	Prompter prompter;
 	
-	public List<PromptResponse> call(String promptTitle, String file, String prompt, String outputStructure, PromptResponseConverter responseConverter) {
+	public List<PromptResponse> call(String promptTitle, String prompt, String outputStructure, PromptResponseConverter responseConverter) {
 		
-		return prompter.call(file + prompt, outputStructure)
+		return prompter.call(prompt, outputStructure)
 				.reduce((a,b)-> a+b)
 				.map(s-> new PromptResponse(promptTitle, s))
 				.map(s-> responseConverter.convert(s))
