@@ -65,61 +65,67 @@ public class PromptPipelineConfiguration {
 			FileMetadataDatabase fileMetadataDatabase,
 			GenericPromptCaller genericPromptCaller) {
 		
-		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
-		
 		this.fileScanner = fileScanner;
 		this.fileMetadataDatabase = fileMetadataDatabase;
 		this.genericPromptCaller = genericPromptCaller;
 		
+		//fs2.subscribe(s-> log.info(s.toString()));
+		
+	}
+	
+	public Flux<PromptResponse> build(){
+		
+		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
+		
 		Flux<FilePromptEvent2> fs = PromptPipelineBuilder.<FileMetadata, FilePromptEvent2> instance()
-			.withTrigger(fileScanner.flux())
-			.prompting(f->{
-				return f
-				.map(fileComparator::matches)
-				.filter(fh->!fh.hashMatches())
-				.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
-				.flatMap(fh-> {
-					return Flux.fromStream(
-							//solidPromptCaller.prompt(fh.currentFile().body(), PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT).stream())
+				.withTrigger(fileScanner.flux())
+				.prompting(f->{
+					return f
+					.map(fileComparator::matches)
+					.filter(fh->!fh.hashMatches())
+					.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
+					.flatMap(fh-> {
+						return Flux.fromStream(
+								//solidPromptCaller.prompt(fh.currentFile().body(), PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT).stream())
+								genericPromptCaller.call(
+										PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, 
+										PromptConfiguration.SOLID_COMPLAINCE_PROMPT + " body: " +  fh.currentFile().body(), 
+										PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
+										jsonItemListConverter
+										)
+								.stream()
+								.map(sc-> {
+									return new FilePromptEvent2(fh.currentFile(), sc);
+								}));
+					});
+							//.doOnNext(fpe-> log.info(fpe.toString()));
+				})
+				.persist(s->{
+					promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
+				})
+				.build();
+			
+			PromptResponseConverter prc = (r) -> List.of(r);
+			
+			Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent2, PromptResponse> instance()
+				.withTrigger(fs.window(Duration.ofSeconds(5)).flatMap(f->f))
+				.prompting(flux->{
+					return flux.flatMap(fpe-> 
+						Flux.fromStream(
 							genericPromptCaller.call(
-									PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, 
-									PromptConfiguration.SOLID_COMPLAINCE_PROMPT + " body: " +  fh.currentFile().body(), 
-									PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
-									jsonItemListConverter
-									)
-							.stream()
-							.map(sc-> {
-								return new FilePromptEvent2(fh.currentFile(), sc);
-							}));
-				});
-						//.doOnNext(fpe-> log.info(fpe.toString()));
-			})
-			.persist(s->{
-				promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
-			})
-			.build();
-		
-		PromptResponseConverter prc = (r) -> List.of(r);
-		
-		Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent2, PromptResponse> instance()
-			.withTrigger(fs.window(Duration.ofSeconds(5)).flatMap(f->f))
-			.prompting(flux->{
-				return flux.flatMap(fpe-> 
-					Flux.fromStream(
-						genericPromptCaller.call(
-							PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE, 
-							fpe.result.toString() + " " + PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), 
-							PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
-							prc
-							).stream())
-						);	
-			})
-			.persist(pr-> {
-				promptResponseDatabase.save(pr);
-			})
-			.build();
-		
-		fs2.subscribe(s-> log.info(s.toString()));
+								PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE, 
+								fpe.result.toString() + " " + PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), 
+								PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
+								prc
+								).stream())
+							);	
+				})
+				.persist(pr-> {
+					promptResponseDatabase.save(pr);
+				})
+				.build();
+			
+			return fs2;
 		
 	}
 

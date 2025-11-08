@@ -23,6 +23,8 @@ import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.reports.ReportRestController;
 
+import reactor.core.publisher.Flux;
+
 /**
  * Pre-written prompt chains can target any 
  * information source. Useful to provide guidance
@@ -43,8 +45,29 @@ public class PromptPipelineTest {
 	@Autowired
 	ReportRestController reportRestController;
 	
+	@Autowired
+	PromptPipelineConfiguration promptPipelineConfiguration;
+	
+	
+	/**
+	 * 
+	 * dyn config
+	 *  trigger - prompt title - output structure - output always a list
+	 *  
+	 *  triggers:
+	 *   file change event
+	 *   file replay event
+	 *   prompt output event
+	 * 
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
+		
+		Flux<PromptResponse> pipeline = promptPipelineConfiguration.build();
+		pipeline.subscribe(s-> log.info(s.toString()));
 		
 		File configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
 		Path destination = configuredDirectory.toPath().resolve(TestFiles.POOR_SOLID_COMPLIANCE);
