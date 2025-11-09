@@ -6,7 +6,9 @@ package com.hdekker.ai_workflow.pipeline.domain;
  * 
  */
 public record PipelinePrompt(
-		String title
+		String title,
+		String body,
+		String outputStructure
 		) {
 
 }

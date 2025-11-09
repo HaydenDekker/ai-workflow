@@ -75,8 +75,8 @@ public class PromptPipelineConfiguration {
 				return Flux.fromStream(
 						genericPromptCaller.call(
 								pipelinePrompt.title(), 
-								PromptConfiguration.SOLID_COMPLAINCE_PROMPT + " body: " +  fh.currentFile().body(), 
-								PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
+								pipelinePrompt.body() + " body: " +  fh.currentFile().body(), 
+								pipelinePrompt.outputStructure(),
 								jsonItemListConverter
 								)
 						.stream());
@@ -100,8 +100,8 @@ public class PromptPipelineConfiguration {
 						Flux.fromStream(
 							genericPromptCaller.call(
 								pipelinePrompt.title(), 
-								PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.response(), 
-								PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
+								pipelinePrompt.body() + " body: " +  fpe.response(), 
+								pipelinePrompt.outputStructure(),
 								prc
 								).stream())
 							);	
@@ -119,11 +119,19 @@ public class PromptPipelineConfiguration {
 //		promptPipeline.stream()
 //			.map(f-> )
 	
-		PipelinePrompt solidFileSystemEventPipelinePrompt = new PipelinePrompt(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE);
+		PipelinePrompt solidFileSystemEventPipelinePrompt = new PipelinePrompt(
+				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
+				PromptConfiguration.SOLID_COMPLAINCE_PROMPT,
+				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT
+				);
 		
 		Flux<PromptResponse> fs = buildFileHistoryPipelineStage(solidFileSystemEventPipelinePrompt);
 		
-		PipelinePrompt priorityClassificationPipelineStage = new PipelinePrompt(PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE);
+		PipelinePrompt priorityClassificationPipelineStage = new PipelinePrompt(
+				PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE,
+				PromptConfiguration.PRIORITY_ORDER_PROMPT,
+				PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT
+				);
 		
 		Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs, priorityClassificationPipelineStage);
 		return fs2;
