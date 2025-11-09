@@ -75,7 +75,7 @@ public class PromptPipelineTest {
 		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
 		
 		Thread.sleep(2000);
-		 
+		
 		List<PromptResponse> reportItems = reportRestController.resultsForPrompt(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE)
 				.collectList()
 				.block();

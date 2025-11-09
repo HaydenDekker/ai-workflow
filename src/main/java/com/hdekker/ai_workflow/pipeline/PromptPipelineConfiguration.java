@@ -13,7 +13,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
-import com.hdekker.ai_workflow.files.FileComparator;
+import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
@@ -41,7 +41,7 @@ public class PromptPipelineConfiguration {
 	PromptResponseDatabase promptResponseDatabase;
 	
 	// should trigger update
-	record FilePromptEvent2(FileMetadata event, PromptResponse result) {}
+	record FilePromptEvent(FileMetadata event, PromptResponse result) {}
 	
 	ObjectMapper om = new ObjectMapper();
 	
@@ -62,28 +62,19 @@ public class PromptPipelineConfiguration {
 	
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
-			FileMetadataDatabase fileMetadataDatabase,
 			GenericPromptCaller genericPromptCaller) {
 		
 		this.fileScanner = fileScanner;
-		this.fileMetadataDatabase = fileMetadataDatabase;
 		this.genericPromptCaller = genericPromptCaller;
-		
-		//fs2.subscribe(s-> log.info(s.toString()));
-		
+
 	}
 	
 	public Flux<PromptResponse> build(){
 		
-		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
-		
-		Flux<FilePromptEvent2> fs = PromptPipelineBuilder.<FileMetadata, FilePromptEvent2> instance()
+		Flux<FilePromptEvent> fs = PromptPipelineBuilder.<FileHistory, FilePromptEvent> instance()
 				.withTrigger(fileScanner.flux())
 				.prompting(f->{
 					return f
-					.map(fileComparator::matches)
-					.filter(fh->!fh.hashMatches())
-					.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
 					.flatMap(fh-> {
 						return Flux.fromStream(
 								//solidPromptCaller.prompt(fh.currentFile().body(), PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT).stream())
@@ -95,7 +86,7 @@ public class PromptPipelineConfiguration {
 										)
 								.stream()
 								.map(sc-> {
-									return new FilePromptEvent2(fh.currentFile(), sc);
+									return new FilePromptEvent(fh.currentFile(), sc);
 								}));
 					});
 							//.doOnNext(fpe-> log.info(fpe.toString()));
@@ -107,7 +98,7 @@ public class PromptPipelineConfiguration {
 			
 			PromptResponseConverter prc = (r) -> List.of(r);
 			
-			Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent2, PromptResponse> instance()
+			Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent, PromptResponse> instance()
 				.withTrigger(fs.window(Duration.ofSeconds(5)).flatMap(f->f))
 				.prompting(flux->{
 					return flux.flatMap(fpe-> 

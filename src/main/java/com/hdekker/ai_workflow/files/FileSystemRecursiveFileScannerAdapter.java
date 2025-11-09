@@ -22,6 +22,7 @@ import org.springframework.integration.file.dsl.Files;
 import org.springframework.integration.util.IntegrationReactiveUtils;
 import org.springframework.stereotype.Component;
 
+import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.OllamaWorld;
 
@@ -42,20 +43,25 @@ public class FileSystemRecursiveFileScannerAdapter{
 	
 	BufferedWriter bw = null;
 	
-	Flux<FileMetadata> flux = Flux.empty();
+	Flux<FileHistory> flux = Flux.empty();
 	
 	@Autowired
 	ApplicationContext applicationContext;
 	
 	StandardIntegrationFlow flow;
 	
+	@Autowired
+	FileMetadataDatabase fileMetadataDatabase;
+	
 	FileSystemRecursiveFileScannerAdapter(FileSystemScannerConfig config,
 			IntegrationFlowContext context,
 			OllamaWorld ollamaWorld,
-			ApplicationContext applicationContext){
+			ApplicationContext applicationContext,
+			FileMetadataDatabase fileMetadataDatabase){
 		
 		this.config = config;
 		this.applicationContext = applicationContext;
+		this.fileMetadataDatabase = fileMetadataDatabase;
 		
 		File folder = null;
 		try {
@@ -92,6 +98,8 @@ public class FileSystemRecursiveFileScannerAdapter{
 	            .getBean("fileInboundFluxChannel", FluxMessageChannel.class);
 		
 		FileHash fileHash = new FileHash();
+		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
+		
 		
 		flux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel)
 					.map(m->{
@@ -99,12 +107,15 @@ public class FileSystemRecursiveFileScannerAdapter{
 						String hash = fileHash.hash(s);
 						String file = (String) m.getHeaders().get("file_relativePath");
 						return new FileMetadata(file, s, hash);	
-					});
+					})
+					.map(fileComparator::matches)
+					.filter(fh->!fh.hashMatches())
+					.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()));
 		
 		
 	}
 	
-	public Flux<FileMetadata> flux() {
+	public Flux<FileHistory> flux() {
 		return flux;
 	}
 
