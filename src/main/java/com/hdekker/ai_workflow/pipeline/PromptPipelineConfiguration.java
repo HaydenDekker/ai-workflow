@@ -65,36 +65,36 @@ public class PromptPipelineConfiguration {
 
 	}
 	
-	public Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
+	public Flux<PromptResponse> buildFileHistoryPipelineStage(){
 		
-//		promptPipeline.stream()
-//			.map(f-> )
-//		
+		return PromptPipelineBuilder.<FileHistory, PromptResponse> instance()
+		.withTrigger(fileScanner.flux())
+		.prompting(f->{
+			return f
+			.flatMap(fh-> {
+				return Flux.fromStream(
+						//solidPromptCaller.prompt(fh.currentFile().body(), PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT).stream())
+						genericPromptCaller.call(
+								PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, 
+								PromptConfiguration.SOLID_COMPLAINCE_PROMPT + " body: " +  fh.currentFile().body(), 
+								PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
+								jsonItemListConverter
+								)
+						.stream());
+			});
+		})
+		.persist(s->{
+			promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
+		})
+		.build();
 		
-		Flux<PromptResponse> fs = PromptPipelineBuilder.<FileHistory, PromptResponse> instance()
-				.withTrigger(fileScanner.flux())
-				.prompting(f->{
-					return f
-					.flatMap(fh-> {
-						return Flux.fromStream(
-								//solidPromptCaller.prompt(fh.currentFile().body(), PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT).stream())
-								genericPromptCaller.call(
-										PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, 
-										PromptConfiguration.SOLID_COMPLAINCE_PROMPT + " body: " +  fh.currentFile().body(), 
-										PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
-										jsonItemListConverter
-										)
-								.stream());
-					});
-				})
-				.persist(s->{
-					promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
-				})
-				.build();
-			
-			PromptResponseConverter prc = (r) -> List.of(r);
-			
-			Flux<PromptResponse> fs2  = PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
+	}
+	
+	Flux<PromptResponse> buildPromptResponsePipelineStage(Flux<PromptResponse> fs){
+		
+		PromptResponseConverter prc = (r) -> List.of(r);
+		
+		return PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
 				.withTrigger(fs)
 				.prompting(flux->{
 					return flux.flatMap(fpe-> 
@@ -112,7 +112,17 @@ public class PromptPipelineConfiguration {
 				})
 				.build();
 			
-			return fs2;
+	}
+	
+	
+	public Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
+		
+//		promptPipeline.stream()
+//			.map(f-> )
+	
+		Flux<PromptResponse> fs = buildFileHistoryPipelineStage();		
+		Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs);
+		return fs2;
 		
 	}
 
