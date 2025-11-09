@@ -50,6 +50,9 @@ public class PromptPipelineTest {
 	PromptPipelineTestConfig testConfig;
 	
 	@Autowired
+	PromptConfiguration promptConfiguration;
+	
+	@Autowired
 	PromptPipelineConfiguration promptPipelineConfiguration;
 	
 	
@@ -70,11 +73,6 @@ public class PromptPipelineTest {
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		
-		List<PipelinePrompt> promptPipeline = testConfig.testPipelinePromptList();
-		
-		Flux<PromptResponse> pipeline = promptPipelineConfiguration.build(promptPipeline);
-		pipeline.subscribe(s-> log.info(s.toString()));
-		
 		File configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
 		Path destination = configuredDirectory.toPath().resolve(TestFiles.POOR_SOLID_COMPLIANCE);
 		Path source = Paths.get(TEST_FILES_DIR + TestFiles.POOR_SOLID_COMPLIANCE);
@@ -82,14 +80,14 @@ public class PromptPipelineTest {
 		
 		Thread.sleep(2000);
 		
-		List<PromptResponse> reportItems = reportRestController.resultsForPrompt(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE)
+		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_COMPLIANCE")
 				.collectList()
 				.block();
 
 		assertThat(reportItems)
 			.hasSizeGreaterThan(0);
 		
-		List<PromptResponse> results = reportRestController.resultsForPrompt(PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE)
+		List<PromptResponse> results = reportRestController.resultsForPrompt("PRIORITY_ORDER")
 				.collectList()
 				.block();
 		

@@ -1,37 +1,35 @@
 package com.hdekker.ai_workflow.prompt;
 
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+
+import jakarta.annotation.PostConstruct;
+
+@Configuration()
+@ConfigurationProperties("prompt-config")
 public class PromptConfiguration {
 	
-	public static final String SOLID_COMPLIANCE_PROMPT_TITLE = "SOLID_COMPLIANCE";
+	Logger log = LoggerFactory.getLogger(PromptConfiguration.class);
 	
-	public static final String SOLID_COMPLAINCE_PROMPT = """
-			Given the code below, ensure that it complies to SOLID principals. 
-			You might not have external context for some classes so the assessment should just reason about the immediate code. 
-			If it doesn't immediately break principals state that it is compliant.
-			\n\r ---------- \n\r 
-			""";
+	List<PipelinePrompt> chain;
 	
-	public static final String SOLID_COMPLIANCE_PROMPT_OUTPUT = "Output json, as {className:String, compliance: YES|NO, principle:String, task:String, reason:String}";
-	
-	
-	public static final String PRIORITY_ORDER_PROMPT_TITLE = "PRIORITY_ORDER";
-	
-	public static final String PRIORITY_ORDER_PROMPT = """
-			Given this list of review responses, the question and the source 
-			file, prioritise the items in order of most impactful change to 
-			least impactful change. Use the number 10 to 1 with 10 being most impactful.
-			""";
-	
-	public static final String PRIORITY_ORDER_PROMPT_OUTPUT = """
-			Provide response in the following json format,
-			{
-				inputSummary: String,
-				impactAssessment: String,
-				imaactWeight: Number 1 to 10
-			}
-			If there are no responses, respond with an empty list.
-			If there is only one respone, make sure its wrapped in a list.
-			""";
+	public List<PipelinePrompt> getChain() {
+		return chain;
+	}
 
+	public void setChain(List<PipelinePrompt> chain) {
+		this.chain = chain;
+	}
+	
+	@PostConstruct
+	public void log() {
+		chain.forEach(pp->log.info(pp.toString()));
+	}
 
 }

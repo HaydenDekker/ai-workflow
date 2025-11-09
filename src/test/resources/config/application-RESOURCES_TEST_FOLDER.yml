@@ -16,7 +16,10 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
+app:
+  ai:
+    endpoint: http://127.0.0.1:11434
+    model: gemma3:4b
 scanner:
   url: file:/test/project-root
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
-  #/Users/hayde/workspace_25/ai-workflow

@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
@@ -33,15 +32,15 @@ public class PromptPipelineConfiguration {
 
 	@Autowired
 	FileSystemRecursiveFileScannerAdapter fileScanner;
-	
-	@Autowired
-	FileMetadataDatabase fileMetadataDatabase;
-	
+
 	@Autowired
 	GenericPromptCaller genericPromptCaller;
 	
 	@Autowired
 	PromptResponseDatabase promptResponseDatabase;
+	
+	@Autowired
+	PromptConfiguration promptConfiguration;
 	
 	ObjectMapper om = new ObjectMapper();
 	
@@ -62,34 +61,40 @@ public class PromptPipelineConfiguration {
 	
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
-			GenericPromptCaller genericPromptCaller) {
+			GenericPromptCaller genericPromptCaller,
+			PromptConfiguration promptConfiguration,
+			PromptResponseDatabase promptResponseDatabase) {
 		
 		this.fileScanner = fileScanner;
 		this.genericPromptCaller = genericPromptCaller;
-
+		this.promptConfiguration = promptConfiguration;
+		this.promptResponseDatabase = promptResponseDatabase;
+		
+		List<PipelinePrompt> promptPipeline = promptConfiguration.getChain();
+		Flux<PromptResponse> pipeline = build(promptPipeline);
+		pipeline.subscribe(s-> log.info(s.toString()));
+		
 	}
 	
 	public Flux<PromptResponse> buildFileHistoryPipelineStage(PipelinePrompt pipelinePrompt){
 		
 		return PromptPipelineBuilder.<FileHistory, PromptResponse> instance()
-		.withTrigger(fileScanner.flux())
-		.prompting(f->{
-			return f
-			.flatMap(fh-> {
-				return Flux.fromStream(
-						genericPromptCaller.call(
-								pipelinePrompt.title(), 
-								pipelinePrompt.body() + " body: " +  fh.currentFile().body(), 
-								pipelinePrompt.outputStructure(),
-								jsonItemListConverter
-								)
-						.stream());
-			});
-		})
-		.persist(s->{
-			promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
-		})
-		.build();
+			.withTrigger(fileScanner.flux())
+			.prompting(f->{
+				return f
+				.flatMap(fh-> {
+					return Flux.fromStream(
+							genericPromptCaller.call(
+									pipelinePrompt.title(), 
+									pipelinePrompt.body() + " body: " +  fh.currentFile().body(), 
+									pipelinePrompt.outputStructure(),
+									jsonItemListConverter
+									)
+							.stream());
+				});
+			})
+			.persist(promptResponseDatabase::save)
+			.build();
 		
 	}
 	
@@ -98,22 +103,20 @@ public class PromptPipelineConfiguration {
 		PromptResponseConverter prc = (r) -> List.of(r);
 		
 		return PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
-				.withTrigger(fs)
-				.prompting(flux->{
-					return flux.flatMap(fpe-> 
-						Flux.fromStream(
-							genericPromptCaller.call(
-								pipelinePrompt.title(), 
-								pipelinePrompt.body() + " body: " +  fpe.response(), 
-								pipelinePrompt.outputStructure(),
-								prc
-								).stream())
-							);	
-				})
-				.persist(pr-> {
-					promptResponseDatabase.save(pr);
-				})
-				.build();
+			.withTrigger(fs)
+			.prompting(flux->{
+				return flux.flatMap(fpe-> 
+					Flux.fromStream(
+						genericPromptCaller.call(
+							pipelinePrompt.title(), 
+							pipelinePrompt.body() + " body: " +  fpe.response(), 
+							pipelinePrompt.outputStructure(),
+							prc
+							).stream())
+						);	
+			})
+			.persist(promptResponseDatabase::save)
+			.build();
 			
 	}
 	
@@ -150,25 +153,7 @@ public class PromptPipelineConfiguration {
 		PipelinePrompt subscribePrompt = responsePrompts.get(responsePrompts.size()-1);
 	
 		Flux<PromptResponse> fs = promptTitleMap.get(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + subscribePrompt.title());
-		
-//		PipelinePrompt solidFileSystemEventPipelinePrompt = new PipelinePrompt(
-//				PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name(),
-//				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
-//				PromptConfiguration.SOLID_COMPLAINCE_PROMPT,
-//				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT
-//				);
-//		
-//		Flux<PromptResponse> fs = buildFileHistoryPipelineStage(solidFileSystemEventPipelinePrompt);
-//		
-//		PipelinePrompt priorityClassificationPipelineStage = new PipelinePrompt(
-//				PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
-//				PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE,
-//				PromptConfiguration.PRIORITY_ORDER_PROMPT,
-//				PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT
-//				);
-//		
-//		Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs, priorityClassificationPipelineStage);
-//		
+
 		return fs;
 		
 	}

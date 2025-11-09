@@ -25,3 +25,43 @@ app:
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
+  
+prompt-config:
+  chain:
+    - 
+      event: FILE_SYS_HASH_CHANGED_EVENT
+      title: SOLID_COMPLIANCE
+      body: |
+        Given the code below, ensure that it complies to SOLID principals.
+        You might not have external context for some classes so the assessment should just reason about the immediate code. 
+        If it doesn't immediately break principals state that it is compliant.
+        \n\r ---------- \n\r 
+      outputStructure: |
+        Output json, as 
+          [{
+           className:String, 
+           compliance:YES|NO, 
+           principle:String, 
+           task:String, 
+           reason:String
+          }, ... etc
+          ]
+         A single item must be encaptulated in an array.
+    -
+      event: PROMPT_RESPONSE_EVENT_SOLID_COMPLIANCE
+      title: PRIORITY_ORDER
+      body: |
+        Given this SOLID compliance assessment, define a priority for the rectification
+        of the issue. If the compliance assessment was compliant, the impact weight must be 0. A large issue should have 
+        a an impact weight of 10. Typically, Issues in adapters would have less priorty than issues in the core application layer.
+        Issues in interfaces would hold the highest priorty. Provide clear rationale in the response.
+      outputStructure: |
+        Provide response in the following json format,
+          {
+            inputSummary: String,
+            impactRationale: String,
+            impactWeight: Number 1 to 10
+          }
+          If there are no responses, respond with an empty list.
+          If there is only one respone, make sure its wrapped in a list.
+

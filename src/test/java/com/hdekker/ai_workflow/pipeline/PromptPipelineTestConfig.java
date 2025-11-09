@@ -34,24 +34,6 @@ public class PromptPipelineTestConfig {
 	Prompter prompter() {
 		return (s, structure) -> Flux.just(stub);
 	}
-	
-	List<PipelinePrompt> testPipelinePromptList(){
-		
-		return List.of(
-				new PipelinePrompt(
-						PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name(),
-						PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
-						PromptConfiguration.SOLID_COMPLAINCE_PROMPT,
-						PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT
-						),
-				new PipelinePrompt(
-						PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
-						PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE,
-						PromptConfiguration.PRIORITY_ORDER_PROMPT,
-						PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT
-						)
-				);
-		
-	}
+
 	
 }
