@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.pipeline.domain;
 
 /**
  *  To capture configuration of a prompt for

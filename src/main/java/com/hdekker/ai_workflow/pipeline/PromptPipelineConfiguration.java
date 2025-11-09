@@ -1,6 +1,5 @@
 package com.hdekker.ai_workflow.pipeline;
 
-import java.time.Duration;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -15,10 +14,10 @@ import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.llm.PromptResponseConverter;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
+import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 
 import reactor.core.publisher.Flux;
@@ -39,9 +38,6 @@ public class PromptPipelineConfiguration {
 	
 	@Autowired
 	PromptResponseDatabase promptResponseDatabase;
-	
-	// should trigger update
-	record FilePromptEvent(FileMetadata event, PromptResponse result) {}
 	
 	ObjectMapper om = new ObjectMapper();
 	
@@ -69,9 +65,13 @@ public class PromptPipelineConfiguration {
 
 	}
 	
-	public Flux<PromptResponse> build(){
+	public Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
 		
-		Flux<FilePromptEvent> fs = PromptPipelineBuilder.<FileHistory, FilePromptEvent> instance()
+//		promptPipeline.stream()
+//			.map(f-> )
+//		
+		
+		Flux<PromptResponse> fs = PromptPipelineBuilder.<FileHistory, PromptResponse> instance()
 				.withTrigger(fileScanner.flux())
 				.prompting(f->{
 					return f
@@ -84,12 +84,8 @@ public class PromptPipelineConfiguration {
 										PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
 										jsonItemListConverter
 										)
-								.stream()
-								.map(sc-> {
-									return new FilePromptEvent(fh.currentFile(), sc);
-								}));
+								.stream());
 					});
-							//.doOnNext(fpe-> log.info(fpe.toString()));
 				})
 				.persist(s->{
 					promptResponseDatabase.save(new PromptResponse(PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE, s.toString()));
@@ -98,14 +94,14 @@ public class PromptPipelineConfiguration {
 			
 			PromptResponseConverter prc = (r) -> List.of(r);
 			
-			Flux<PromptResponse> fs2  = PromptPipelineBuilder.<FilePromptEvent, PromptResponse> instance()
-				.withTrigger(fs.window(Duration.ofSeconds(5)).flatMap(f->f))
+			Flux<PromptResponse> fs2  = PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
+				.withTrigger(fs)
 				.prompting(flux->{
 					return flux.flatMap(fpe-> 
 						Flux.fromStream(
 							genericPromptCaller.call(
 								PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE, 
-								fpe.result.toString() + " " + PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.event.body(), 
+								PromptConfiguration.PRIORITY_ORDER_PROMPT + " body: " +  fpe.response(), 
 								PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT,
 								prc
 								).stream())

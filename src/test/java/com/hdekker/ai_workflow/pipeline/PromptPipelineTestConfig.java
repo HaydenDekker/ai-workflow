@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -7,6 +9,7 @@ import org.springframework.context.annotation.Profile;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.llm.Prompter;
+import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 
 import reactor.core.publisher.Flux;
 
@@ -28,6 +31,12 @@ public class PromptPipelineTestConfig {
 	@Primary
 	Prompter prompter() {
 		return (s, structure) -> Flux.just(stub);
+	}
+	
+	List<PipelinePrompt> testPipelinePromptList(){
+		
+		return List.of();
+		
 	}
 	
 }

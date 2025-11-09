@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.reports.ReportRestController;
 
@@ -46,6 +47,9 @@ public class PromptPipelineTest {
 	ReportRestController reportRestController;
 	
 	@Autowired
+	PromptPipelineTestConfig testConfig;
+	
+	@Autowired
 	PromptPipelineConfiguration promptPipelineConfiguration;
 	
 	
@@ -66,7 +70,9 @@ public class PromptPipelineTest {
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		
-		Flux<PromptResponse> pipeline = promptPipelineConfiguration.build();
+		List<PipelinePrompt> promptPipeline = testConfig.testPipelinePromptList();
+		
+		Flux<PromptResponse> pipeline = promptPipelineConfiguration.build(promptPipeline);
 		pipeline.subscribe(s-> log.info(s.toString()));
 		
 		File configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
