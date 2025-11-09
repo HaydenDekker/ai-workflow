@@ -11,13 +11,18 @@ import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaApi.Model;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import com.hdekker.ai_workflow.TestProfiles;
 
 @SpringBootTest
+@ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
 public class OllamaAdapterTest {
 	
 	Logger log = LoggerFactory.getLogger(OllamaAdapterTest.class);
 	
-	public static final String TEST_ENDPOINT_OLLAMA = "http://192.168.2.108:11434";
+	public static final String TEST_ENDPOINT_OLLAMA = "http://127.0.0.1:11434";
+			//"http://192.168.2.108:11434";
 
 	@Test
 	public void givenOllamaEndpoint_ExpectBuilderReturnsChatClient() {

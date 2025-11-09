@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Profile;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.PromptTriggerEvent;
+import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 
 import reactor.core.publisher.Flux;
 
@@ -35,7 +37,20 @@ public class PromptPipelineTestConfig {
 	
 	List<PipelinePrompt> testPipelinePromptList(){
 		
-		return List.of();
+		return List.of(
+				new PipelinePrompt(
+						PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name(),
+						PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
+						PromptConfiguration.SOLID_COMPLAINCE_PROMPT,
+						PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT
+						),
+				new PipelinePrompt(
+						PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
+						PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE,
+						PromptConfiguration.PRIORITY_ORDER_PROMPT,
+						PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT
+						)
+				);
 		
 	}
 	

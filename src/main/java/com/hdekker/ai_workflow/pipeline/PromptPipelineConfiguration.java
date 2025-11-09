@@ -1,6 +1,9 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +21,7 @@ import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.llm.PromptResponseConverter;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.PromptTriggerEvent;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 
 import reactor.core.publisher.Flux;
@@ -113,28 +117,59 @@ public class PromptPipelineConfiguration {
 			
 	}
 	
+	Map<String, Flux<PromptResponse>> promptTitleMap = new HashMap<String, Flux<PromptResponse>>();
+	
 	
 	public Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
 		
-//		promptPipeline.stream()
-//			.map(f-> )
+		List<PipelinePrompt> responsePrompts = new ArrayList<PipelinePrompt>();
+		
+		promptPipeline.stream()
+			.forEach(f-> {
+				if(f.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
+					
+					Flux<PromptResponse> pr = buildFileHistoryPipelineStage(f);
+					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + f.title(), pr);
+				
+				}else {
+					responsePrompts.add(f);
+				}
+			});
+		
+		responsePrompts.forEach(pp->{
+			Flux<PromptResponse> fs = promptTitleMap.get(pp.event());
+			Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs, pp);
+			promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), fs2);
+		});
+		
+		if(responsePrompts.size()==0) {
+			log.warn("User input empty list, consider adding validation to interface.");
+			return Flux.empty();
+		}
+		
+		PipelinePrompt subscribePrompt = responsePrompts.get(responsePrompts.size()-1);
 	
-		PipelinePrompt solidFileSystemEventPipelinePrompt = new PipelinePrompt(
-				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
-				PromptConfiguration.SOLID_COMPLAINCE_PROMPT,
-				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT
-				);
+		Flux<PromptResponse> fs = promptTitleMap.get(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + subscribePrompt.title());
 		
-		Flux<PromptResponse> fs = buildFileHistoryPipelineStage(solidFileSystemEventPipelinePrompt);
-		
-		PipelinePrompt priorityClassificationPipelineStage = new PipelinePrompt(
-				PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE,
-				PromptConfiguration.PRIORITY_ORDER_PROMPT,
-				PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT
-				);
-		
-		Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs, priorityClassificationPipelineStage);
-		return fs2;
+//		PipelinePrompt solidFileSystemEventPipelinePrompt = new PipelinePrompt(
+//				PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name(),
+//				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
+//				PromptConfiguration.SOLID_COMPLAINCE_PROMPT,
+//				PromptConfiguration.SOLID_COMPLIANCE_PROMPT_OUTPUT
+//				);
+//		
+//		Flux<PromptResponse> fs = buildFileHistoryPipelineStage(solidFileSystemEventPipelinePrompt);
+//		
+//		PipelinePrompt priorityClassificationPipelineStage = new PipelinePrompt(
+//				PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + PromptConfiguration.SOLID_COMPLIANCE_PROMPT_TITLE,
+//				PromptConfiguration.PRIORITY_ORDER_PROMPT_TITLE,
+//				PromptConfiguration.PRIORITY_ORDER_PROMPT,
+//				PromptConfiguration.PRIORITY_ORDER_PROMPT_OUTPUT
+//				);
+//		
+//		Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs, priorityClassificationPipelineStage);
+//		
+		return fs;
 		
 	}
 
