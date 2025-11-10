@@ -16,7 +16,7 @@ public class PromptResponseDatabase {
 	public List<PromptResponse> responseList(){
 		return repository.findAll()
 				.stream()
-				.map(e-> new PromptResponse(e.getPromptTitle(), e.response))
+				.map(e-> new PromptResponse(e.getPromptTitle(), e.getFileName(), e.response))
 				.toList();
 	}
 	
@@ -25,13 +25,15 @@ public class PromptResponseDatabase {
 		PromptResponseEntity pre = new PromptResponseEntity();
 		pre.setResponse(response.response());
 		pre.setPromptTitle(response.promptTitle());
+		pre.setFileName(response.promptFile());
 		repository.save(pre);
+		
 	}
 
 	public List<PromptResponse> findAllByPromptTitle(String prompt) {
 		return repository.findAllByPromptTitle(prompt)
 				.stream()
-				.map(pre->new PromptResponse(pre.getPromptTitle(), pre.getResponse()))
+				.map(pre->new PromptResponse(pre.getPromptTitle(), pre.getFileName(), pre.getResponse()))
 				.toList();
 	}
 	

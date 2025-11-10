@@ -44,7 +44,7 @@ public class PromptPipelineConfiguration {
 	
 	ObjectMapper om = new ObjectMapper();
 	
-	PromptResponseConverter jsonItemListConverter = (s)->{
+	PromptResponseConverter<PromptResponse> jsonItemListConverter = (s)->{
 		String json = LLMOutputParsingUtils.extractJsonContent(s.response());
 		List<Object> list = List.of();
 		try {
@@ -55,7 +55,7 @@ public class PromptPipelineConfiguration {
 		}
 		return list
 			.stream()
-			.map(resp->new PromptResponse(s.promptTitle(), resp.toString()))
+			.map(resp->new PromptResponse(s.promptTitle(), s.promptFile(), resp.toString()))
 			.toList();
 	};
 	
@@ -80,42 +80,40 @@ public class PromptPipelineConfiguration {
 		
 		return PromptPipelineBuilder.<FileHistory, PromptResponse> instance()
 			.withTrigger(fileScanner.flux())
-			.prompting(f->{
-				return f
-				.flatMap(fh-> {
-					return Flux.fromStream(
-							genericPromptCaller.call(
-									pipelinePrompt.title(), 
-									pipelinePrompt.body() + " body: " +  fh.currentFile().body(), 
-									pipelinePrompt.outputStructure(),
-									jsonItemListConverter
-									)
-							.stream());
-				});
-			})
+			.prompting(f->
+				f.map(fh-> 
+					genericPromptCaller.call(
+							pipelinePrompt.title(), 
+							pipelinePrompt.body() + " body: " +  fh.currentFile().body(), 
+							pipelinePrompt.outputStructure(),
+							fh.currentFile().url()
+						)
+				)
+			)
 			.persist(promptResponseDatabase::save)
+			.split(jsonItemListConverter)
 			.build();
 		
 	}
 	
 	Flux<PromptResponse> buildPromptResponsePipelineStage(Flux<PromptResponse> fs, PipelinePrompt pipelinePrompt){
 		
-		PromptResponseConverter prc = (r) -> List.of(r);
+		// TODO Low priority - can remove type argument, as output is now always a prompt response.
+		PromptResponseConverter<PromptResponse> prc = (r) -> List.of(r);
 		
 		return PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
 			.withTrigger(fs)
-			.prompting(flux->{
-				return flux.flatMap(fpe-> 
-					Flux.fromStream(
-						genericPromptCaller.call(
-							pipelinePrompt.title(), 
-							pipelinePrompt.body() + " body: " +  fpe.response(), 
-							pipelinePrompt.outputStructure(),
-							prc
-							).stream())
-						);	
-			})
+			.prompting(flux->
+				flux.map(fpe-> 
+					genericPromptCaller.call(
+						pipelinePrompt.title(), 
+						pipelinePrompt.body() + " body: " +  fpe.response(), 
+						pipelinePrompt.outputStructure(),
+						fpe.promptFile())
+					)	
+			)
 			.persist(promptResponseDatabase::save)
+			.split(prc)
 			.build();
 			
 	}

@@ -20,11 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
-import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.reports.ReportRestController;
-
-import reactor.core.publisher.Flux;
 
 /**
  * Pre-written prompt chains can target any 
@@ -45,15 +41,6 @@ public class PromptPipelineTest {
 	
 	@Autowired
 	ReportRestController reportRestController;
-	
-	@Autowired
-	PromptPipelineTestConfig testConfig;
-	
-	@Autowired
-	PromptConfiguration promptConfiguration;
-	
-	@Autowired
-	PromptPipelineConfiguration promptPipelineConfiguration;
 	
 	
 	/**
@@ -84,8 +71,9 @@ public class PromptPipelineTest {
 				.collectList()
 				.block();
 
+		// TODO make explicit - split after save.
 		assertThat(reportItems)
-			.hasSizeGreaterThan(0);
+			.hasSize(1);
 		
 		assertThat(reportItems.get(0).promptFile())
 			.isNotNull();
@@ -94,8 +82,9 @@ public class PromptPipelineTest {
 				.collectList()
 				.block();
 		
-		assertThat(results)
-			.hasSizeGreaterThan(0);
+		// TODO make explicit - split above outputs 2 items.
+		assertThat(results.size())
+			.isEqualTo(2);
 		
 	}
 	

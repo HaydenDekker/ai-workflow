@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.pipeline.PromptResponse;
-import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
@@ -36,6 +35,7 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 		
 		add(new H2("AI Workflow"));
 		responseGrid.addColumn(PromptResponse::promptTitle).setHeader("Prompt Title");
+		responseGrid.addColumn(PromptResponse::promptFile).setHeader("File");
 		//responseGrid.addColumn(PromptResponse::response).setHeader("Response");
 		responseGrid.setItemDetailsRenderer(new ComponentRenderer<Div, PromptResponse>(Div::new, (c,v)->{
 			c.add(new Markdown(v.response()));

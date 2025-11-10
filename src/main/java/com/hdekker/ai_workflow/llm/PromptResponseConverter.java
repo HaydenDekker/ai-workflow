@@ -9,6 +9,6 @@ import com.hdekker.ai_workflow.pipeline.PromptResponse;
  * with multiple suggestions or event no suggestions.
  * 
  */
-public interface PromptResponseConverter {
-	List<PromptResponse> convert(PromptResponse promptResponse);
+public interface PromptResponseConverter<K> {
+	List<K> convert(K promptResponse);
 }
