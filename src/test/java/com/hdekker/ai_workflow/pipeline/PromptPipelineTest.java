@@ -87,6 +87,9 @@ public class PromptPipelineTest {
 		assertThat(reportItems)
 			.hasSizeGreaterThan(0);
 		
+		assertThat(reportItems.get(0).promptFile())
+			.isNotNull();
+		
 		List<PromptResponse> results = reportRestController.resultsForPrompt("PRIORITY_ORDER")
 				.collectList()
 				.block();

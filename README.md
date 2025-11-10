@@ -14,7 +14,14 @@ Building up to an agent,
 
 4. Advance test to include scenario test cases, use compile time configuration.
 
-5. Display prompt responses.
+## Prompt Response View
+
+1. (done) Display prompt responses.
+
+2. Show source file
+
+3. Show prompt input for a response.
+
 
 ## TODO List
 

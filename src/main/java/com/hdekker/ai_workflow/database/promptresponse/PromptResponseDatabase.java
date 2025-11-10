@@ -23,7 +23,7 @@ public class PromptResponseDatabase {
 	public void save(PromptResponse response) {
 		
 		PromptResponseEntity pre = new PromptResponseEntity();
-		pre.setResponse(response.promptTitle());
+		pre.setResponse(response.response());
 		pre.setPromptTitle(response.promptTitle());
 		repository.save(pre);
 	}
