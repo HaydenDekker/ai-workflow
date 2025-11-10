@@ -10,9 +10,11 @@ Building up to an agent,
 
 2. (done) create a second request triggered off an initial request.
 
-3. Move to dynamic configuration of prompt chain.
+3. (done) Move to dynamic configuration of prompt chain
 
 4. Advance test to include scenario test cases, use compile time configuration.
+
+5. Display prompt responses.
 
 ## TODO List
 
