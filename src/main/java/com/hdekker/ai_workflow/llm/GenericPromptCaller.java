@@ -15,7 +15,7 @@ public class GenericPromptCaller {
 		
 		return prompter.call(prompt, outputStructure)
 				.reduce((a,b)-> a+b)
-				.map(s-> new PromptResponse(promptTitle, fileName, s))
+				.map(s-> new PromptResponse(promptTitle, fileName, prompt, s))
 				.block();
 		
 	}

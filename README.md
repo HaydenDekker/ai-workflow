@@ -6,15 +6,23 @@ Aiming to have AI act as the navigator rather than the driver of pair programmin
 
 Building up to an agent,
 
-1. (done) pipe a request through a configured LLM prompt and save to a database.
+- (done) pipe a request through a configured LLM prompt and save to a database.
 
-2. (done) create a second request triggered off an initial request.
+- (done) create a second request triggered off an initial request.
 
-3. (done) Move to dynamic configuration of prompt chain
+- (done) Move to dynamic configuration of prompt chain
 
-4. Advance test to include scenario test cases, use compile time configuration.
+- (done) Split prompt after persisting.
 
-5. Split prompt after persisting.
+- (Cancelled - its simpler to adjust the prompt to provide just the filtered answers) Add filter after the split to stop optimise usage of GPU when no further processing is required.
+
+- Response should include input pre-pended in a single string. (simplest approach, otherwise could enrich using message headers at beginning of prompt)
+
+- Messages, use spring message objects to pass content along the chain
+
+### Prompt Response Splitter
+
+- Prompt provides 0,1,n of responses
 
 ## Prompt Response View
 
@@ -24,6 +32,9 @@ Building up to an agent,
 
 3. Show prompt input for a response.
 
+## Prompt Content Test
+
+- scenario test cases, setup examples and expectations.
 
 ## TODO List
 

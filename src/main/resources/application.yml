@@ -30,37 +30,38 @@ prompt-config:
   chain:
     - 
       event: FILE_SYS_HASH_CHANGED_EVENT
-      title: SOLID_COMPLIANCE
+      title: SOLID_NON_COMPLIANCE
       body: |
-        Given the code below, ensure that it complies to SOLID principals.
+        Given the code below, identify any non-compliances to SOLID principals.
         You might not have external context for some classes so the assessment should just reason about the immediate code. 
-        If it doesn't immediately break principals state that it is compliant.
         \n\r ---------- \n\r 
       outputStructure: |
         Output json, as 
           [{
            className:String, 
-           compliance:YES|NO, 
+           compliance:NO, 
            principle:String, 
            task:String, 
            reason:String
           }, ... etc
           ]
          A single item must be encaptulated in an array.
+         If there are no non-compliances output just an empty array.
     -
-      event: PROMPT_RESPONSE_EVENT_SOLID_COMPLIANCE
+      event: PROMPT_RESPONSE_EVENT_SOLID_NON_COMPLIANCE
       title: PRIORITY_ORDER
       body: |
-        Given this SOLID compliance assessment, define a priority for the rectification
-        of the issue. If the compliance assessment was compliant, the impact weight must be 0. A large issue should have 
-        a an impact weight of 10. Typically, Issues in adapters would have less priorty than issues in the core application layer.
-        Issues in interfaces would hold the highest priorty. Provide clear rationale in the response.
+        Given this SOLID non-compliance assessment, define a priority for the rectification of the issue.
+        A large issue should have a an impact weight of 3, while a small issue 1. 
+        To determine priortyWeight,
+        - 1 if relevant to external infrastructure adapters, such as database repositories, rest controllers or any thirdparty tool making IO requests.
+        - 2 if issues in function of the core application layer.
+        - 3 if issues in interfaces between adapters and core.
       outputStructure: |
         Provide response in the following json format,
           {
-            inputSummary: String,
-            impactRationale: String,
-            impactWeight: Number 1 to 10
+            priorityWeight: Number 1 .. 3
+            priotyRationale: String,
           }
           If there are no responses, respond with an empty list.
           If there is only one respone, make sure its wrapped in a list.

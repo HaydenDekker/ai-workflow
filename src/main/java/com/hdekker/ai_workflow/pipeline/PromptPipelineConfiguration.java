@@ -55,7 +55,7 @@ public class PromptPipelineConfiguration {
 		}
 		return list
 			.stream()
-			.map(resp->new PromptResponse(s.promptTitle(), s.promptFile(), resp.toString()))
+			.map(resp->new PromptResponse(s.promptTitle(), s.promptFileName(), s.promptInput(), resp.toString()))
 			.toList();
 	};
 	
@@ -109,8 +109,8 @@ public class PromptPipelineConfiguration {
 						pipelinePrompt.title(), 
 						pipelinePrompt.body() + " body: " +  fpe.response(), 
 						pipelinePrompt.outputStructure(),
-						fpe.promptFile())
-					)	
+						fpe.promptFileName())
+					)
 			)
 			.persist(promptResponseDatabase::save)
 			.split(prc)

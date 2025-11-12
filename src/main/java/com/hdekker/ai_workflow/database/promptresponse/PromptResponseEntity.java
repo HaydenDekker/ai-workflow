@@ -22,10 +22,23 @@ public class PromptResponseEntity {
 	String promptTitle;
 	
 	@Lob
+	public String promptInput;
+	
+	@Lob
 	public String response;
 	
-	String fileName;
 	
+	String fileName;
+
+	
+	public String getPromptInput() {
+		return promptInput;
+	}
+
+	public void setPromptInput(String promptInput) {
+		this.promptInput = promptInput;
+	}
+
 	public String getFileName() {
 		return fileName;
 	}

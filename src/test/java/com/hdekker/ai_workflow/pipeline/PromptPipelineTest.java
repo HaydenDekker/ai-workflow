@@ -67,7 +67,8 @@ public class PromptPipelineTest {
 		
 		Thread.sleep(2000);
 		
-		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_COMPLIANCE")
+		// TODO name taken from current config. Need to create test config.
+		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_NON_COMPLIANCE")
 				.collectList()
 				.block();
 
@@ -75,7 +76,7 @@ public class PromptPipelineTest {
 		assertThat(reportItems)
 			.hasSize(1);
 		
-		assertThat(reportItems.get(0).promptFile())
+		assertThat(reportItems.get(0).promptFileName())
 			.isNotNull();
 		
 		List<PromptResponse> results = reportRestController.resultsForPrompt("PRIORITY_ORDER")
@@ -85,6 +86,10 @@ public class PromptPipelineTest {
 		// TODO make explicit - split above outputs 2 items.
 		assertThat(results.size())
 			.isEqualTo(2);
+		
+		// TODO text taken from output
+		assertThat(results.get(0).response())
+			.contains("SOLID principals");
 		
 	}
 	

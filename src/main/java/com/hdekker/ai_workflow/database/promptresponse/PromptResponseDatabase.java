@@ -16,16 +16,18 @@ public class PromptResponseDatabase {
 	public List<PromptResponse> responseList(){
 		return repository.findAll()
 				.stream()
-				.map(e-> new PromptResponse(e.getPromptTitle(), e.getFileName(), e.response))
+				.map(e-> new PromptResponse(e.getPromptTitle(), e.getFileName(), e.getPromptInput(), e.response))
 				.toList();
 	}
 	
 	public void save(PromptResponse response) {
 		
+		// TODO move into entity as builder
 		PromptResponseEntity pre = new PromptResponseEntity();
 		pre.setResponse(response.response());
 		pre.setPromptTitle(response.promptTitle());
-		pre.setFileName(response.promptFile());
+		pre.setFileName(response.promptFileName());
+		pre.setPromptInput(response.promptInput());
 		repository.save(pre);
 		
 	}
@@ -33,7 +35,7 @@ public class PromptResponseDatabase {
 	public List<PromptResponse> findAllByPromptTitle(String prompt) {
 		return repository.findAllByPromptTitle(prompt)
 				.stream()
-				.map(pre->new PromptResponse(pre.getPromptTitle(), pre.getFileName(), pre.getResponse()))
+				.map(pre->new PromptResponse(pre.getPromptTitle(), pre.getFileName(), pre.getPromptInput(), pre.getResponse()))
 				.toList();
 	}
 	
