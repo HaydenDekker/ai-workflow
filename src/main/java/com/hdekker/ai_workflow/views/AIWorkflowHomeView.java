@@ -33,14 +33,20 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 	
 	AIWorkflowHomeView(){
 		
+		setHeightFull(); 
+		
 		add(new H2("AI Workflow"));
 		responseGrid.addColumn(PromptResponse::promptTitle).setHeader("Prompt Title");
 		responseGrid.addColumn(PromptResponse::promptFileName).setHeader("File");
 		//responseGrid.addColumn(PromptResponse::response).setHeader("Response");
 		responseGrid.setItemDetailsRenderer(new ComponentRenderer<Div, PromptResponse>(Div::new, (c,v)->{
-			c.add(new Markdown(v.promptInput() + v.response()));
+			Markdown md = new Markdown(v.promptInput() + v.response());
+			md.addClassName("markdown-output");
+			c.add(md);
 		}));
 		add(responseGrid);
+		
+		responseGrid.setHeightFull();
 		
 	}
 
@@ -49,7 +55,4 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 		List<PromptResponse> list = promptResponseDatabase.responseList();
 		responseGrid.setItems(list);
 	}
-	
-	
-
 }

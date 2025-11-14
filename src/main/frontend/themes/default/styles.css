@@ -1,0 +1,26 @@
+/* Add your styles here */
+
+vaadin-markdown {
+ max-width: 100%;
+ overflow-wrap: break-word;
+ word-wrap: break-word;
+ word-break: break-word;
+}
+
+vaadin-markdown pre,
+vaadin-markdown code {
+ white-space: pre-wrap;
+}
+
+.markdown-output h2 {
+    /* Style all H2 headings *inside* the Markdown component */
+    color: var(--lumo-error-color);
+    border-bottom: 2px solid var(--lumo-contrast-10pct);
+    padding-bottom: var(--lumo-space-s);
+}
+
+.markdown-output p {
+    /* Style all paragraphs inside the Markdown component */
+    line-height: 1.6;
+    margin-bottom: var(--lumo-space-m);
+}
