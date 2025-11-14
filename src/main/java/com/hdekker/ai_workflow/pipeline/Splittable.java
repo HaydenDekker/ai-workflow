@@ -1,9 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
-import com.hdekker.ai_workflow.llm.PromptResponseConverter;
-
-public interface Splittable<T,K> {
+public interface Splittable<T,R,K> {
 	
-	PromptPipelineBuilder<T,K> split(PromptResponseConverter<K> splitter);
+	PromptPipelineBuilder<T,K> split(SplittableStrategy<R, K> splitter);
 
 }

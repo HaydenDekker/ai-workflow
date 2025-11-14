@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: ai-workflow
+  ai:
+    chat:
+      client:
+        enabled: false
+  datasource:
+    driver-class-name: org.h2.Driver #org.postgresql.Driver
+    url: jdbc:h2:mem:testdb #jdbc:postgresql://localhost:5432/test-db
+    username: app_user
+    password: mysecretpassword
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+app:
+  ai:
+    endpoint: http://127.0.0.1:11434
+    model: gemma3:4b
+scanner:
+  url: file:/test/project-root
+  output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests

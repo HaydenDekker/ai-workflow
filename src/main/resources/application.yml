@@ -18,10 +18,10 @@ spring:
       ddl-auto: create-drop
 app:
   ai:
-    endpoint: http://127.0.0.1:11434
-    model: gemma3:4b
-    #endpoint: http://192.168.2.108:11434
-    #model: gemma3:27b
+    #endpoint: http://127.0.0.1:11434
+    #model: gemma3:4b
+    endpoint: http://192.168.2.108:11434
+    model: gemma3:27b
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
@@ -32,36 +32,40 @@ prompt-config:
       event: FILE_SYS_HASH_CHANGED_EVENT
       title: SOLID_NON_COMPLIANCE
       body: |
-        Given the code below, identify any non-compliances to SOLID principals.
-        You might not have external context for some classes so the assessment should just reason about the immediate code. 
-        \n\r ---------- \n\r 
+        Is this code directly breaking SOLID principles? Your answer must consider the code as is. It must not attempt to reason about future uses. It must not consider if users misuse it either.
       outputStructure: |
-        Output json, as 
-          [{
-           className:String, 
-           compliance:NO, 
-           principle:String, 
-           task:String, 
-           reason:String
-          }, ... etc
-          ]
-         A single item must be encaptulated in an array.
-         If there are no non-compliances output just an empty array.
+        
+        First, list each principle and assessment of the code against the principle before outputing a final answer.
+        The final answer must be a "YES" or "NO" followed by a json array following these rules:
+        If the answer is NO then output an empty json array,
+        ```json
+         []
+        ```
+        If the answer is YES, it does break a principle, then output an array of analysis objects where each object contains the following:
+        ```json
+        {
+          "principle": String,
+          "issue": String,
+          "fix": String
+        }
+        ```
     -
       event: PROMPT_RESPONSE_EVENT_SOLID_NON_COMPLIANCE
       title: PRIORITY_ORDER
       body: |
         Given this SOLID non-compliance assessment, define a priority for the rectification of the issue.
-        A large issue should have a an impact weight of 3, while a small issue 1. 
-        To determine priortyWeight,
-        - 1 if relevant to external infrastructure adapters, such as database repositories, rest controllers or any thirdparty tool making IO requests.
-        - 2 if issues in function of the core application layer.
-        - 3 if issues in interfaces between adapters and core.
       outputStructure: |
+        To determine the priortiy use the following table:
+        SOLID Violation Severity (Y-Axis)	Core Logic Class (High Impact)	Adapter/Service Class (Medium Impact)	Utility/Helper Class (Low Impact)
+        Rank 1: SRP/OCP	   Highest Priority (P1)	High Priority (P2)	Medium Priority (P3)
+        Rank 2: LSP/ISP	   High Priority (P2)	Medium Priority (P3)	Lower Priority (P4)
+        Rank 3: DIP	   Medium Priority (P3)	Lower Priority (P4)	Lowest Priority (P5)
+        First explain your understanding of the table and then create the response in the format below,
         Provide response in the following json format,
           {
-            priorityWeight: Number 1 .. 3
+            priorityWeight: Number 1 .. 5
             priotyRationale: String,
+            explainationOfRectification: String
           }
           If there are no responses, respond with an empty list.
           If there is only one respone, make sure its wrapped in a list.

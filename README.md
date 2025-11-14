@@ -16,7 +16,7 @@ Building up to an agent,
 
 - (Cancelled - its simpler to adjust the prompt to provide just the filtered answers) Add filter after the split to stop optimise usage of GPU when no further processing is required.
 
-- Response should include input pre-pended in a single string. (simplest approach, otherwise could enrich using message headers at beginning of prompt)
+- (done) Response should include input pre-pended in a single string. (simplest approach, otherwise could enrich using message headers at beginning of prompt)
 
 - Messages, use spring message objects to pass content along the chain
 
@@ -34,9 +34,17 @@ Building up to an agent,
 
 ## Prompt Content Test
 
-- scenario test cases, setup examples and expectations.
+Need to work specific prompts to get them conistent accross various models. 
+That can be acheived by adding additional prompt chains that trigger from
+specific folder root where the test files can be placed in those roots and
+the output of the chain viewed via the UI.
+
+- dynamic root folder monitor configuration
+
+- multiple chains in configuration
 
 ## TODO List
 
-- Prompt output of list split into next prompt.
-- List of outputs aggregated to single prompt.
+- List of outputs aggregated to single prompt. / but better being a map().reduce() operation.
+- When should a prompt chain state be invalidated? Change of file (yes), change of prompt (yes), 
+  but only have to redo the invalidated steps, easier to redo the whole step initially.

@@ -42,7 +42,6 @@ public class PromptPipelineTest {
 	@Autowired
 	ReportRestController reportRestController;
 	
-	
 	/**
 	 * 
 	 * dyn config
@@ -88,7 +87,7 @@ public class PromptPipelineTest {
 			.isEqualTo(2);
 		
 		// TODO text taken from output
-		assertThat(results.get(0).response())
+		assertThat(results.get(0).promptInput())
 			.contains("SOLID principals");
 		
 	}

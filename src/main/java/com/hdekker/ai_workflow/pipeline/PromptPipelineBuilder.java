@@ -1,9 +1,8 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import com.hdekker.ai_workflow.llm.PromptResponseConverter;
 
 import reactor.core.publisher.Flux;
 
@@ -12,13 +11,14 @@ public class PromptPipelineBuilder<T, K> implements
 	Triggered<T, K>, 
 	PromptMapped<T, K>,
 	Persistable<T, K>,
-	Splittable<T,K> {
-	
+	Splittable<T,K,K> {
+
 	// check event will trigger 
 	Flux<T> trigger;
 	Function<Flux<T>, Flux<K>> prompt;
 	Consumer<K> outputConsumer;
-	PromptResponseConverter<K> splitter;
+	SplittableStrategy<K, K> splitter;
+	Optional<Enrichable<T>> enrichable = Optional.empty();
 	
 	public static <T,K> Triggered<T, K> instance() {
 		return new PromptPipelineBuilder<T,K>();
@@ -37,22 +37,31 @@ public class PromptPipelineBuilder<T, K> implements
 	}
 	
 	public Flux<K> build(){
-		return prompt.apply(trigger)
+		return prompt.apply(
+					enrichable.map(en -> trigger.map(input->en.enrich(input)))
+						.orElse(trigger)
+				)
 				.doOnNext(outputConsumer)
 				.flatMap(p -> {
-					return Flux.fromStream(splitter.convert(p).stream());
+					return Flux.fromStream(splitter.split(p).stream());
 				});
 	}
 
 	@Override
-	public Splittable<T,K> persist(Consumer<K> outputConsumer) {
+	public Splittable<T,K,K> persist(Consumer<K> outputConsumer) {
 		this.outputConsumer = outputConsumer;
 		return this;
 	}
 
 	@Override
-	public PromptPipelineBuilder<T, K> split(PromptResponseConverter<K> splitter) {
+	public PromptPipelineBuilder<T, K> split(SplittableStrategy<K, K> splitter) {
 		this.splitter = splitter;
+		return this;
+	}
+
+	@Override
+	public PromptMapped<T,K> enrichFirst(Enrichable<T> enrich) {
+		this.enrichable = Optional.of(enrich);
 		return this;
 	}
 

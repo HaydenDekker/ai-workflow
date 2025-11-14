@@ -17,7 +17,6 @@ import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
-import com.hdekker.ai_workflow.llm.PromptResponseConverter;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.pipeline.domain.PromptTriggerEvent;
@@ -44,7 +43,7 @@ public class PromptPipelineConfiguration {
 	
 	ObjectMapper om = new ObjectMapper();
 	
-	PromptResponseConverter<PromptResponse> jsonItemListConverter = (s)->{
+	SplittableStrategy<PromptResponse, PromptResponse> jsonItemListConverter = (s)->{
 		String json = LLMOutputParsingUtils.extractJsonContent(s.response());
 		List<Object> list = List.of();
 		try {
@@ -99,10 +98,11 @@ public class PromptPipelineConfiguration {
 	Flux<PromptResponse> buildPromptResponsePipelineStage(Flux<PromptResponse> fs, PipelinePrompt pipelinePrompt){
 		
 		// TODO Low priority - can remove type argument, as output is now always a prompt response.
-		PromptResponseConverter<PromptResponse> prc = (r) -> List.of(r);
+		SplittableStrategy<PromptResponse, PromptResponse> prc = (r) -> List.of(r);
 		
 		return PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
 			.withTrigger(fs)
+			.enrichFirst(pr-> new PromptResponse(pr.promptTitle(), pr.promptFileName(), pr.promptInput(), pr.promptTitle() + "\n\r\n\r" +  pr.promptInput() + " Response: \n\r\n\r" + pr.response()))
 			.prompting(flux->
 				flux.map(fpe-> 
 					genericPromptCaller.call(
