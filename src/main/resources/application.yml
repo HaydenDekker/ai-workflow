@@ -15,7 +15,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
 app:
   ai:
     #endpoint: http://127.0.0.1:11434
@@ -36,6 +36,7 @@ prompt-config:
       outputStructure: |
         
         First, list each principle and assessment of the code against the principle before outputing a final answer.
+        For each answer use some common sense if the principle application is too much of an edge case.
         The final answer must be a "YES" or "NO" followed by a json array following these rules:
         If the answer is NO then output an empty json array,
         ```json
@@ -56,9 +57,9 @@ prompt-config:
         Given this SOLID non-compliance assessment, define a priority for the rectification of the issue.
       outputStructure: |
         To determine the priortiy use the following table:
-        SOLID Violation Severity (Y-Axis)	Core Logic Class (High Impact)	Adapter/Service Class (Medium Impact)	Utility/Helper Class (Low Impact)
-        Rank 1: SRP/OCP	   Highest Priority (P1)	High Priority (P2)	Medium Priority (P3)
-        Rank 2: LSP/ISP	   High Priority (P2)	Medium Priority (P3)	Lower Priority (P4)
+        SOLID Violation Severity (Y-Axis)	Core Logic Class (High Impact)	Adapter/Service Class (Medium Impact)	Utility/Helper Class (Low Impact)   Special Cases
+        Rank 1: SRP/OCP	   Highest Priority (P1)	High Priority (P2)	Medium Priority (P3)   No special cases
+        Rank 2: LSP/ISP	   High Priority (P2)	Medium Priority (P3)	Lower Priority (P4)  Builder Pattern ISP (P5)
         Rank 3: DIP	   Medium Priority (P3)	Lower Priority (P4)	Lowest Priority (P5)
         First explain your understanding of the table and then create the response in the format below,
         Provide response in the following json format,
@@ -69,4 +70,4 @@ prompt-config:
           }
           If there are no responses, respond with an empty list.
           If there is only one respone, make sure its wrapped in a list.
-
+  predefinedPromptFilePath: /test/prompts

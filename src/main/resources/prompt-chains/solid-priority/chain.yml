@@ -1,0 +1,11 @@
+chain:
+  - 
+    event: FILE_SYS_HASH_CHANGED_EVENT
+    title: SOLID_NON_COMPLIANCE
+    body: solid-compliance.md
+    outputStructure: solid-compliance-output.md
+  -
+    event: PROMPT_RESPONSE_EVENT_SOLID_NON_COMPLIANCE
+    title: PRIORITY_ORDER
+    body: solid-priority.md
+    outputStructure: solid-priority-output.md

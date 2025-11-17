@@ -27,9 +27,20 @@ public class PromptConfiguration {
 		this.chain = chain;
 	}
 	
+	String predefinedPromptFilePath;
+	
+	public String getPredefinedPromptFilePath() {
+		return predefinedPromptFilePath;
+	}
+
+	public void setPredefinedPromptFilePath(String predefinedPromptFilePath) {
+		this.predefinedPromptFilePath = predefinedPromptFilePath;
+	}
+
 	@PostConstruct
 	public void log() {
 		chain.forEach(pp->log.info(pp.toString()));
+		log.info("Pre-defined prompt/s, file path:" + predefinedPromptFilePath);
 	}
 
 }
