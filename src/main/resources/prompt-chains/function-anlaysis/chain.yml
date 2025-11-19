@@ -1,0 +1,6 @@
+chain:
+  - 
+    event: FILE_SYS_HASH_CHANGED_EVENT
+    title: FUNCTION_ANALYSIS
+    body: function-analysis.md
+    outputStructure: function-analysis-output.md

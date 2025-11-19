@@ -110,13 +110,14 @@ public class FileSystemRecursiveFileScannerAdapter{
 					})
 					.map(fileComparator::matches)
 					.filter(fh->!fh.hashMatches())
-					.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()));
-		
+					.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
+					.share();
 		
 	}
 	
 	public Flux<FileHistory> flux() {
-		return flux;
+		return flux.onBackpressureBuffer();
+				//.delayElements(Duration.ofSeconds(1)).publishOn(Schedulers.newBoundedElastic(10, 10, "prompt"))
 	}
 
 

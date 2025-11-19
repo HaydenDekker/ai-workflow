@@ -20,14 +20,14 @@ To determine the priority use the following table:
       <td>Highest Priority (<b>P1</b>)</td>
       <td>High Priority (P2)</td>
       <td>Medium Priority (P3)</td>
-      <td>Builder Pattern ISP (<b>P5</b>)</td>
+      <td>Builder Pattern (<b>P5</b>)</td>
     </tr>
     <tr>
       <td><b>Rank 2: LSP/ISP</b></td>
       <td>High Priority (P2)</td>
       <td>Medium Priority (P3)</td>
       <td>Lower Priority (P4)</td>
-      <td>Builder Pattern ISP (<b>P5</b>)</td>
+      <td>Builder Pattern (<b>P5</b>)</td>
     </tr>
     <tr>
       <td><b>Rank 3: DIP</b></td>
@@ -38,8 +38,13 @@ To determine the priority use the following table:
   </tbody>
 </table>      
              
-First explain your understanding of the table and then create the response in the format below,
-        Provide response in the following json format,
+First explain your understanding of the table.
+
+Secondly, assess the Special Cases and determine if a special case applies.
+
+Finally, create the response in the format below,
+
+Provide response in the following json format,
         
 ```json
   {

@@ -75,7 +75,7 @@ public class PromptPipelineTest {
 		assertThat(reportItems)
 			.hasSize(1);
 		
-		assertThat(reportItems.get(0).promptFileName())
+		assertThat(reportItems.get(0).fileName())
 			.isNotNull();
 		
 		List<PromptResponse> results = reportRestController.resultsForPrompt("PRIORITY_ORDER")
@@ -87,7 +87,7 @@ public class PromptPipelineTest {
 			.isEqualTo(2);
 		
 		// TODO text taken from output
-		assertThat(results.get(0).promptInput())
+		assertThat(results.get(0).prompt().body())
 			.contains("SOLID principals");
 		
 	}

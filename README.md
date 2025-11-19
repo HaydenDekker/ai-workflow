@@ -1,6 +1,8 @@
 # AI Workflow
 
-Aiming to have AI act as the navigator rather than the driver of pair programming.
+Aiming to have AI act as the navigator rather than the driver of pair programming. A root directory is monitored for file events. The file is pushed into the configured prompt pipeline and a response is provided. The responses are displayed in via web ui.
+
+I imagine working away, being creative, and the machine churning away in the background validating all of my work. I'm the expert, not the AI.
 
 ## Prompt chains
 
@@ -22,7 +24,7 @@ Building up to an agent,
 
 ### Prompt Response Splitter
 
-- Prompt provides 0,1,n of responses
+- (done) Prompt provides 0,1,n of responses - always returns a list. Easy api really.
 
 ## Prompt Response View
 
@@ -30,14 +32,16 @@ Building up to an agent,
 
 2. (done) Show source file
 
-3. Show prompt input for a response.
+3. (done) Show prompt input for a response. Prompt is now packaged into the response. Have to re-parse but this feels clear.
 
-## Prompt Content Test
+## Prompt Content Configuration
 
 Need to work specific prompts to get them conistent accross various models. 
 That can be acheived by adding additional prompt chains that trigger from
 specific folder root where the test files can be placed in those roots and
 the output of the chain viewed via the UI.
+
+- (done) prompt configuration into filesystem (allows easy design with .md)
 
 - dynamic root folder monitor configuration
 
@@ -48,3 +52,4 @@ the output of the chain viewed via the UI.
 - List of outputs aggregated to single prompt. / but better being a map().reduce() operation.
 - When should a prompt chain state be invalidated? Change of file (yes), change of prompt (yes), 
   but only have to redo the invalidated steps, easier to redo the whole step initially.
+- outputs for conditional logic, how to define, parse and execute branches.

@@ -44,7 +44,7 @@ public class PromptConfigurationTest {
 			.isTrue();
 		 
 		assertThat(Files.list(directory).count())
-			.isGreaterThan(0);
+			.isGreaterThan(1);
 		
 	}
 	
@@ -52,7 +52,7 @@ public class PromptConfigurationTest {
 	public void onStart_expectTestPromptConfigurationsReadIntoMemory() {
 		
 		assertThat(systemPromptConfiguration.getPromptChains())
-			.hasSizeGreaterThan(0);
+			.hasSizeGreaterThan(1);
 		
 	}
 

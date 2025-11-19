@@ -21,6 +21,7 @@ import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.pipeline.domain.PromptTriggerEvent;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
+import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 
 import reactor.core.publisher.Flux;
 
@@ -49,29 +50,44 @@ public class PromptPipelineConfiguration {
 		try {
 			list = om.readValue(json, new TypeReference<List<Object>>() {});
 		} catch (JsonProcessingException e) {
-			log.error("Unexpected LLM response " + json);
+			log.error("Unexpected LLM response " + s.response());
 			e.printStackTrace();
 		}
 		return list
 			.stream()
-			.map(resp->new PromptResponse(s.promptTitle(), s.promptFileName(), s.promptInput(), resp.toString()))
+			.map(resp->new PromptResponse(s.prompt(), s.fileName(), s.file(), resp.toString()))
 			.toList();
 	};
+	
+	@Autowired
+	SystemPromptConfiguration systemPromptConfiguration;
 	
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			GenericPromptCaller genericPromptCaller,
 			PromptConfiguration promptConfiguration,
-			PromptResponseDatabase promptResponseDatabase) {
+			PromptResponseDatabase promptResponseDatabase,
+			SystemPromptConfiguration systemPromptConfiguration) {
 		
 		this.fileScanner = fileScanner;
 		this.genericPromptCaller = genericPromptCaller;
 		this.promptConfiguration = promptConfiguration;
 		this.promptResponseDatabase = promptResponseDatabase;
+		this.systemPromptConfiguration = systemPromptConfiguration;
 		
-		List<PipelinePrompt> promptPipeline = promptConfiguration.getChain();
-		Flux<PromptResponse> pipeline = build(promptPipeline);
-		pipeline.subscribe(s-> log.info(s.toString()));
+//		List<PipelinePrompt> promptPipeline = promptConfiguration.getChain();
+//		Flux<PromptResponse> pipeline = build(promptPipeline);
+//		pipeline.subscribe(s-> log.info(s.toString()));
+		
+		systemPromptConfiguration.getPromptChains()
+			.stream()
+			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
+			.map(pc-> build(pc.chain()))
+			.forEach(flux-> {
+				
+				log.info("starting");
+				flux.subscribe(s-> log.info(s.toString()));
+			});
 		
 	}
 	
@@ -82,9 +98,8 @@ public class PromptPipelineConfiguration {
 			.prompting(f->
 				f.map(fh-> 
 					genericPromptCaller.call(
-							pipelinePrompt.title(), 
-							pipelinePrompt.body() + " body: " +  fh.currentFile().body(), 
-							pipelinePrompt.outputStructure(),
+							pipelinePrompt,
+							fh.currentFile().body(),
 							fh.currentFile().url()
 						)
 				)
@@ -102,14 +117,13 @@ public class PromptPipelineConfiguration {
 		
 		return PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
 			.withTrigger(fs)
-			.enrichFirst(pr-> new PromptResponse(pr.promptTitle(), pr.promptFileName(), pr.promptInput(), pr.promptTitle() + "\n\r\n\r" +  pr.promptInput() + " Response: \n\r\n\r" + pr.response()))
+			.enrichFirst(pr-> new PromptResponse(pr.prompt(), pr.fileName(), pr.file(), pr.prompt().title() + "\n\r\n\r" +  pr.prompt().body() + " Response: \n\r\n\r" + pr.response()))
 			.prompting(flux->
 				flux.map(fpe-> 
 					genericPromptCaller.call(
-						pipelinePrompt.title(), 
-						pipelinePrompt.body() + " body: " +  fpe.response(), 
-						pipelinePrompt.outputStructure(),
-						fpe.promptFileName())
+						pipelinePrompt, 
+						fpe.response(),
+						fpe.fileName())
 					)
 			)
 			.persist(promptResponseDatabase::save)
@@ -118,10 +132,15 @@ public class PromptPipelineConfiguration {
 			
 	}
 	
-	Map<String, Flux<PromptResponse>> promptTitleMap = new HashMap<String, Flux<PromptResponse>>();
-	
 	
 	public Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
+		
+		if(promptPipeline.size()==0) {
+			log.warn("Empty prompt list, dev: consider adding validation to interface.");
+			return Flux.empty();
+		}
+		
+		Map<String, Flux<PromptResponse>> promptTitleMap = new HashMap<String, Flux<PromptResponse>>();
 		
 		List<PipelinePrompt> responsePrompts = new ArrayList<PipelinePrompt>();
 		
@@ -143,14 +162,10 @@ public class PromptPipelineConfiguration {
 			promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), fs2);
 		});
 		
-		if(responsePrompts.size()==0) {
-			log.warn("User input empty list, consider adding validation to interface.");
-			return Flux.empty();
-		}
-		
-		PipelinePrompt subscribePrompt = responsePrompts.get(responsePrompts.size()-1);
+		PipelinePrompt subscribePrompt = promptPipeline.get(promptPipeline.size()-1);
 	
-		Flux<PromptResponse> fs = promptTitleMap.get(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + subscribePrompt.title());
+		Flux<PromptResponse> fs = promptTitleMap.get(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + subscribePrompt.title())
+				.doOnNext(pr -> log.info(subscribePrompt.title()));
 
 		return fs;
 		

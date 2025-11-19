@@ -218,7 +218,9 @@ public class SystemPromptConfiguration {
 			String fullPath = resource.getFile().getAbsolutePath();
 			String relativePath = PathUtility.getRelativePath(fullPath, SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH);
 			Path filePath = directory.resolve(relativePath);
-			Files.createDirectories(filePath);
+			if(!Files.exists(filePath)){
+				Files.createDirectories(filePath);
+			}
 			if(resource.getFile().isDirectory()) return;
 			Files.copy(resource.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 			

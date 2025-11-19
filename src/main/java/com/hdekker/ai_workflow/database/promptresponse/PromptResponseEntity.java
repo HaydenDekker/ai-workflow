@@ -21,16 +21,47 @@ public class PromptResponseEntity {
 	
 	String promptTitle;
 	
+	String event;
+	
 	@Lob
 	public String promptInput;
 	
 	@Lob
 	public String response;
 	
+	@Lob
+	public String format;
+	
+	@Lob
+	public String file;
 	
 	String fileName;
-
 	
+
+	public String getFile() {
+		return file;
+	}
+
+	public void setFile(String file) {
+		this.file = file;
+	}
+
+	public String getFormat() {
+		return format;
+	}
+
+	public void setFormat(String format) {
+		this.format = format;
+	}
+	
+	public String getEvent() {
+		return event;
+	}
+
+	public void setEvent(String event) {
+		this.event = event;
+	}
+
 	public String getPromptInput() {
 		return promptInput;
 	}
