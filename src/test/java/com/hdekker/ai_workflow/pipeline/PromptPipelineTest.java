@@ -20,7 +20,12 @@ import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.PromptChain;
+import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.reports.ReportRestController;
+
+import reactor.core.publisher.Flux;
 
 /**
  * Pre-written prompt chains can target any 
@@ -41,6 +46,8 @@ public class PromptPipelineTest {
 	
 	@Autowired
 	ReportRestController reportRestController;
+	
+	public static final String TEXT_IN_SOLID_PRIORITY_PROMPT = "Priority of SOLID Non-Compliance Rectification";
 	
 	/**
 	 * 
@@ -88,7 +95,29 @@ public class PromptPipelineTest {
 		
 		// TODO text taken from output
 		assertThat(results.get(0).prompt().body())
-			.contains("SOLID principals");
+			.contains(TEXT_IN_SOLID_PRIORITY_PROMPT);
+		
+	}
+	
+	@Test
+	public void givenPromptChainWithReduceFlagSet_ExpectOutputUsedForNextInput() {
+		
+		String inputOne = "This is a test input";
+		String inputTwo = "Another test input";
+		String dummyEvent = "TEST_EVENT";
+		String title = "Reduce Prompt Stage Test";
+		
+		PipelinePrompt pipelinePrompt = new PipelinePrompt(
+				dummyEvent, 
+				title, 
+				"Accumulate this new input into the previous response.",
+				"List the items in the response.");
+		
+		PromptChain reducePromptChain = new PromptChain(List.of(pipelinePrompt));
+		
+//		PromptPipelineBuilder.<String, PromptResponse>instance()
+//			.withTrigger(Flux.just(inputOne, inputTwo))
+//			.prompting(fs-> fs.map(null))
 		
 	}
 	

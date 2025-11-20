@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
-import com.hdekker.ai_workflow.pipeline.PromptResponse;
+import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 

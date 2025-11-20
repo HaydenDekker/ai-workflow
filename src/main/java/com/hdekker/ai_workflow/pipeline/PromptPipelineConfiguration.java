@@ -21,6 +21,8 @@ import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.pipeline.domain.PromptTriggerEvent;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
+import com.hdekker.ai_workflow.prompt.PromptRequest;
+import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 
 import reactor.core.publisher.Flux;
@@ -93,14 +95,15 @@ public class PromptPipelineConfiguration {
 	
 	public Flux<PromptResponse> buildFileHistoryPipelineStage(PipelinePrompt pipelinePrompt){
 		
-		return PromptPipelineBuilder.<FileHistory, PromptResponse> instance()
-			.withTrigger(fileScanner.flux())
+		return PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+			.withTrigger(fileScanner.flux()
+					.map(fh-> new PromptRequest(pipelinePrompt, fh.currentFile().body(), fh.currentFile().url())))
 			.prompting(f->
-				f.map(fh-> 
+				f.map(pr-> 
 					genericPromptCaller.call(
-							pipelinePrompt,
-							fh.currentFile().body(),
-							fh.currentFile().url()
+							pr.pipelinePrompt(),
+							pr.file(),
+							pr.fileURL()
 						)
 				)
 			)
@@ -115,15 +118,18 @@ public class PromptPipelineConfiguration {
 		// TODO Low priority - can remove type argument, as output is now always a prompt response.
 		SplittableStrategy<PromptResponse, PromptResponse> prc = (r) -> List.of(r);
 		
-		return PromptPipelineBuilder.<PromptResponse, PromptResponse> instance()
-			.withTrigger(fs)
-			.enrichFirst(pr-> new PromptResponse(pr.prompt(), pr.fileName(), pr.file(), pr.prompt().title() + "\n\r\n\r" +  pr.prompt().body() + " Response: \n\r\n\r" + pr.response()))
+		return PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+			.withTrigger(fs
+					.map(presp-> new PromptRequest(
+							pipelinePrompt, 
+							presp.prompt().title() + "\n\r\n\r" +  presp.prompt().body() + " Response: \n\r\n\r" + presp.response(), 
+							presp.fileName())))
 			.prompting(flux->
 				flux.map(fpe-> 
 					genericPromptCaller.call(
 						pipelinePrompt, 
-						fpe.response(),
-						fpe.fileName())
+						fpe.file(),
+						fpe.fileURL())
 					)
 			)
 			.persist(promptResponseDatabase::save)

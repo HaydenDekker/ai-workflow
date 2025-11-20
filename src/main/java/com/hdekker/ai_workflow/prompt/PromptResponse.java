@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.prompt;
 
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 

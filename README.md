@@ -22,9 +22,15 @@ Building up to an agent,
 
 - Messages, use spring message objects to pass content along the chain
 
+- Builder to accept PromptRequest and return PromptResponse. Requires mapping stages but is clearer on the intent of each stage.
+
 ### Prompt Response Splitter
 
 - (done) Prompt provides 0,1,n of responses - always returns a list. Easy api really.
+
+### Map Reduce Prompt
+
+ - List of outputs aggregated to single prompt, a map().reduce() operation. Requires local state and feedback to ensure the prompt output is ready for the next response. For the api, the stage to select this is in the enrich phase, setting a flag for reduce. The domain model would need to carry this so that the prompt stage will cache the previous response for input. Surely this is ok.
 
 ## Prompt Response View
 
@@ -45,11 +51,10 @@ the output of the chain viewed via the UI.
 
 - dynamic root folder monitor configuration
 
-- multiple chains in configuration
+- (done) multiple chains in configuration
 
 ## TODO List
 
-- List of outputs aggregated to single prompt. / but better being a map().reduce() operation.
 - When should a prompt chain state be invalidated? Change of file (yes), change of prompt (yes), 
   but only have to redo the invalidated steps, easier to redo the whole step initially.
 - outputs for conditional logic, how to define, parse and execute branches.

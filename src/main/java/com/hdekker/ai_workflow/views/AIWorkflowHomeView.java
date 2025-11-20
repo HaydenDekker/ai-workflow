@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
-import com.hdekker.ai_workflow.pipeline.PromptResponse;
+import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;

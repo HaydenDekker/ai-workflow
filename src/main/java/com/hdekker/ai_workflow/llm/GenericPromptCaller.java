@@ -3,8 +3,8 @@ package com.hdekker.ai_workflow.llm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.hdekker.ai_workflow.pipeline.PromptResponse;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 @Component
 public class GenericPromptCaller {
