@@ -7,6 +7,6 @@ import reactor.core.publisher.Flux;
 
 public interface LLMAdapter {
 	
-	Flux<PromptResponse> call(PromptRequest request);
+	Flux<PromptResponse> call(Flux<PromptRequest> request);
 
 }

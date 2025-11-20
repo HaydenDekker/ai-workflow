@@ -62,7 +62,8 @@ public class PromptPipelineTest {
 	 * @throws InterruptedException
 	 * @throws IOException
 	 */
-	
+
+	// TODO make clear - Integration test
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		

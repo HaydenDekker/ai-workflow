@@ -14,7 +14,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
-import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
@@ -93,45 +92,24 @@ public class PromptPipelineConfiguration {
 		
 	}
 	
-	public Flux<PromptResponse> buildFileHistoryPipelineStage(PipelinePrompt pipelinePrompt){
+	PromptRequest convert(PipelinePrompt pipelinePrompt, PromptResponse response) {
 		
-		return PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
-			.withTrigger(fileScanner.flux()
-					.map(fh-> new PromptRequest(pipelinePrompt, fh.currentFile().body(), fh.currentFile().url())))
-			.prompting(f->
-				f.map(pr-> 
-					genericPromptCaller.call(
-							pr.pipelinePrompt(),
-							pr.file(),
-							pr.fileURL()
-						)
-				)
-			)
-			.persist(promptResponseDatabase::save)
-			.split(jsonItemListConverter)
-			.build();
+		return new PromptRequest(
+				pipelinePrompt, 
+				response.prompt().title() + "\n\r\n\r" +  response.prompt().body() + " Response: \n\r\n\r" + response.response(), 
+				response.fileName());
 		
 	}
 	
-	Flux<PromptResponse> buildPromptResponsePipelineStage(Flux<PromptResponse> fs, PipelinePrompt pipelinePrompt){
-		
-		// TODO Low priority - can remove type argument, as output is now always a prompt response.
-		SplittableStrategy<PromptResponse, PromptResponse> prc = (r) -> List.of(r);
+	Flux<PromptResponse> buildPromptPipelineStage(
+			Flux<PromptRequest> fs, 
+			PipelinePrompt pipelinePrompt,
+			SplittableStrategy<PromptResponse, PromptResponse> prc,
+			LLMAdapter adapter ){
 		
 		return PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
-			.withTrigger(fs
-					.map(presp-> new PromptRequest(
-							pipelinePrompt, 
-							presp.prompt().title() + "\n\r\n\r" +  presp.prompt().body() + " Response: \n\r\n\r" + presp.response(), 
-							presp.fileName())))
-			.prompting(flux->
-				flux.map(fpe-> 
-					genericPromptCaller.call(
-						pipelinePrompt, 
-						fpe.file(),
-						fpe.fileURL())
-					)
-			)
+			.withTrigger(fs)
+			.prompting(adapter::call)
 			.persist(promptResponseDatabase::save)
 			.split(prc)
 			.build();
@@ -150,21 +128,41 @@ public class PromptPipelineConfiguration {
 		
 		List<PipelinePrompt> responsePrompts = new ArrayList<PipelinePrompt>();
 		
+		SplittableStrategy<PromptResponse, PromptResponse> prc = (r) -> List.of(r);
+		
 		promptPipeline.stream()
-			.forEach(f-> {
-				if(f.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
-					
-					Flux<PromptResponse> pr = buildFileHistoryPipelineStage(f);
-					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + f.title(), pr);
+			.forEach(pp-> {
+				if(pp.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
+					Flux<PromptResponse> pr = buildPromptPipelineStage(
+							fileScanner.flux()
+								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())),
+							pp, 
+							jsonItemListConverter,
+							flux->flux.map(fpe-> 
+							genericPromptCaller.call(
+								pp, 
+								fpe.file(),
+								fpe.fileURL())
+							));
+					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), pr);
 				
 				}else {
-					responsePrompts.add(f);
+					responsePrompts.add(pp);
 				}
 			});
 		
 		responsePrompts.forEach(pp->{
 			Flux<PromptResponse> fs = promptTitleMap.get(pp.event());
-			Flux<PromptResponse> fs2 = buildPromptResponsePipelineStage(fs, pp);
+			Flux<PromptResponse> fs2 = buildPromptPipelineStage(
+					fs.map(presp-> convert(pp, presp)), 
+					pp, 
+					prc,
+					flux->flux.map(fpe-> 
+					genericPromptCaller.call(
+						pp, 
+						fpe.file(),
+						fpe.fileURL())
+					));
 			promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), fs2);
 		});
 		
