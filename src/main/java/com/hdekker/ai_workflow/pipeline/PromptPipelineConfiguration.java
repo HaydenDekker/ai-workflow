@@ -128,8 +128,6 @@ public class PromptPipelineConfiguration {
 		
 		List<PipelinePrompt> responsePrompts = new ArrayList<PipelinePrompt>();
 		
-		SplittableStrategy<PromptResponse, PromptResponse> prc = (r) -> List.of(r);
-		
 		promptPipeline.stream()
 			.forEach(pp-> {
 				if(pp.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
@@ -156,7 +154,7 @@ public class PromptPipelineConfiguration {
 			Flux<PromptResponse> fs2 = buildPromptPipelineStage(
 					fs.map(presp-> convert(pp, presp)), 
 					pp, 
-					prc,
+					SplittableStrategy.noSPLT(),
 					flux->flux.map(fpe-> 
 					genericPromptCaller.call(
 						pp, 

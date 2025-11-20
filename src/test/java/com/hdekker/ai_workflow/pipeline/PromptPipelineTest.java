@@ -20,8 +20,10 @@ import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.pipeline.domain.PromptChain;
+import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.reports.ReportRestController;
 
@@ -102,8 +104,11 @@ public class PromptPipelineTest {
 		
 	}
 	
+	@Autowired
+	GenericPromptCaller genericPromptCaller;
+	
 	@Test
-	public void givenPromptChainWithReduceFlagSet_ExpectOutputUsedForNextInput() {
+	public void givenPromptChainWithReduceAdapterSet_ExpectOutputResultsFromThePipeline() {
 		
 		String inputOne = "This is a test input";
 		String inputTwo = "Another test input";
@@ -116,13 +121,23 @@ public class PromptPipelineTest {
 				"Accumulate this new input into the previous response.",
 				"List the items in the response.");
 		
-		PromptChain reducePromptChain = new PromptChain(List.of(pipelinePrompt));
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(genericPromptCaller);
 		
-		// TODO may be able move to to adapter being closer to the function.
+		Flux<PromptResponse> pipeline = PromptPipelineBuilder.<PromptRequest, PromptResponse>instance()
+			.withTrigger(Flux.just(inputOne, inputTwo)
+					.map(s->{
+						return new PromptRequest(pipelinePrompt, s, "some/url");
+					}))
+			.prompting(llmReducerAdapter::call)
+			.persist(l-> log.info("persisting " + l))
+			.split(SplittableStrategy.noSPLT())
+			.build();
 		
-//		PromptPipelineBuilder.<String, PromptResponse>instance()
-//			.withTrigger(Flux.just(inputOne, inputTwo))
-//			.prompting(fs-> fs.map(null))
+		List<PromptResponse> reduced = pipeline.collectList()
+			.block();
+		
+		assertThat(reduced.size())
+			.isEqualTo(2);
 		
 	}
 	
