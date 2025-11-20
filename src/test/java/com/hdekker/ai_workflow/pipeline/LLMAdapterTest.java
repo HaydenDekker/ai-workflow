@@ -35,6 +35,7 @@ public class LLMAdapterTest {
 		PipelinePrompt pp = new PipelinePrompt(
 				"Not Relevant",  // TODO perhaps the API object needs to be different from the pipeline object 
 				"RESPONSE_REDUCTION_TEST", 
+				"REDUCTION_NOT_USED",
 				"Pretend to decide if the content is relevant and append it to the existing overview if needed. Really a mock will just append.", 
 				"Neat and tidy. The mock will do the work.");
 		PromptRequest pr = new PromptRequest(pp, "Test one", "/dont/care");

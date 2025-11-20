@@ -4,3 +4,9 @@ chain:
     title: FUNCTION_ANALYSIS
     body: function-analysis.md
     outputStructure: function-analysis-output.md
+  -
+    event: PROMPT_RESPONSE_EVENT_FUNCTION_ANALYSIS
+    title: FUNCTION_SUMMARY
+    type: REDUCTION
+    body: function-summary.md
+    outputStructure: function-summary-output.md

@@ -16,7 +16,12 @@ public class PromptResponseDatabase {
 	
 	PromptResponse parse(PromptResponseEntity e) {
 		return new PromptResponse(
-				new PipelinePrompt(e.getEvent(), e.getPromptTitle(), e.getPromptInput(), e.getFormat()), 
+				new PipelinePrompt(
+						e.getEvent(), 
+						e.getPromptTitle(), 
+						"Not used",
+						e.getPromptInput(), 
+						e.getFormat()), 
 				e.getFileName(), e.getFile(), e.getResponse());
 	}
 	

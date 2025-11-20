@@ -23,6 +23,17 @@ public class PromptResponseEntity {
 	
 	String event;
 	
+	String type;
+
+	
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
 	@Lob
 	public String promptInput;
 	

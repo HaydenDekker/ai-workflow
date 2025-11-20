@@ -40,6 +40,8 @@ Building up to an agent,
 
 3. (done) Show prompt input for a response. Prompt is now packaged into the response. Have to re-parse but this feels clear.
 
+- Trigger a chain to re-run manually. Anywhere along the chain should run it downstream.
+
 ## Prompt Content Configuration
 
 Need to work specific prompts to get them conistent accross various models. 

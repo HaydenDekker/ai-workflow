@@ -22,7 +22,6 @@ import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
-import com.hdekker.ai_workflow.pipeline.domain.PromptChain;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.reports.ReportRestController;
@@ -118,6 +117,7 @@ public class PromptPipelineTest {
 		PipelinePrompt pipelinePrompt = new PipelinePrompt(
 				dummyEvent, 
 				title, 
+				"Reduction not used",
 				"Accumulate this new input into the previous response.",
 				"List the items in the response.");
 		

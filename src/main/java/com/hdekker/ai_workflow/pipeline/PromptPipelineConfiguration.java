@@ -131,17 +131,24 @@ public class PromptPipelineConfiguration {
 		promptPipeline.stream()
 			.forEach(pp-> {
 				if(pp.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
+					
+					LLMAdapter gp = flux->flux.map(fpe-> 
+					genericPromptCaller.call(
+						pp, 
+						fpe.file(),
+						fpe.fileURL()));
+				
+					LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
+							new LLMReducerAdapter(genericPromptCaller):
+								gp;
+					
 					Flux<PromptResponse> pr = buildPromptPipelineStage(
 							fileScanner.flux()
 								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())),
 							pp, 
 							jsonItemListConverter,
-							flux->flux.map(fpe-> 
-							genericPromptCaller.call(
-								pp, 
-								fpe.file(),
-								fpe.fileURL())
-							));
+							adapter
+						);
 					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), pr);
 				
 				}else {
@@ -151,16 +158,23 @@ public class PromptPipelineConfiguration {
 		
 		responsePrompts.forEach(pp->{
 			Flux<PromptResponse> fs = promptTitleMap.get(pp.event());
+			
+			LLMAdapter gp = flux->flux.map(fpe-> 
+				genericPromptCaller.call(
+					pp, 
+					fpe.file(),
+					fpe.fileURL()));
+			
+			LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
+					new LLMReducerAdapter(genericPromptCaller):
+						gp;
+			
 			Flux<PromptResponse> fs2 = buildPromptPipelineStage(
 					fs.map(presp-> convert(pp, presp)), 
 					pp, 
 					SplittableStrategy.noSPLT(),
-					flux->flux.map(fpe-> 
-					genericPromptCaller.call(
-						pp, 
-						fpe.file(),
-						fpe.fileURL())
-					));
+					adapter
+					);
 			promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), fs2);
 		});
 		
