@@ -22,7 +22,7 @@ Building up to an agent,
 
 - Messages, use spring message objects to pass content along the chain
 
-- Builder to accept PromptRequest and return PromptResponse. Requires mapping stages but is clearer on the intent of each stage.
+- (done) Builder to accept PromptRequest and return PromptResponse. Requires mapping stages but is clearer on the intent of each stage.
 
 ### Prompt Response Splitter
 

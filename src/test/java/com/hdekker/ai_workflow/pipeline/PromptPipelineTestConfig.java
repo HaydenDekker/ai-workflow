@@ -10,7 +10,7 @@ import com.hdekker.ai_workflow.llm.Prompter;
 import reactor.core.publisher.Flux;
 
 @Configuration
-@Profile(TestProfiles.RESOURCES_TEST_FOLDER)
+@Profile(TestProfiles.FIXED_LLM_TEST_RESPONSE)
 public class PromptPipelineTestConfig {
 	
 	String stub = """

@@ -34,7 +34,9 @@ import reactor.core.publisher.Flux;
  * 
  */
 @SpringBootTest
-@ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
+@ActiveProfiles({
+	TestProfiles.RESOURCES_TEST_FOLDER,
+	TestProfiles.FIXED_LLM_TEST_RESPONSE})
 public class PromptPipelineTest {
 	
 	Logger log = LoggerFactory.getLogger(PromptPipelineTest.class);
@@ -115,6 +117,8 @@ public class PromptPipelineTest {
 				"List the items in the response.");
 		
 		PromptChain reducePromptChain = new PromptChain(List.of(pipelinePrompt));
+		
+		// TODO may be able move to to adapter being closer to the function.
 		
 //		PromptPipelineBuilder.<String, PromptResponse>instance()
 //			.withTrigger(Flux.just(inputOne, inputTwo))
