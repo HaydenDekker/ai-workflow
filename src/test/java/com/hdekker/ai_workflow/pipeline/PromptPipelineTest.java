@@ -82,7 +82,7 @@ public class PromptPipelineTest {
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		
-		testFiles.copyTestFileAnAllowToPropagte();
+		testFiles.copyTestFileAnAllowToPropagte(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		
 		// TODO name taken from current config. Need to create test config.
 		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_NON_COMPLIANCE")

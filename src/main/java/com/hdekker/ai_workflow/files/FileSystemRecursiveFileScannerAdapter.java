@@ -75,7 +75,6 @@ public class FileSystemRecursiveFileScannerAdapter{
 		IntegrationFlowBuilder flowBuilder = IntegrationFlow.from(
 				Files.inboundAdapter(folder)
 					.recursive(true)
-					.patternFilter("*.java")
 					.useWatchService(true)
 					.watchEvents(
 							WatchEventType.CREATE, 
@@ -84,9 +83,9 @@ public class FileSystemRecursiveFileScannerAdapter{
 				e-> e.poller(
 						Pollers.fixedRate(Duration.ofSeconds(1), Duration.ofSeconds(2)))
 			)
-		.log()
-		.transform(Files.toStringTransformer())
-		.channel(c-> c.flux("fileInboundFluxChannel"));
+			.log()
+			.transform(Files.toStringTransformer())
+			.channel(c-> c.flux("fileInboundFluxChannel"));
 		
 		flow = flowBuilder.get();
 		

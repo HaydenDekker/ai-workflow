@@ -63,7 +63,7 @@ The database is still required for file-system hash monitoring so that the entir
 
 - (done) Create PromptResponseFileSystemAdapter to receive and store prompt responses.
 - (done) Create FileOutput stage for prompt chain builder and enable configuration to define target file type.
-- Update file scanner to listen to all event
+- (done) Update file scanner to listen to all event
 - Update pipeline configuration to filter on file regex.
 - Update pipeline configuration to listen to new response file events/thoughts.
 - Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.

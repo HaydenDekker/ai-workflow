@@ -158,7 +158,7 @@ public class PromptPipelineConfiguration {
 					
 					LLMAdapter gp = flux->flux.map(fpe-> 
 					genericPromptCaller.call(
-						pp, 
+						pp,
 						fpe.file(),
 						fpe.fileURL()));
 				
