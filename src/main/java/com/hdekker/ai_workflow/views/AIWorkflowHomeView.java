@@ -39,7 +39,11 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 		responseGrid.addColumn((p)-> p.prompt().title()).setHeader("Prompt Title");
 		responseGrid.addColumn(PromptResponse::fileName).setHeader("File name");
 		responseGrid.setItemDetailsRenderer(new ComponentRenderer<Div, PromptResponse>(Div::new, (c,v)->{
-			Markdown md = new Markdown(v.prompt().body() + v.prompt().outputStructure() + v.response());
+			Markdown md = new Markdown(
+					v.prompt().body() + 
+					v.file() +
+					v.prompt().outputStructure() +
+					v.response());
 			md.addClassName("markdown-output");
 			c.add(md);
 		}));

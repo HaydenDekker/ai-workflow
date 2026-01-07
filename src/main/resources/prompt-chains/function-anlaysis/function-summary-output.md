@@ -6,4 +6,4 @@ Look at the previous functional history, state where the new function may fit, c
 
 Assess all of the existing groups and make sure the level is consistent. It should be a high level overview.
 
-Output the final updated function overview in plain text laymens terms using dot points to break up the categories.
+Output the final updated function overview in plain text laymans terms using dot points to break up the categories.

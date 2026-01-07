@@ -30,7 +30,7 @@ Building up to an agent,
 
 ### Map Reduce Prompt
 
- - List of outputs aggregated to single prompt, a map().reduce() operation. Requires local state and feedback to ensure the prompt output is ready for the next response. For the api, the stage to select this is in the enrich phase, setting a flag for reduce. The domain model would need to carry this so that the prompt stage will cache the previous response for input. Surely this is ok.
+ - (done) List of outputs aggregated to single prompt, a map().reduce() operation. Requires local state and feedback to ensure the prompt output is ready for the next response. For the api, the stage to select this is in the enrich phase, setting a flag for reduce. The domain model would need to carry this so that the prompt stage will cache the previous response for input. Surely this is ok.
 
 ## Prompt Response View
 
@@ -44,16 +44,26 @@ Building up to an agent,
 
 ## Prompt Content Configuration
 
-Need to work specific prompts to get them conistent accross various models. 
-That can be acheived by adding additional prompt chains that trigger from
+Need to work specific prompts to get them consistent across various models. 
+That can be achieved by adding additional prompt chains that trigger from
 specific folder root where the test files can be placed in those roots and
 the output of the chain viewed via the UI.
 
-- (done) prompt configuration into filesystem (allows easy design with .md)
+- (done) prompt configuration into file-system (allows easy design with .md)
 
-- dynamic root folder monitor configuration
+- (cancelled - simpler to start the program at the root directory, inline with OpenCode's startup method) dynamic root folder monitor configuration.
 
 - (done) multiple chains in configuration
+
+## Architectural Pivot
+
+The database add's unnecessary complexity as prompt outputs/thoughts could themselves be files. Outputting results as files improves the git workflow, allowing thought state to be progressively captured. It removes the database interface. The prompt config needs are also simplified as the user only needs to consider what files are present and in what location. Accessing the files is then simply a matter of pulling up the directory and flicking through to see results.
+
+- Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.
+- Update View to utilise new port.
+- Create PromptResponseFileSystemAdapter to implement PromptResponsePort
+- Remove PromptResponseDatabaseAdapter from program.
+
 
 ## TODO List
 

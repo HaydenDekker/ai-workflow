@@ -2,8 +2,6 @@ package com.hdekker.ai_workflow.pipeline;
 
 import java.util.List;
 
-import com.hdekker.ai_workflow.prompt.PromptResponse;
-
 /**
  * Highly likely a prompt could return 
  * with multiple suggestions or event no suggestions.

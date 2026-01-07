@@ -76,10 +76,7 @@ public class PromptPipelineConfiguration {
 		this.promptResponseDatabase = promptResponseDatabase;
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		
-//		List<PipelinePrompt> promptPipeline = promptConfiguration.getChain();
-//		Flux<PromptResponse> pipeline = build(promptPipeline);
-//		pipeline.subscribe(s-> log.info(s.toString()));
-		
+	
 		systemPromptConfiguration.getPromptChains()
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
@@ -87,7 +84,7 @@ public class PromptPipelineConfiguration {
 			.forEach(flux-> {
 				
 				log.info("starting");
-				flux.subscribe(s-> log.info(s.toString()));
+				flux.subscribe();
 			});
 		
 	}
