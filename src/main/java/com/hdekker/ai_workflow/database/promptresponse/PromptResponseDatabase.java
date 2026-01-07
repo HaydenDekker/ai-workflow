@@ -43,7 +43,7 @@ public class PromptResponseDatabase {
 		pre.setPromptInput(response.prompt().body());
 		pre.setFormat(response.prompt().outputStructure());
 		pre.setEvent(response.prompt().event());
-		pre.setFile(response.file());
+		pre.setFile(response.fileContents());
 		repository.save(pre);
 		
 	}

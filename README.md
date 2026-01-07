@@ -59,6 +59,10 @@ the output of the chain viewed via the UI.
 
 The database add's unnecessary complexity as prompt outputs/thoughts could themselves be files. Outputting results as files improves the git workflow, allowing thought state to be progressively captured. It removes the database interface. The prompt config needs are also simplified as the user only needs to consider what files are present and in what location. Accessing the files is then simply a matter of pulling up the directory and flicking through to see results.
 
+The database is still required for file-system hash monitoring so that the entire prompt chain isn't reloaded on startup.
+
+- (done) Create PromptResponseFileSystemAdapter to receive and store prompt responses.
+- (done) Create FileOutput stage for prompt chain builder and enable configuration to define target file type.
 - Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.
 - Update View to utilise new port.
 - Create PromptResponseFileSystemAdapter to implement PromptResponsePort
@@ -70,3 +74,5 @@ The database add's unnecessary complexity as prompt outputs/thoughts could thems
 - When should a prompt chain state be invalidated? Change of file (yes), change of prompt (yes), 
   but only have to redo the invalidated steps, easier to redo the whole step initially.
 - outputs for conditional logic, how to define, parse and execute branches.
+- need a way to clear memeory of any prompts to reset the system. Involves clearing file-system hash cache.
+- set a flag for autocopy of prepackaged prompts.

@@ -26,8 +26,6 @@ public class FileSystemScannerConfig {
 	
 	String outputFolder;
 	
-	
-	
 	public String getOutputFolder() {
 		return outputFolder;
 	}

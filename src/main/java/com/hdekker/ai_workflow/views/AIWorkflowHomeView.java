@@ -41,7 +41,7 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 		responseGrid.setItemDetailsRenderer(new ComponentRenderer<Div, PromptResponse>(Div::new, (c,v)->{
 			Markdown md = new Markdown(
 					v.prompt().body() + 
-					v.file() +
+					v.fileContents() +
 					v.prompt().outputStructure() +
 					v.response());
 			md.addClassName("markdown-output");

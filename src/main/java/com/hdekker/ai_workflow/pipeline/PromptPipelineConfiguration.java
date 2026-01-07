@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +17,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
+import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
@@ -26,10 +30,17 @@ import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 
 import reactor.core.publisher.Flux;
 
+/**
+ *  To build the configured pipelines ready for file processing.
+ * 
+ */
 @Configuration
 public class PromptPipelineConfiguration {
 	
 	Logger log = LoggerFactory.getLogger(PromptPipelineConfiguration.class);
+	
+	@Autowired
+	FileSystemScannerConfig fileScannerConfig;
 
 	@Autowired
 	FileSystemRecursiveFileScannerAdapter fileScanner;
@@ -56,25 +67,38 @@ public class PromptPipelineConfiguration {
 		}
 		return list
 			.stream()
-			.map(resp->new PromptResponse(s.prompt(), s.fileName(), s.file(), resp.toString()))
+			.map(resp->new PromptResponse(s.prompt(), s.fileName(), s.fileContents(), resp.toString()))
 			.toList();
 	};
 	
 	@Autowired
 	SystemPromptConfiguration systemPromptConfiguration;
 	
+	// TODO component and pass in.
+	Path outputFolderPath;
+	
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			GenericPromptCaller genericPromptCaller,
 			PromptConfiguration promptConfiguration,
 			PromptResponseDatabase promptResponseDatabase,
-			SystemPromptConfiguration systemPromptConfiguration) {
+			SystemPromptConfiguration systemPromptConfiguration,
+			FileSystemScannerConfig fileScannerConfig) {
 		
 		this.fileScanner = fileScanner;
 		this.genericPromptCaller = genericPromptCaller;
 		this.promptConfiguration = promptConfiguration;
 		this.promptResponseDatabase = promptResponseDatabase;
 		this.systemPromptConfiguration = systemPromptConfiguration;
+		this.fileScannerConfig = fileScannerConfig;
+		
+		
+		try {
+			outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 	
 		systemPromptConfiguration.getPromptChains()
@@ -107,7 +131,10 @@ public class PromptPipelineConfiguration {
 		return PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
 			.withTrigger(fs)
 			.prompting(adapter::call)
-			.persist(promptResponseDatabase::save)
+			.persist(pr->{
+				promptResponseDatabase.save(pr);
+				PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
+			})
 			.split(prc)
 			.build();
 			

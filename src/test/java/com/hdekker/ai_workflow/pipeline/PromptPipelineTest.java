@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,8 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
+import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
@@ -42,8 +46,6 @@ public class PromptPipelineTest {
 	
 	Logger log = LoggerFactory.getLogger(PromptPipelineTest.class);
 	
-	public static final String TEST_FILES_DIR = "src/test/resources/test-files-init/";
-
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
 	
@@ -51,6 +53,42 @@ public class PromptPipelineTest {
 	ReportRestController reportRestController;
 	
 	public static final String TEXT_IN_SOLID_PRIORITY_PROMPT = "Priority of SOLID Non-Compliance Rectification";
+	
+	File configuredDirectory;
+	
+	@BeforeEach
+	public void captureConfiguration() {
+		try {
+			configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	void copyTestFileToConfiguredMonitoredSystemPath(String filename) throws IOException {
+		
+		Path destination = configuredDirectory.toPath().resolve(filename);
+		Path source = Paths.get(TestFiles.getTestFilePath(filename));
+		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+	}
+	
+	@Autowired
+	FileSystemRecursiveFileScannerAdapter scannerAdapter;
+	
+	void blockTillScannerReadOrFail(String filename) {
+		
+		scannerAdapter.flux()
+			.filter(fh->fh.currentFile().url().contains(filename))
+			.timeout(Duration.ofSeconds(2))
+			.blockFirst();
+	}
+	
+	void copyTestFileAnAllowToPropagte() throws IOException {
+		
+		copyTestFileToConfiguredMonitoredSystemPath(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
+		
+		blockTillScannerReadOrFail(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
+	}
 	
 	/**
 	 * 
@@ -70,12 +108,7 @@ public class PromptPipelineTest {
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		
-		File configuredDirectory = fileSystemScannerConfig.getUrl().getFile();
-		Path destination = configuredDirectory.toPath().resolve(TestFiles.POOR_SOLID_COMPLIANCE);
-		Path source = Paths.get(TEST_FILES_DIR + TestFiles.POOR_SOLID_COMPLIANCE);
-		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-		
-		Thread.sleep(2000);
+		copyTestFileAnAllowToPropagte();
 		
 		// TODO name taken from current config. Need to create test config.
 		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_NON_COMPLIANCE")
@@ -101,6 +134,13 @@ public class PromptPipelineTest {
 		assertThat(results.get(0).prompt().body())
 			.contains(TEXT_IN_SOLID_PRIORITY_PROMPT);
 		
+		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + reportItems.get(0).createOutputFileName());
+		
+		log.info("Checking file exists, " + outputFilePath.toString() );
+		
+		assertThat(Files.exists(outputFilePath))
+			.isTrue();
+		
 	}
 	
 	@Autowired
@@ -112,7 +152,7 @@ public class PromptPipelineTest {
 		String inputOne = "This is a test input";
 		String inputTwo = "Another test input";
 		String dummyEvent = "TEST_EVENT";
-		String title = "Reduce Prompt Stage Test";
+		String title = "Prompt Event Stage Test";
 		
 		PipelinePrompt pipelinePrompt = new PipelinePrompt(
 				dummyEvent, 
