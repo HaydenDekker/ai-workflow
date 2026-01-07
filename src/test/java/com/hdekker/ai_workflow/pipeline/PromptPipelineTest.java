@@ -1,15 +1,11 @@
 package com.hdekker.ai_workflow.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.GenericPromptCaller;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
@@ -56,6 +51,9 @@ public class PromptPipelineTest {
 	
 	File configuredDirectory;
 	
+	@Autowired
+	TestFiles testFiles;
+	
 	@BeforeEach
 	public void captureConfiguration() {
 		try {
@@ -65,30 +63,6 @@ public class PromptPipelineTest {
 		}
 	}
 	
-	void copyTestFileToConfiguredMonitoredSystemPath(String filename) throws IOException {
-		
-		Path destination = configuredDirectory.toPath().resolve(filename);
-		Path source = Paths.get(TestFiles.getTestFilePath(filename));
-		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-	}
-	
-	@Autowired
-	FileSystemRecursiveFileScannerAdapter scannerAdapter;
-	
-	void blockTillScannerReadOrFail(String filename) {
-		
-		scannerAdapter.flux()
-			.filter(fh->fh.currentFile().url().contains(filename))
-			.timeout(Duration.ofSeconds(2))
-			.blockFirst();
-	}
-	
-	void copyTestFileAnAllowToPropagte() throws IOException {
-		
-		copyTestFileToConfiguredMonitoredSystemPath(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
-		
-		blockTillScannerReadOrFail(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
-	}
 	
 	/**
 	 * 
@@ -108,7 +82,7 @@ public class PromptPipelineTest {
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		
-		copyTestFileAnAllowToPropagte();
+		testFiles.copyTestFileAnAllowToPropagte();
 		
 		// TODO name taken from current config. Need to create test config.
 		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_NON_COMPLIANCE")

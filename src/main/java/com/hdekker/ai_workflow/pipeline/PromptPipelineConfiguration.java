@@ -141,7 +141,7 @@ public class PromptPipelineConfiguration {
 	}
 	
 	
-	public Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
+	private Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
 		
 		if(promptPipeline.size()==0) {
 			log.warn("Empty prompt list, dev: consider adding validation to interface.");

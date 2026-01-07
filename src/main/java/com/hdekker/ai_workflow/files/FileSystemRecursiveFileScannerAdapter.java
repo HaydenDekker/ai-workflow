@@ -117,7 +117,6 @@ public class FileSystemRecursiveFileScannerAdapter{
 	
 	public Flux<FileHistory> flux() {
 		return flux.onBackpressureBuffer();
-				//.delayElements(Duration.ofSeconds(1)).publishOn(Schedulers.newBoundedElastic(10, 10, "prompt"))
 	}
 
 
