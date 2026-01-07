@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
@@ -92,18 +93,18 @@ public class PromptPipelineConfiguration {
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		this.fileScannerConfig = fileScannerConfig;
 		
-		
 		try {
 			outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
+		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator();
 	
 		systemPromptConfiguration.getPromptChains()
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
+			//.flatMap(pc-> ppc.configure(pc.chain()).stream())
 			.map(pc-> build(pc.chain()))
 			.forEach(flux-> {
 				
@@ -168,6 +169,7 @@ public class PromptPipelineConfiguration {
 					
 					Flux<PromptResponse> pr = buildPromptPipelineStage(
 							fileScanner.flux()
+							
 								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())),
 							pp, 
 							jsonItemListConverter,
@@ -181,6 +183,7 @@ public class PromptPipelineConfiguration {
 			});
 		
 		responsePrompts.forEach(pp->{
+			
 			Flux<PromptResponse> fs = promptTitleMap.get(pp.event());
 			
 			LLMAdapter gp = flux->flux.map(fpe-> 
@@ -209,6 +212,10 @@ public class PromptPipelineConfiguration {
 
 		return fs;
 		
+	}
+
+	public Flux<PromptResponse> configure(List<PipelinePrompt> promptChain) {
+		return null;
 	}
 
 }
