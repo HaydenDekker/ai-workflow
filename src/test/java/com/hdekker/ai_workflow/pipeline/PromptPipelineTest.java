@@ -10,11 +10,14 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
@@ -54,6 +57,20 @@ public class PromptPipelineTest {
 	@Autowired
 	TestFiles testFiles;
 	
+	@TempDir 
+	static Path promptDirectory;
+	
+	@TempDir 
+	static Path rootDirectory;
+	
+	// TODO - Replace all directory access for testing with temp directory instances
+	// including prompt directory and root directory
+	@DynamicPropertySource 
+    static void registerTempDirProperty(DynamicPropertyRegistry registry) {
+        registry.add("prompt-config.predefinedPromptFilePath", () -> promptDirectory.toAbsolutePath().toString());
+        registry.add("scanner.url", () -> "file:/" + rootDirectory.toAbsolutePath().toString());
+    }
+	
 	@BeforeEach
 	public void captureConfiguration() {
 		try {
@@ -78,7 +95,6 @@ public class PromptPipelineTest {
 	 * @throws IOException
 	 */
 
-	// TODO make clear - Integration test
 	@Test
 	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
 		

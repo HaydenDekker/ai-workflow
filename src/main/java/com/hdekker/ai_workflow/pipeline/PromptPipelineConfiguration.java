@@ -107,7 +107,6 @@ public class PromptPipelineConfiguration {
 			//.flatMap(pc-> ppc.configure(pc.chain()).stream())
 			.map(pc-> build(pc.chain()))
 			.forEach(flux-> {
-				
 				log.info("starting");
 				flux.subscribe();
 			});
@@ -121,24 +120,6 @@ public class PromptPipelineConfiguration {
 				response.prompt().title() + "\n\r\n\r" +  response.prompt().body() + " Response: \n\r\n\r" + response.response(), 
 				response.fileName());
 		
-	}
-	
-	Flux<PromptResponse> buildPromptPipelineStage(
-			Flux<PromptRequest> fs, 
-			PipelinePrompt pipelinePrompt,
-			SplittableStrategy<PromptResponse, PromptResponse> prc,
-			LLMAdapter adapter ){
-		
-		return PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
-			.withTrigger(fs)
-			.prompting(adapter::call)
-			.persist(pr->{
-				promptResponseDatabase.save(pr);
-				PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-			})
-			.split(prc)
-			.build();
-			
 	}
 	
 	
@@ -167,15 +148,18 @@ public class PromptPipelineConfiguration {
 							new LLMReducerAdapter(genericPromptCaller):
 								gp;
 					
-					Flux<PromptResponse> pr = buildPromptPipelineStage(
-							fileScanner.flux()
-							
-								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())),
-							pp, 
-							jsonItemListConverter,
-							adapter
-						);
-					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), pr);
+					Flux<PromptResponse> prf = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+						.withTrigger(fileScanner.flux()
+								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())))
+						.prompting(adapter::call)
+						.persist(pr->{
+							promptResponseDatabase.save(pr);
+							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
+						})
+						.split(jsonItemListConverter)
+						.build();
+
+					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), prf);
 				
 				}else {
 					responsePrompts.add(pp);
@@ -196,12 +180,17 @@ public class PromptPipelineConfiguration {
 					new LLMReducerAdapter(genericPromptCaller):
 						gp;
 			
-			Flux<PromptResponse> fs2 = buildPromptPipelineStage(
-					fs.map(presp-> convert(pp, presp)), 
-					pp, 
-					SplittableStrategy.noSPLT(),
-					adapter
-					);
+			Flux<PromptResponse> fs2 = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+					.withTrigger(
+							fs.map(presp-> convert(pp, presp)))
+					.prompting(adapter::call)
+					.persist(pr->{
+						promptResponseDatabase.save(pr);
+						PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
+					})
+					.split(SplittableStrategy.noSPLT())
+					.build();
+			
 			promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), fs2);
 		});
 		

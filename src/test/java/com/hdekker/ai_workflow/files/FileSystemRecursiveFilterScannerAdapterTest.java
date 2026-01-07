@@ -1,11 +1,15 @@
 package com.hdekker.ai_workflow.files;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
@@ -22,11 +26,24 @@ public class FileSystemRecursiveFilterScannerAdapterTest {
 	@Autowired
 	FileSystemRecursiveFileScannerAdapter scannerAdapter;
 	
+	@TempDir 
+	static Path promptDirectory;
+	
+	@TempDir 
+	static Path rootDirectory;
+	
+	// TODO - Replace all directory access for testing with temp directory instances
+	// including prompt directory and root directory
+	@DynamicPropertySource 
+    static void registerTempDirProperty(DynamicPropertyRegistry registry) {
+        registry.add("prompt-config.predefinedPromptFilePath", () -> promptDirectory.toAbsolutePath().toString());
+        registry.add("scanner.url", () -> "file:/" + rootDirectory.toAbsolutePath().toString());
+    }
+	
 	@Test
-	public void canCaptureFileCreationEvent() throws IOException {
+	public void canCaptureFileCreationEvent() throws IOException, InterruptedException {
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.TYPICAL_RESPONSE_MD);
-		
 	}
 
 }

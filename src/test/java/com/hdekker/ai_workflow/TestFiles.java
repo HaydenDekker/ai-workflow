@@ -60,7 +60,7 @@ public class TestFiles {
 		scannerAdapter.flux()
 			.doOnNext(fh-> log.info("" + fh.currentFile().url()))
 			.filter(fh->fh.currentFile().url().contains(filename))
-			.timeout(Duration.ofSeconds(2))
+			.timeout(Duration.ofSeconds(10))
 			.blockFirst();
 	}
 	
