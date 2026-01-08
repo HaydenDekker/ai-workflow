@@ -16,7 +16,7 @@ public class PromptPipelineTestConfig {
 	String stub = """
 			Just a simple test response as if its from the raw output of the LLM "
 			```json 
-			[{
+			[{ 
 			   	"className": "LogSubscriberPort",
 			   	"compliance": "YES",
 			   	"principle": "Single Responsibility Principle",
@@ -36,7 +36,7 @@ public class PromptPipelineTestConfig {
 	@Bean
 	@Primary
 	Prompter prompter() {
-		return (s, structure) -> Flux.just(stub);
+		return (s) -> Flux.just(stub);
 	}
 
 	

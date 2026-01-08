@@ -5,7 +5,7 @@ import java.security.NoSuchAlgorithmException;
 
 public class FileHash {
 
-	public String hash(String file) {
+	public static String hash(String file) {
 		
 		MessageDigest instance = null;
 		try {

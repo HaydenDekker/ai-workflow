@@ -33,8 +33,8 @@ public class FileUpdatedFilterTest {
 		InputStream data2IS = new ByteArrayInputStream(stubFileData2);
 		
 		FileHash fh = new FileHash();
-		String previousFileHash = fh.hash(getString(data1IS));
-		String currentFileHash = fh.hash(getString(data2IS));
+		String previousFileHash = FileHash.hash(getString(data1IS));
+		String currentFileHash = FileHash.hash(getString(data2IS));
 		
 		FileMetaDatabaseSearcher searcher = (url)->{
 			return Optional.of(new FileMetadata(url, "",  previousFileHash));

@@ -20,7 +20,7 @@ import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
-import com.hdekker.ai_workflow.llm.GenericPromptCaller;
+import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.pipeline.domain.PromptTriggerEvent;
@@ -45,9 +45,6 @@ public class PromptPipelineConfiguration {
 
 	@Autowired
 	FileSystemRecursiveFileScannerAdapter fileScanner;
-
-	@Autowired
-	GenericPromptCaller genericPromptCaller;
 	
 	@Autowired
 	PromptResponseDatabase promptResponseDatabase;
@@ -75,19 +72,20 @@ public class PromptPipelineConfiguration {
 	@Autowired
 	SystemPromptConfiguration systemPromptConfiguration;
 	
+	@Autowired
+	Prompter prompter;
+	
 	// TODO component and pass in.
 	Path outputFolderPath;
 	
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
-			GenericPromptCaller genericPromptCaller,
 			PromptConfiguration promptConfiguration,
 			PromptResponseDatabase promptResponseDatabase,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig) {
 		
 		this.fileScanner = fileScanner;
-		this.genericPromptCaller = genericPromptCaller;
 		this.promptConfiguration = promptConfiguration;
 		this.promptResponseDatabase = promptResponseDatabase;
 		this.systemPromptConfiguration = systemPromptConfiguration;
@@ -99,7 +97,10 @@ public class PromptPipelineConfiguration {
 			e.printStackTrace();
 		}
 		
-		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator();
+		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
+				fileScanner.flux(),
+				prompter
+				);
 	
 		systemPromptConfiguration.getPromptChains()
 			.stream()
@@ -138,14 +139,13 @@ public class PromptPipelineConfiguration {
 			.forEach(pp-> {
 				if(pp.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
 					
-					LLMAdapter gp = flux->flux.map(fpe-> 
-					genericPromptCaller.call(
-						pp,
-						fpe.file(),
-						fpe.fileURL()));
+					LLMAdapter gp = flux->flux.flatMap(fpe-> 
+						prompter.call(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
+							.reduce((a,b)-> a+b)
+							.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 				
 					LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-							new LLMReducerAdapter(genericPromptCaller):
+							new LLMReducerAdapter(prompter):
 								gp;
 					
 					Flux<PromptResponse> prf = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
@@ -170,14 +170,13 @@ public class PromptPipelineConfiguration {
 			
 			Flux<PromptResponse> fs = promptTitleMap.get(pp.event());
 			
-			LLMAdapter gp = flux->flux.map(fpe-> 
-				genericPromptCaller.call(
-					pp, 
-					fpe.file(),
-					fpe.fileURL()));
+			LLMAdapter gp = flux->flux.flatMap(fpe-> 
+				prompter.call(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
+					.reduce((a,b)-> a+b)
+					.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 			
 			LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-					new LLMReducerAdapter(genericPromptCaller):
+					new LLMReducerAdapter(prompter):
 						gp;
 			
 			Flux<PromptResponse> fs2 = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()

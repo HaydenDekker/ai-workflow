@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.llm.GenericPromptCaller;
+import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -26,12 +26,12 @@ import reactor.core.publisher.Flux;
 public class LLMAdapterTest {
 	
 	@Autowired
-	GenericPromptCaller genericPromptCaller;
+	Prompter prompter;
 	
 	@Test
 	public void reducerAdapterCombinesPreviousPrompt() {
 		
-		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(genericPromptCaller);
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter);
 		
 		PipelinePrompt pp = TestData.basicPrompt();
 		PromptRequest pr = new PromptRequest(pp, "Test one", "/dont/care");

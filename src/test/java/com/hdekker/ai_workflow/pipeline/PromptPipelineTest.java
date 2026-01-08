@@ -22,7 +22,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.llm.GenericPromptCaller;
+import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -134,7 +134,7 @@ public class PromptPipelineTest {
 	}
 	
 	@Autowired
-	GenericPromptCaller genericPromptCaller;
+	Prompter prompter;
 	
 	@Test
 	public void givenPromptChainWithReduceAdapterSet_ExpectOutputResultsFromThePipeline() {
@@ -151,7 +151,7 @@ public class PromptPipelineTest {
 				"Accumulate this new input into the previous response.",
 				"List the items in the response.");
 		
-		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(genericPromptCaller);
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter);
 		
 		Flux<PromptResponse> pipeline = PromptPipelineBuilder.<PromptRequest, PromptResponse>instance()
 			.withTrigger(Flux.just(inputOne, inputTwo)

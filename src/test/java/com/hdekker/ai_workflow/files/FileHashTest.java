@@ -12,13 +12,12 @@ public class FileHashTest {
 		String file = "Hello Test File Here.";
 		String file2 = "Hello File 2 here";
 		
-		FileHash fh = new FileHash();
-		String hash = fh.hash(file);
-		String hash2 = fh.hash(file);
+		String hash = FileHash.hash(file);
+		String hash2 = FileHash.hash(file);
 		
 		assertThat(hash).isEqualTo(hash2);
 		
-		String hash3 = fh.hash(file2);
+		String hash3 = FileHash.hash(file2);
 		assertThat(hash3).isNotEqualTo(hash);
 		
 	}

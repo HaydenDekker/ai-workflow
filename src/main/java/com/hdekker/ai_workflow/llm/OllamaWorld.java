@@ -26,8 +26,8 @@ public class OllamaWorld implements Prompter{
 		client = ChatClient.builder(ollamaChatModel).build();
 	}
 	
-	public Flux<String> call(String prompt, String structure) {
-		return client.prompt(prompt + " \n + " + structure)
+	public Flux<String> call(String prompt) {
+		return client.prompt(prompt)
 				.stream()
 				.content();	
 	}

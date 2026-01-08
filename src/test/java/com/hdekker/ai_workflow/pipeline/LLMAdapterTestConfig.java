@@ -17,7 +17,7 @@ public class LLMAdapterTestConfig {
 	@Bean
 	@Primary
 	public Prompter testPrompter() {
-		return (p,c) -> Flux.just(p + " just return the request.");
+		return (p) -> Flux.just(p + " just return the request.");
 	}
 	
 }

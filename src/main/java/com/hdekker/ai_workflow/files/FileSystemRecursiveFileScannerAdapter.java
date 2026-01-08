@@ -96,14 +96,13 @@ public class FileSystemRecursiveFileScannerAdapter{
 		FluxMessageChannel filesChannel = this.applicationContext
 	            .getBean("fileInboundFluxChannel", FluxMessageChannel.class);
 		
-		FileHash fileHash = new FileHash();
 		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
 		
 		
 		flux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel)
 					.map(m->{
 						String s = (String) m.getPayload();
-						String hash = fileHash.hash(s);
+						String hash = FileHash.hash(s);
 						String file = (String) m.getHeaders().get("file_relativePath");
 						return new FileMetadata(file, s, hash);	
 					})
