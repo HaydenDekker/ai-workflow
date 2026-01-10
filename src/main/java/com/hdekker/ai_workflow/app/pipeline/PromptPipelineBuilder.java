@@ -1,8 +1,10 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.app.pipeline;
 
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 
 import reactor.core.publisher.Flux;
 
@@ -29,7 +31,7 @@ public class PromptPipelineBuilder<T, K> {
 		BuilderImpl<?, K> split(SplittableStrategy<K,K> splitter);
 	}
 	
-	static class BuilderImpl<T,K> implements
+	public static class BuilderImpl<T,K> implements
 	Triggered<T, K>, 
 	PromptMapped<T,K>,
 	Persistable<K>,

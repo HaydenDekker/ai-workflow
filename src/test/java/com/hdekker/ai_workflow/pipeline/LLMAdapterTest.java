@@ -31,11 +31,11 @@ public class LLMAdapterTest {
 	@Test
 	public void reducerAdapterCombinesPreviousPrompt() {
 		
-		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter);
-		
 		PipelinePrompt pp = TestData.basicPrompt();
-		PromptRequest pr = new PromptRequest(pp, "Test one", "/dont/care");
-		PromptRequest pr2 = new PromptRequest(pp, "Test two", "/dont/care");
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter,pp);
+		
+		PromptRequest pr = new PromptRequest("Test one", "/dont/care");
+		PromptRequest pr2 = new PromptRequest("Test two", "/dont/care");
 		
 		Flux<PromptResponse> resp = llmReducerAdapter.call(Flux.just(pr, pr2));
 		

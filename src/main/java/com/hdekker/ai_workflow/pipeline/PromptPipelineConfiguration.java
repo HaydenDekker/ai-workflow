@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
 import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
@@ -117,7 +118,6 @@ public class PromptPipelineConfiguration {
 	PromptRequest convert(PipelinePrompt pipelinePrompt, PromptResponse response) {
 		
 		return new PromptRequest(
-				pipelinePrompt, 
 				response.prompt().title() + "\n\r\n\r" +  response.prompt().body() + " Response: \n\r\n\r" + response.response(), 
 				response.fileName());
 		
@@ -145,12 +145,12 @@ public class PromptPipelineConfiguration {
 							.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 				
 					LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-							new LLMReducerAdapter(prompter):
+							new LLMReducerAdapter(prompter, pp):
 								gp;
 					
 					Flux<PromptResponse> prf = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
 						.withTrigger(fileScanner.flux()
-								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())))
+								.map(fh-> new PromptRequest(fh.currentFile().body(), fh.currentFile().url())))
 						.prompting(adapter::call)
 						.persist(pr->{
 							promptResponseDatabase.save(pr);
@@ -162,8 +162,11 @@ public class PromptPipelineConfiguration {
 					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), prf);
 				
 				}else {
+					
 					responsePrompts.add(pp);
+					
 				}
+	
 			});
 		
 		responsePrompts.forEach(pp->{
@@ -176,7 +179,7 @@ public class PromptPipelineConfiguration {
 					.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 			
 			LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-					new LLMReducerAdapter(prompter):
+					new LLMReducerAdapter(prompter, pp):
 						gp;
 			
 			Flux<PromptResponse> fs2 = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()

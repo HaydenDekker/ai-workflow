@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.app.pipeline;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -10,7 +12,6 @@ import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.LLMReducerAdapter;
-import com.hdekker.ai_workflow.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -50,17 +51,18 @@ public class PromptPipelineConfigurator {
 		
 			
 				LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-						new LLMReducerAdapter(prompter):
+						new LLMReducerAdapter(prompter, pp):
 							gp;
+				
+				Path outputFolderPath = Paths.get("");
 				
 				PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
 						.withTrigger(fileInputFlux
-								.map(fh-> new PromptRequest(pp, fh.currentFile().body(), fh.currentFile().url())))
-						.prompting(adapter::call);
-//						.persist(pr->{
-//							promptResponseDatabase.save(pr);
-//							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-//						})
+								.map(fh-> new PromptRequest(fh.currentFile().body(), fh.currentFile().url())))
+						.prompting(adapter::call)
+						.persist(pr->{
+							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
+						});
 //						.split(jsonItemListConverter)
 //						.build();
 				

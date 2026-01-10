@@ -1,9 +1,13 @@
 package com.hdekker.ai_workflow;
 
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 public class TestData {
+	
+	static String fileNameStub = "input-file.txt";
+	static String fileContentStub = "This is the content of the input file.";
 	
 	public static PipelinePrompt basicPrompt() {
 		return new PipelinePrompt(
@@ -17,10 +21,14 @@ public class TestData {
 	public static PromptResponse basicResponse() {
 		return new PromptResponse(
 				basicPrompt(), 
-				"input-file.txt", 
-				"This is the content of the input file.", 
+				basicRequest().fileURL(),
+				basicRequest().file(), 
 				"This is the content after the pipeline stage has parsed the input file via an llm and appended any additional information.");
 		
+	}
+
+	public static PromptRequest basicRequest() {
+		return new PromptRequest(fileNameStub, fileContentStub);
 	}
 
 }

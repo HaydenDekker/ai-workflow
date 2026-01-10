@@ -9,18 +9,21 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.github.javaparser.ast.expr.PatternExpr;
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.Prompter;
-import com.hdekker.ai_workflow.pipeline.PromptPipelineConfiguration;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 
+/***
+ *  To take the users list of graph structures and initialise
+ *  the edges in memory.
+ * 
+ */
 public class PromptPipelineConfiguratorTest {
 	
 	PromptPipelineConfigurator configurator;
