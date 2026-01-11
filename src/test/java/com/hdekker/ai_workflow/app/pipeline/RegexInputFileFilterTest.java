@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilterTest.RegexInputFileFilter.FilterResult;
+import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
 
 /***
  *  To configure the rang of files this prompt accepts.
@@ -17,37 +17,6 @@ import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilterTest.RegexInputF
  */
 public class RegexInputFileFilterTest {
 	
-	public static class RegexInputFileFilter {
-		
-		public record FilterResult(boolean matches, String path, String name) {}
-		
-		public FilterResult matches(String input, String regex) {
-	        if (input == null || regex == null) {
-	            return new FilterResult(false, null, null);
-	        }
-
-	        Pattern pattern = Pattern.compile(regex);
-	        Matcher matcher = pattern.matcher(input);
-
-	        if (matcher.matches()) {
-	            // Extract groups safely, checking if the named groups exist in the regex
-	            String path = hasGroup(matcher, "path") ? matcher.group("path") : null;
-	            String name = hasGroup(matcher, "name") ? matcher.group("name") : null;
-	            return new FilterResult(true, path, name);
-	        }
-
-	        return new FilterResult(false, null, null);
-	    }
-
-	    private boolean hasGroup(Matcher matcher, String groupName) {
-	        try {
-	            matcher.start(groupName);
-	            return true;
-	        } catch (IllegalArgumentException | IllegalStateException e) {
-	            return false;
-	        }
-	    }
-	}
 
 	public record TestCase(
 	        String testName, 
@@ -110,9 +79,8 @@ public class RegexInputFileFilterTest {
 	    @ParameterizedTest(name = "{index}: {0}")
 	    @MethodSource("testCases")
 	    public void givenInputFileMatchingRegex_ExpectPasses(TestCase testCase) {
-	        RegexInputFileFilter filter = new RegexInputFileFilter();
 
-	        FilterResult result = filter.matches(testCase.inputFile(), testCase.regex());
+	        FilterResult result = RegexInputFileFilter.matches(testCase.inputFile(), testCase.regex());
 
 	        // Assert basic match
 	        assertEquals(testCase.shouldMatch(), result.matches(), "Match status mismatch for: " + testCase.testName());

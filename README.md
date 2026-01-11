@@ -59,16 +59,19 @@ the output of the chain viewed via the UI.
 
 The database add's unnecessary complexity as prompt outputs/thoughts could themselves be files. Outputting results as files improves the git workflow, allowing thought state to be progressively captured. It removes the database interface. The prompt config needs are also simplified as the user only needs to consider what files are present and in what location. Accessing the files is then simply a matter of pulling up the directory and flicking through to see results.
 
+I've view the new configuration as a flattened graph where each node n1 and n2 are files in and out. The edge or path is the agent/prompt runner.
+
 The database is still required for file-system hash monitoring so that the entire prompt chain isn't reloaded on startup.
 
 - (done) Create PromptResponseFileSystemAdapter to receive and store prompt responses.
 - (done) Create FileOutput stage for prompt chain builder and enable configuration to define target file type.
 - (done) Update file scanner to listen to all event
-- Update pipeline configuration to filter on file regex.
+- (done) Update pipeline configuration to filter on file regex.
+- Update pipeline to output document to the prompt file template where the file name is a function of the input file url.
 - Update pipeline configuration to listen to new response file events/thoughts.
 - Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.
 - Update View to utilise new port.
-- Create PromptResponseFileSystemAdapter to implement PromptResponsePort
+- (done) Create PromptResponseFileSystemAdapter to implement PromptResponsePort
 - Remove PromptResponseDatabaseAdapter from program.
 - Remove event based prompt chain configuration as new events occur only on file change.
 
