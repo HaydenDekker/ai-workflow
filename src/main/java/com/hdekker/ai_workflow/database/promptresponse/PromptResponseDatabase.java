@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
+// TODO remove.
 @Component
 public class PromptResponseDatabase {
 
@@ -18,6 +19,7 @@ public class PromptResponseDatabase {
 		return new PromptResponse(
 				new PipelinePrompt(
 						e.getEvent(), 
+						"",
 						e.getPromptTitle(), 
 						"Not used",
 						e.getPromptInput(), 

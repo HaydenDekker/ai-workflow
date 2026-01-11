@@ -9,10 +9,15 @@ package com.hdekker.ai_workflow.pipeline.domain;
  */
 public record PipelinePrompt(
 		String event,
+		String fileInputRegex,
 		String title,
 		String type,
 		String body,
 		String outputStructure
 		) {
+
+	public Boolean inputRegexMatches(String fileURL) {
+		return false;
+	}
 
 }

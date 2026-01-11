@@ -80,3 +80,4 @@ The database is still required for file-system hash monitoring so that the entir
 - outputs for conditional logic, how to define, parse and execute branches.
 - need a way to clear memeory of any prompts to reset the system. Involves clearing file-system hash cache.
 - set a flag for autocopy of prepackaged prompts.
+- images and audio files, secondary filter to ensure file type can be provided to LLMAdpater.

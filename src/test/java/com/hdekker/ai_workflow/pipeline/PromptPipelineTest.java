@@ -146,7 +146,8 @@ public class PromptPipelineTest {
 		String title = "Prompt Event Stage Test";
 		
 		PipelinePrompt pipelinePrompt = new PipelinePrompt(
-				dummyEvent, 
+				dummyEvent,
+				"",
 				title, 
 				"Reduction not used",
 				"Accumulate this new input into the previous response.",
