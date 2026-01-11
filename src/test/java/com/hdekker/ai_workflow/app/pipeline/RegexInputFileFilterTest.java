@@ -3,10 +3,13 @@ package com.hdekker.ai_workflow.app.pipeline;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilterTest.RegexInputFileFilter.FilterResult;
 
 /***
  *  To configure the rang of files this prompt accepts.
@@ -15,64 +18,110 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class RegexInputFileFilterTest {
 	
 	public static class RegexInputFileFilter {
-		/**
-		 * Checks if the input string matches the provided regex pattern.
-		 */
-		public boolean matches(String input, String regex) {
-			if (input == null || regex == null) {
-				return false;
-			}
-			return Pattern.matches(regex, input);
-		}
-	}
-	
-	record TestCase(String name, String inputFile, String regex, Boolean shouldMatch) {}
-	
-	public static List<TestCase> testCases(){
-		return List.of(
-	            // 1. Basic match
-	            new TestCase("Simple extension match", "input-file.txt", ".*\\.txt", true),
-
-	            // 2. Folder: Match any file in a specific folder
-	            // Matches "logs/" followed by any characters
-	            new TestCase("Any file in 'logs' folder", "logs/app.log", "logs/.*", true),
-
-	            // 3. Folder: Match a specific file type in a specific folder
-	            // Matches "src/main/" then any chars ending in ".java"
-	            new TestCase("Java files in src folder", "src/main/User.java", "src/main/.*\\.java", true),
-
-	            // 4. Specific file in any subfolder
-	            // Matches any path ending in "config.json"
-	            new TestCase("Config in any subfolder", "etc/app/config.json", ".*/config\\.json", true),
-
-	            // 5. Obscure: Case sensitivity (Regex is case-sensitive by default)
-	            new TestCase("Case mismatch (Should fail)", "IMAGE.PNG", ".*\\.png", false),
-
-	            // 6. Obscure: Hidden files
-	            new TestCase("Hidden file match", ".gitignore", "\\..*", true),
-
-	            // 7. Obscure: Multiple dots in filename
-	            new TestCase("Multiple dots match", "archive.tar.gz", ".*\\.tar\\.gz", true),
-
-	            // 8. Negative Match: Ensure regex doesn't over-match
-	            new TestCase("Partial name mismatch", "backup-txt-file.zip", ".*\\.txt", false)
-	        );
-	}
-
-	@ParameterizedTest()
-	@MethodSource("testCases")
-	public void givenInputFileMatchingRegex_ExpectPasses(TestCase testCase) {
 		
-		// Arrange
-        RegexInputFileFilter filter = new RegexInputFileFilter();
+		public record FilterResult(boolean matches, String path, String name) {}
+		
+		public FilterResult matches(String input, String regex) {
+	        if (input == null || regex == null) {
+	            return new FilterResult(false, null, null);
+	        }
 
-        // Act
-        boolean result = filter.matches(testCase.inputFile(), testCase.regex());
+	        Pattern pattern = Pattern.compile(regex);
+	        Matcher matcher = pattern.matcher(input);
 
-        // Assert
-        assertEquals(testCase.shouldMatch(), result, 
-            String.format("Failed case '%s': Input '%s' against Regex '%s'", 
-            testCase.name(), testCase.inputFile(), testCase.regex()));
+	        if (matcher.matches()) {
+	            // Extract groups safely, checking if the named groups exist in the regex
+	            String path = hasGroup(matcher, "path") ? matcher.group("path") : null;
+	            String name = hasGroup(matcher, "name") ? matcher.group("name") : null;
+	            return new FilterResult(true, path, name);
+	        }
+
+	        return new FilterResult(false, null, null);
+	    }
+
+	    private boolean hasGroup(Matcher matcher, String groupName) {
+	        try {
+	            matcher.start(groupName);
+	            return true;
+	        } catch (IllegalArgumentException | IllegalStateException e) {
+	            return false;
+	        }
+	    }
 	}
+
+	public record TestCase(
+	        String testName, 
+	        String inputFile, 
+	        String regex, 
+	        boolean shouldMatch, 
+	        String expectedPath, 
+	        String expectedName
+	    ) {}
+
+	    public static List<TestCase> testCases() {
+	        return List.of(
+	            // 1. Full Capture: Path and Name
+	            new TestCase("Full capture", "usr/bin/java", "(?<path>.*/)(?<name>.*)", true, "usr/bin/", "java"),
+
+	            // 2. Path Only: No name group in regex
+	            new TestCase("Path only capture", "home/user/docs/readme.txt", "(?<path>.*/).*\\.txt", true, "home/user/docs/", null),
+
+	            // 3. Name Only: No path group in regex
+	            new TestCase("Name only capture", "home/user/docs/readme.txt", ".*/(?<name>.*\\.txt)", true, null, "readme.txt"),
+
+	            // 4. Capture Path in the middle (Obscure)
+	            new TestCase("Path in middle", "cloud/storage/v1/bucket/file.png", "cloud/(?<path>.*)/bucket/(?<name>.*)", true, "storage/v1", "file.png"),
+
+	            // 5. No Groups: Just a boolean match
+	            new TestCase("No groups captured", "simple-file.txt", ".*\\.txt", true, null, null),
+
+	            // 6. Fail Match: Groups should be null
+	            new TestCase("Failed match", "wrong-extension.jpg", ".*\\.txt", false, null, null),
+	            
+	            new TestCase("Simple extension match", "input-file.txt", ".*\\.txt", true, null, null),
+
+	            // 2. Folder: Match any file in a specific folder (Capturing the folder as path)
+	            new TestCase("Any file in 'logs' folder", "logs/app.log", "(?<path>logs/)(?<name>.*)", true, "logs/", "app.log"),
+
+	            // 3. Folder: Match specific file type (Capturing complex path)
+	            new TestCase("Java files in src folder", "src/main/User.java", "(?<path>src/main/)(?<name>.*\\.java)", true, "src/main/", "User.java"),
+
+	            // 4. Specific file in any subfolder (Capturing path anywhere)
+	            new TestCase("Config in any subfolder", "etc/app/config.json", "(?<path>.*/)(?<name>config\\.json)", true, "etc/app/", "config.json"),
+
+	            // 5. Case sensitivity (Regex failure)
+	            new TestCase("Case mismatch (Should fail)", "IMAGE.PNG", ".*\\.png", false, null, null),
+
+	            // 6. Hidden files (Name only)
+	            new TestCase("Hidden file match", ".gitignore", "(?<name>\\..*)", true, null, ".gitignore"),
+
+	            // 7. Multiple dots (Path and Name split)
+	            new TestCase("Multiple dots match", "backups/2024/archive.tar.gz", "(?<path>.*/)(?<name>.*\\.tar\\.gz)", true, "backups/2024/", "archive.tar.gz"),
+
+	            // 8. Negative Match
+	            new TestCase("Partial name mismatch", "backup-txt-file.zip", ".*\\.txt", false, null, null),
+	            
+	            // 9. Obscure: Path in the middle, name at the end
+	            new TestCase("Path in middle of URL", "https://cdn.com/assets/v1/img/hero.jpg", ".*/(?<path>assets/.*/img)/(?<name>.*)", true, "assets/v1/img", "hero.jpg")
+	       
+	        );
+	    }
+
+	    @ParameterizedTest(name = "{index}: {0}")
+	    @MethodSource("testCases")
+	    public void givenInputFileMatchingRegex_ExpectPasses(TestCase testCase) {
+	        RegexInputFileFilter filter = new RegexInputFileFilter();
+
+	        FilterResult result = filter.matches(testCase.inputFile(), testCase.regex());
+
+	        // Assert basic match
+	        assertEquals(testCase.shouldMatch(), result.matches(), "Match status mismatch for: " + testCase.testName());
+
+	        // Assert captured groups
+	        if (testCase.shouldMatch()) {
+	            assertEquals(testCase.expectedPath(), result.path(), "Path group mismatch for: " + testCase.testName());
+	            assertEquals(testCase.expectedName(), result.name(), "Name group mismatch for: " + testCase.testName());
+	        }
+	    }
 
 }
