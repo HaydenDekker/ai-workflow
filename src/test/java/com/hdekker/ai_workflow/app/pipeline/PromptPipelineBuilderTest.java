@@ -20,12 +20,16 @@ public class PromptPipelineBuilderTest {
 	Flux<PromptRequest> fileInputFlux;
 	Prompter prompter;
 	
+	String outputFilename = "";
+	
 	@Test
 	public void givenFileMatchingPromptInputRegex_PipelineFilterPassesFile()  {
 		
 		PipelinePrompt pp = TestData.basicPrompt();
 		PromptResponse basicResponse = TestData.basicResponse();
-		Consumer<PromptResponse> persister = (p) -> {};
+		Consumer<PromptResponse> persister = (p) -> {
+			outputFilename = p.createOutputFileName();
+		};
 		fileInputFlux = Flux.just(TestData.basicRequest(TestData.fileNameStub));
 		
 		prompter = (prompt) -> {
@@ -49,7 +53,11 @@ public class PromptPipelineBuilderTest {
 		assertThat(resp.fileName())
 			.isEqualTo(basicResponse.fileName());
 		
+		assertThat(outputFilename)
+			.isEqualTo("output/input-file.txt");
+		
 	}
+
 	
 	@Test
 	public void givenFileNotMatchingPromptInputRegex_ExpectFilterBlocksFile() {

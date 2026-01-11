@@ -161,7 +161,8 @@ public class SystemPromptConfiguration {
 							pp.title(),
 							pp.type(),
 							bodyFileAsString, 
-							outputFileAsString);
+							outputFileAsString,
+							"");
 					
 				}).toList());
 		}

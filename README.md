@@ -67,7 +67,7 @@ The database is still required for file-system hash monitoring so that the entir
 - (done) Create FileOutput stage for prompt chain builder and enable configuration to define target file type.
 - (done) Update file scanner to listen to all event
 - (done) Update pipeline configuration to filter on file regex.
-- Update pipeline to output document to the prompt file template where the file name is a function of the input file url.
+- (done) Update pipeline to output document to the prompt file template where the file name is a function of the input file url.
 - Update pipeline configuration to listen to new response file events/thoughts.
 - Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.
 - Update View to utilise new port.

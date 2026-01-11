@@ -151,7 +151,8 @@ public class PromptPipelineTest {
 				title, 
 				"Reduction not used",
 				"Accumulate this new input into the previous response.",
-				"List the items in the response.");
+				"List the items in the response.",
+				"");
 		
 		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter, pipelinePrompt);
 		

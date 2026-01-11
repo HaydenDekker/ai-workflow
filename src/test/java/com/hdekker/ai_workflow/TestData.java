@@ -20,12 +20,13 @@ public class TestData {
 	
 	public static PipelinePrompt basicPrompt() {
 		return new PipelinePrompt(
-				"/**", 
-				"/typical-folder/*.txt",
+				"", 
+				"(?:.*/)?(?<name>.*\\.txt)",
 				"BASIC PROMPT TEST", 
 				"STANDARD",
 				"This prompt is part of a basic pipeline stage configuration. You should simply confirm you've received this prompt.", 
-				"Neat and tidy output is required.");
+				"Neat and tidy output is required.",
+				"output/${name}");
 	}
 	
 	public static PromptResponse basicResponse() {

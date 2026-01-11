@@ -23,7 +23,8 @@ public class PromptResponseDatabase {
 						e.getPromptTitle(), 
 						"Not used",
 						e.getPromptInput(), 
-						e.getFormat()), 
+						e.getFormat(),
+						""), 
 				e.getFileName(), e.getFile(), e.getResponse());
 	}
 	

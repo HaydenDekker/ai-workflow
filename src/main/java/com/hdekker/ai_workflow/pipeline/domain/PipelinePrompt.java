@@ -13,7 +13,8 @@ public record PipelinePrompt(
 		String title,
 		String type,
 		String body,
-		String outputStructure
+		String outputStructure,
+		String outputFilenameTemplate
 		) {
 
 	public Boolean inputRegexMatches(String fileURL) {

@@ -7,13 +7,23 @@ import java.util.regex.Pattern;
 
 public class RegexInputFileFilter {
 	
-	public record FilterResult(boolean matches, Map<String, String> groups, String path, String name) {
+	public record FilterResult(boolean matches, Map<String, String> groups) {
+		
+		public String path() {
+			String path = groups.get("path");
+			return (path!=null)? path: "";
+		}
+		
+		public String name() {
+			String name = groups.get("name");
+			return (name!=null)? name: "";
+		}
 		
 	}
 	
 	public static FilterResult matches(String input, String regex) {
         if (input == null || regex == null) {
-            return new FilterResult(false, null, null, null);
+            return new FilterResult(false, null);
         }
 
         Pattern pattern = Pattern.compile(regex);
@@ -23,16 +33,17 @@ public class RegexInputFileFilter {
 
         if (matcher.matches()) {
             // Extract groups safely, checking if the named groups exist in the regex
-            String path = hasGroup(matcher, "path") ? matcher.group("path") : null;
-            String name = hasGroup(matcher, "name") ? matcher.group("name") : null;
+            if(hasGroup(matcher, "path")){
+            	groups.put("path", matcher.group("path"));
+            }
+            if(hasGroup(matcher, "name")) {
+            	groups.put("name", matcher.group("name"));
+            }
             
-            groups.put("path", matcher.group("path"));
-            groups.put("name", matcher.group("name"));
-            
-            return new FilterResult(true, groups, path, name);
+            return new FilterResult(true, groups);
         }
 
-        return new FilterResult(false, groups, null, null);
+        return new FilterResult(false, groups);
     }
 
     private static boolean hasGroup(Matcher matcher, String groupName) {
