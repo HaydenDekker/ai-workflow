@@ -41,7 +41,8 @@ public class PromptPipelineBuilderTest {
 			.reduce((a,b)-> a+b)
 			.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 		;
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
+			.withDefinition(pp)
 			.withTrigger(fileInputFlux)
 			.prompting(adapter::call)
 			.persist(persister)
@@ -65,11 +66,10 @@ public class PromptPipelineBuilderTest {
 		PipelinePrompt pp = TestData.basicPrompt();
 		PromptResponse basicResponse = TestData.basicResponse();
 		Consumer<PromptResponse> persister = (p) -> {};
-		PromptRequest basicRequest = TestData.basicRequest(TestData.fileNameStub);
+		PromptRequest basicRequest = TestData.basicRequest("diff-type.json");
 		
-		fileInputFlux = Flux.just(basicRequest)
-					.filter(pr-> pp.inputRegexMatches(pr.fileURL()));
-		
+		fileInputFlux = Flux.just(basicRequest);
+					
 		prompter = (prompt) -> {
 			return Flux.just(basicResponse.response());
 		};
@@ -79,7 +79,8 @@ public class PromptPipelineBuilderTest {
 			.reduce((a,b)-> a+b)
 			.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 		;
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
+			.withDefinition(pp)
 			.withTrigger(fileInputFlux)
 			.prompting(adapter::call)
 			.persist(persister)

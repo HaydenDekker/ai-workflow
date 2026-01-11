@@ -2,6 +2,7 @@ package com.hdekker.ai_workflow.files;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
@@ -15,14 +16,20 @@ public class PromptResponseFileSystemAdapterTest {
 	@TempDir
 	Path tempDir;
 	
+	// TODO check non-existant file is created.
+	// TODO existing file is overwritten.
 	@Test
-	public void givenPromptResponse_ExpectOutputFilePrepared() {
+	public void givenPromptResponse_ExpectOutputFilePrepared() throws IOException {
 		
 		PromptResponse testPromptResponse = TestData.basicResponse();
-		Path file = PromptResponseFileSystemAdapter.createFile(testPromptResponse, tempDir);
-		assertThat(file.toFile().getName())
-			.isEqualTo(testPromptResponse.prompt().title() + "_" + "input-file.txt" + ".md");
 		
+		Path file = PromptResponseFileSystemAdapter.createFile(testPromptResponse, tempDir);
+		
+		Path relativePath = tempDir.relativize(file);
+		
+		assertThat(relativePath.toString().replace('\\', '/'))
+			.isEqualTo("output/input-file.txt");
+	
 	}
 
 }

@@ -41,6 +41,7 @@ public class PromptPipelineConfiguratorTest {
 						mockFileBody,
 						FileHash.hash(mockFileBody)), 
 					Optional.empty());
+		
 		Prompter prompter = (s) -> Flux.just(expectedMockResult);
 		
 		configurator = new PromptPipelineConfigurator(Flux.just(fh), prompter);
@@ -57,10 +58,6 @@ public class PromptPipelineConfiguratorTest {
 		
 	}
 	
-	void triggerFileInputEvent() {
-		
-	}
-	
 	@Test
 	public void givenPipelineWithSingleStage_ExpectSingleFluxReturned() {
 		
@@ -73,13 +70,12 @@ public class PromptPipelineConfiguratorTest {
 		
 		Flux<PromptResponse> promptFlux = flux.get(0);
 		
-		PromptResponse pr = promptFlux.doOnSubscribe(s-> triggerFileInputEvent())
-			.blockFirst(Duration.ofSeconds(3));
+		PromptResponse pr = promptFlux.blockFirst(Duration.ofSeconds(3));
 		
 		assertThat(pr.prompt())
 			.isEqualTo(pp);
 		
-		assertThat(pr.fileContents())
+		assertThat(pr.response())
 			.isEqualTo(expectedMockResult);
 			
 		

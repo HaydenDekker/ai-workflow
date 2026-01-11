@@ -55,7 +55,7 @@ public class PromptPipelineConfiguration {
 	
 	ObjectMapper om = new ObjectMapper();
 	
-	SplittableStrategy<PromptResponse, PromptResponse> jsonItemListConverter = (s)->{
+	SplittableStrategy jsonItemListConverter = (s)->{
 		String json = LLMOutputParsingUtils.extractJsonContent(s.response());
 		List<Object> list = List.of();
 		try {
@@ -98,6 +98,7 @@ public class PromptPipelineConfiguration {
 			e.printStackTrace();
 		}
 		
+		// TODO swap in
 		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
 				fileScanner.flux(),
 				prompter
@@ -148,7 +149,8 @@ public class PromptPipelineConfiguration {
 							new LLMReducerAdapter(prompter, pp):
 								gp;
 					
-					Flux<PromptResponse> prf = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+					Flux<PromptResponse> prf = PromptPipelineBuilder.instance()
+						.withDefinition(pp)
 						.withTrigger(fileScanner.flux()
 								.map(fh-> new PromptRequest(fh.currentFile().body(), fh.currentFile().url())))
 						.prompting(adapter::call)
@@ -182,7 +184,8 @@ public class PromptPipelineConfiguration {
 					new LLMReducerAdapter(prompter, pp):
 						gp;
 			
-			Flux<PromptResponse> fs2 = PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+			Flux<PromptResponse> fs2 = PromptPipelineBuilder.instance()
+					.withDefinition(pp)
 					.withTrigger(
 							fs.map(presp-> convert(pp, presp)))
 					.prompting(adapter::call)

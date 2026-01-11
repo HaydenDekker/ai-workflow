@@ -12,6 +12,7 @@ import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.LLMReducerAdapter;
+import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -56,19 +57,19 @@ public class PromptPipelineConfigurator {
 				
 				Path outputFolderPath = Paths.get("");
 				
-				PromptPipelineBuilder.<PromptRequest, PromptResponse> instance()
+				return PromptPipelineBuilder.instance()
+						.withDefinition(pp)
 						.withTrigger(fileInputFlux
-								.map(fh-> new PromptRequest(fh.currentFile().body(), fh.currentFile().url())))
+								.map(fh-> fh.to()))
 						.prompting(adapter::call)
 						.persist(pr->{
 							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-						});
-//						.split(jsonItemListConverter)
-//						.build();
+						})
+						.split(SplittableStrategy.noSPLT())
+						.build();
 				
-				
-				return Flux.just(
-						new PromptResponse(pp, null, null, null));
+//				return Flux.just(
+//						new PromptResponse(pp, null, null, null));
 			})
 			.toList();
 			

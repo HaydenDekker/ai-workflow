@@ -5,77 +5,93 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
+import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.prompt.PromptRequest;
+import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 
-public class PromptPipelineBuilder<T, K> {
-
-	public static interface Triggered<T,K> {
-		PromptMapped<T,K> withTrigger(Flux<T> trigger);
-	}
+public class PromptPipelineBuilder {
 	
-	public interface PromptMapped<T,K> {
-		PromptMapped<T, K> enrichFirst(Enrichable<T> enrich);
-		Persistable<K> prompting(Function<Flux<T>, Flux<K>> prompt);
-	}
-	
-	public interface Enrichable<T> {
-		T enrich(T input);
-	}
-	
-	public interface Persistable<K> {
-		Splittable<K> persist(Consumer<K> object);
+	public static interface WithPipelineDefinition {
+		Triggered withDefinition(PipelinePrompt pipelinePrompt);
 	}
 
-	public interface Splittable<K> {
-		BuilderImpl<?, K> split(SplittableStrategy<K,K> splitter);
+	public static interface Triggered {
+		PromptMapped withTrigger(Flux<PromptRequest> trigger);
 	}
 	
-	public static class BuilderImpl<T,K> implements
-	Triggered<T, K>, 
-	PromptMapped<T,K>,
-	Persistable<K>,
-	Splittable<K> {
+	public interface PromptMapped {
+		PromptMapped enrichFirst(Enrichable enrich);
+		Persistable prompting(Function<Flux<PromptRequest>, Flux<PromptResponse>> prompt);
+	}
+	
+	public interface Enrichable {
+		PromptRequest enrich(PromptRequest input);
+	}
+	
+	public interface Persistable {
+		Splittable persist(Consumer<PromptResponse> object);
+	}
+
+	public interface Splittable {
+		BuilderImpl split(SplittableStrategy splitter);
+	}
+	
+	public static class BuilderImpl implements
+	WithPipelineDefinition,
+	Triggered, 
+	PromptMapped,
+	Persistable,
+	Splittable {
 		
-		Flux<T> trigger;
-		Function<Flux<T>, Flux<K>> prompt;
-		Consumer<K> outputConsumer;
-		SplittableStrategy<K, K> splitter;
-		Optional<Enrichable<T>> enrichable = Optional.empty();
+		Flux<PromptRequest> trigger;
+		Function<Flux<PromptRequest>, Flux<PromptResponse>> prompt;
+		Consumer<PromptResponse> outputConsumer;
+		SplittableStrategy splitter;
+		Optional<Enrichable> enrichable = Optional.empty();
+		PipelinePrompt pipelinePrompt;
 		
 		@Override
-		public PromptMapped<T,K> withTrigger(Flux<T> trigger) {
-			this.trigger = trigger;
+		public Triggered withDefinition(PipelinePrompt pipelinePrompt) {
+			this.pipelinePrompt = pipelinePrompt;
 			return this;
 		}
 		
 		@Override
-		public PromptMapped<T,K> enrichFirst(Enrichable<T> enrich) {
+		public PromptMapped withTrigger(Flux<PromptRequest> trigger) {
+			this.trigger = trigger
+					.filter(pr-> pipelinePrompt.inputRegexMatches(pr.fileURL()));
+			return this;
+		}
+		
+		@Override
+		public PromptMapped enrichFirst(Enrichable enrich) {
 			this.enrichable = Optional.of(enrich);
 			return this;
 		}
 		
 		@Override
-		public Persistable<K> prompting(Function<Flux<T>, Flux<K>> prompt) {
+		public Persistable prompting(Function<Flux<PromptRequest>, Flux<PromptResponse>> prompt) {
 			this.prompt = prompt;
 			return this;
 		}
 		
 		
 		@Override
-		public Splittable<K> persist(Consumer<K> outputConsumer) {
+		public Splittable persist(Consumer<PromptResponse> outputConsumer) {
 			this.outputConsumer = outputConsumer;
 			return this;
 		}
 
 		@Override
-		public BuilderImpl<T, K> split(SplittableStrategy<K, K> splitter) {
+		public BuilderImpl split(SplittableStrategy splitter) {
 			this.splitter = splitter;
 			return this;
 		}
 		
 	
-		public Flux<K> build(){
+		public Flux<PromptResponse> build(){
 			return prompt.apply(
 						enrichable.map(en -> trigger.map(input->en.enrich(input)))
 							.orElse(trigger)
@@ -86,12 +102,13 @@ public class PromptPipelineBuilder<T, K> {
 					});
 		}
 
+
 	}
 
 
 	
-	public static <T,K> Triggered<T, K> instance() {
-		return new BuilderImpl<T,K>();
+	public static WithPipelineDefinition instance() {
+		return new BuilderImpl();
 	}
 
 

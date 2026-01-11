@@ -156,7 +156,8 @@ public class PromptPipelineTest {
 		
 		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter, pipelinePrompt);
 		
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.<PromptRequest, PromptResponse>instance()
+		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
+			.withDefinition(pipelinePrompt)
 			.withTrigger(Flux.just(inputOne, inputTwo)
 					.map(s->{
 						return new PromptRequest(s, "some/url");

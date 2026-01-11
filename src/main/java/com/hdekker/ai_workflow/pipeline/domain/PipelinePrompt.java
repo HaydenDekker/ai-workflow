@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.pipeline.domain;
 
+import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
+
 /**
  *  To capture configuration of a prompt for
  *  a pipeline
@@ -18,7 +20,7 @@ public record PipelinePrompt(
 		) {
 
 	public Boolean inputRegexMatches(String fileURL) {
-		return false;
+		return RegexInputFileFilter.matches(fileURL, fileInputRegex).matches();
 	}
 
 }

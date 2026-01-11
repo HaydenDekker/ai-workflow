@@ -2,9 +2,6 @@ package com.hdekker.ai_workflow.app.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
