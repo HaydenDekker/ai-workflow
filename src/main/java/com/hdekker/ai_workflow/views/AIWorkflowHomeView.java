@@ -1,10 +1,5 @@
 package com.hdekker.ai_workflow.views;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
@@ -17,6 +12,16 @@ import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+/**
+ *  To provide observability of the agents - later problem.
+ *  
+ *  Show configured
+ *  Allow one-shot tests / replays without affecting filesystem
+ *  Show runtime stats of nodes
+ *  Show input filter stats
+ *  Show output file creation stats
+ *  
+ */
 @Route("")
 @PageTitle("AI workflow")
 public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigationObserver{
@@ -25,9 +30,6 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 	 * 
 	 */
 	private static final long serialVersionUID = -7768121568061925115L;
-
-	@Autowired
-	PromptResponseDatabase promptResponseDatabase;
 	
 	Grid<PromptResponse> responseGrid = new Grid<PromptResponse>();
 	
@@ -55,7 +57,6 @@ public class AIWorkflowHomeView extends VerticalLayout implements AfterNavigatio
 
 	@Override
 	public void afterNavigation(AfterNavigationEvent event) {
-		List<PromptResponse> list = promptResponseDatabase.responseList();
-		responseGrid.setItems(list);
+		
 	}
 }

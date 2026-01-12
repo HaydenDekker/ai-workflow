@@ -27,7 +27,6 @@ import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
-import com.hdekker.ai_workflow.reports.ReportRestController;
 
 import reactor.core.publisher.Flux;
 
@@ -35,6 +34,8 @@ import reactor.core.publisher.Flux;
  * Pre-written prompt chains can target any 
  * information source. Useful to provide guidance
  * while allowing the user to take the lead, i.e a sidekick.
+ * 
+ * TODO rename to workflow integration test
  * 
  */
 @SpringBootTest
@@ -47,9 +48,6 @@ public class PromptPipelineTest {
 	
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
-	
-	@Autowired
-	ReportRestController reportRestController;
 	
 	@Autowired
 	PromptPipelineTestConfig config;
@@ -100,42 +98,25 @@ public class PromptPipelineTest {
 	 */
 
 	@Test
-	public void givenSingleFileAndTwoPrompts_ExpectBothOutcomesStoredInDatabase() throws InterruptedException, IOException {
+	public void givenSingleFileAndTwoEdgePromptChain_ExpectTwoOutputsStoredInFilesystem() throws InterruptedException, IOException {
 		
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		
 		Thread.sleep(1000);
 		
-		List<PromptResponse> reportItems = reportRestController.resultsForPrompt(TestFiles.FILE_SOLID_NON_COMPLIANCE_OUTPUT_DIR)
-				.collectList()
-				.block();
-		
 		assertThat(config.prompterCalled)
 			.isTrue();
-
-		assertThat(reportItems)
-			.hasSize(1);
 		
-		assertThat(reportItems.get(0).fileName())
-			.isNotNull();
-		
-		List<PromptResponse> results = reportRestController.resultsForPrompt("PRIORITY_ORDER")
-				.collectList()
-				.block();
-		
-		// TODO make explicit - split above outputs 2 items.
-		assertThat(results.size())
-			.isEqualTo(2);
-		
-		// TODO text taken from output
-		assertThat(results.get(0).prompt().body())
-			.contains(TEXT_IN_SOLID_PRIORITY_PROMPT);
-		
-		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + reportItems.get(0).createOutputFileName());
+		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		
 		log.info("Checking file exists, " + outputFilePath.toString() );
 		
 		assertThat(Files.exists(outputFilePath))
+			.isTrue();
+		
+		Path secondPromptFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_PRIORITY_ORDER_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE);
+		
+		assertThat(Files.exists(secondPromptFilePath))
 			.isTrue();
 		
 	}

@@ -77,7 +77,6 @@ public class PromptPipelineConfiguratorTest {
 		
 		assertThat(pr.response())
 			.isEqualTo(expectedMockResult);
-			
 		
 	}
 

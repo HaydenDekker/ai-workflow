@@ -17,7 +17,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
-import com.hdekker.ai_workflow.database.promptresponse.PromptResponseDatabase;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
@@ -46,9 +45,6 @@ public class PromptPipelineConfiguration {
 
 	@Autowired
 	FileSystemRecursiveFileScannerAdapter fileScanner;
-	
-	@Autowired
-	PromptResponseDatabase promptResponseDatabase;
 	
 	@Autowired
 	PromptConfiguration promptConfiguration;
@@ -82,13 +78,11 @@ public class PromptPipelineConfiguration {
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			PromptConfiguration promptConfiguration,
-			PromptResponseDatabase promptResponseDatabase,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig) {
 		
 		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;
-		this.promptResponseDatabase = promptResponseDatabase;
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		this.fileScannerConfig = fileScannerConfig;
 		
@@ -155,7 +149,6 @@ public class PromptPipelineConfiguration {
 								.map(fh-> new PromptRequest(fh.currentFile().body(), fh.currentFile().url())))
 						.prompting(adapter::call)
 						.persist(pr->{
-							promptResponseDatabase.save(pr);
 							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
 						})
 						.split(jsonItemListConverter)
@@ -188,7 +181,6 @@ public class PromptPipelineConfiguration {
 							fs.map(presp-> convert(pp, presp)))
 					.prompting(adapter::call)
 					.persist(pr->{
-						promptResponseDatabase.save(pr);
 						PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
 					})
 					.split(SplittableStrategy.noSPLT())
