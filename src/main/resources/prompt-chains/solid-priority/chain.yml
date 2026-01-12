@@ -5,11 +5,11 @@ chain:
     title: SOLID_NON_COMPLIANCE
     body: solid-compliance.md
     outputStructure: solid-compliance-output.md
-    outputFilenameTemplate: SOLID_NON_COMPLIANCE_${name}
+    outputFilenameTemplate: SOLID_NON_COMPLIANCE_${name}.md
   -
     event: PROMPT_RESPONSE_EVENT_SOLID_NON_COMPLIANCE
-    fileInputRegex: (?:.*/)?(?<name>.*\.java)
+    fileInputRegex: (?:.*/)?(?<name>.*\.md)
     title: PRIORITY_ORDER
     body: solid-priority.md
     outputStructure: solid-priority-output.md
-    outputFilenameTemplate: SOLID_NON_COMPLIANCE_PRIORITY_ORDER_${name}
+    outputFilenameTemplate: SOLID_NON_COMPLIANCE_PRIORITY_ORDER_${name}.md

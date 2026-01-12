@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,30 +80,35 @@ public class PromptPipelineConfiguration {
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
-			FileSystemScannerConfig fileScannerConfig) {
+			FileSystemScannerConfig fileScannerConfig,
+			Prompter prompter) {
 		
 		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		this.fileScannerConfig = fileScannerConfig;
-		
+		this.prompter = prompter;
+
 		try {
 			outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
+		Consumer<PromptResponse> persisterAdapter = pr-> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
+		
 		// TODO swap in
 		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
 				fileScanner.flux(),
-				prompter
+				prompter,
+				persisterAdapter
 				);
 	
 		systemPromptConfiguration.getPromptChains()
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
-			//.flatMap(pc-> ppc.configure(pc.chain()).stream())
-			.map(pc-> build(pc.chain()))
+			.flatMap(pc-> ppc.configure(pc.chain()).stream())
+			//.map(pc-> build(pc.chain()))
 			.forEach(flux-> {
 				log.info("starting");
 				flux.subscribe();

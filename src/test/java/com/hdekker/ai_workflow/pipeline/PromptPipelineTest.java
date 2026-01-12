@@ -102,20 +102,20 @@ public class PromptPipelineTest {
 		
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		
-		Thread.sleep(1000);
-		
 		assertThat(config.prompterCalled)
 			.isTrue();
 		
-		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE);
+		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE + ".md");
 		
 		log.info("Checking file exists, " + outputFilePath.toString() );
 		
 		assertThat(Files.exists(outputFilePath))
 			.isTrue();
 		
-		Path secondPromptFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_PRIORITY_ORDER_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE);
+		Thread.sleep(1000);
 		
+		Path secondPromptFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_PRIORITY_ORDER_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE + ".md");
+	
 		assertThat(Files.exists(secondPromptFilePath))
 			.isTrue();
 		
@@ -124,6 +124,8 @@ public class PromptPipelineTest {
 	@Autowired
 	Prompter prompter;
 	
+	// TODO move this to builder test or lower as a LLMAdapter test. The adapter has to get
+	// the latest file before proceeding, potentially a factory method.
 	@Test
 	public void givenPromptChainWithReduceAdapterSet_ExpectOutputResultsFromThePipeline() {
 		

@@ -73,6 +73,7 @@ The database is still required for file-system hash monitoring so that the entir
 - Update chain defintion's to listen to new response file events rather than receive events via the in-mem chain config.
 - Externalise fan-out declaring the type of edge as a fan-out (one to many) as opposed to a reduction/aggregation edge.
 - (done) Create PromptResponseFileSystemAdapter to implement PromptResponsePort
+- Update input file regex to accomodate extension where file/filename.txt would be path=file, name=filename and ext=txt.
 - Remove PromptResponseDatabaseAdapter from program.
 - Remove event based prompt chain configuration as new events occur only on file change.
 

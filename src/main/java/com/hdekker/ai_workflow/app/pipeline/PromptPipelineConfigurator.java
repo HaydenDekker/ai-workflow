@@ -3,6 +3,7 @@ package com.hdekker.ai_workflow.app.pipeline;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +27,16 @@ public class PromptPipelineConfigurator {
 	final Flux<FileHistory> fileInputFlux;
 	// TODO more a llm adapter.
 	Prompter prompter;
+	Consumer<PromptResponse> persister;
 	
 	public PromptPipelineConfigurator(
 			Flux<FileHistory> fileInputFlux,
-			Prompter prompter
+			Prompter prompter,
+			Consumer<PromptResponse> persister
 			){
 		this.fileInputFlux = fileInputFlux;
 		this.prompter = prompter;
+		this.persister = persister;
 	}
 
 	public List<Flux<PromptResponse>> configure(List<PipelinePrompt> promptChain) {
@@ -55,21 +59,15 @@ public class PromptPipelineConfigurator {
 						new LLMReducerAdapter(prompter, pp):
 							gp;
 				
-				Path outputFolderPath = Paths.get("");
-				
 				return PromptPipelineBuilder.instance()
 						.withDefinition(pp)
 						.withTrigger(fileInputFlux
 								.map(fh-> fh.to()))
 						.prompting(adapter::call)
-						.persist(pr->{
-							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-						})
+						.persist(persister)
 						.split(SplittableStrategy.noSPLT())
 						.build();
-				
-//				return Flux.just(
-//						new PromptResponse(pp, null, null, null));
+		
 			})
 			.toList();
 			

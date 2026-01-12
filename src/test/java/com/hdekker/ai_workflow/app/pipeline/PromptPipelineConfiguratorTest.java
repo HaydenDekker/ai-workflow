@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,8 @@ public class PromptPipelineConfiguratorTest {
 	
 	String expectedMockResult = "This is the expected result";
 	
+	Boolean persistCalled = false;
+	
 	@BeforeEach
 	public void init() {
 		
@@ -44,7 +47,14 @@ public class PromptPipelineConfiguratorTest {
 		
 		Prompter prompter = (s) -> Flux.just(expectedMockResult);
 		
-		configurator = new PromptPipelineConfigurator(Flux.just(fh), prompter);
+		Consumer<PromptResponse> persister = (pr) -> {
+			persistCalled = true;
+		};
+		
+		configurator = new PromptPipelineConfigurator(
+				Flux.just(fh), 
+				prompter, 
+				persister);
 	
 	}
 	
@@ -77,6 +87,9 @@ public class PromptPipelineConfiguratorTest {
 		
 		assertThat(pr.response())
 			.isEqualTo(expectedMockResult);
+		
+		assertThat(persistCalled)
+			.isTrue();
 		
 	}
 
