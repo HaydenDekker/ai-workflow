@@ -86,13 +86,9 @@ public class SystemPromptConfiguration {
 				 return null;
 			 }
 			
-			 // TODO output file
-//			List<Tuple2<PipelinePrompt, Path>> outputFiles = promptChainFiles.chain().chain().stream().map(pp->{
-//				return Tuples.of(pp, promptChainFiles.supportingFile().get(pp.outputStructure()));
-//			}).collect(Collectors.toList());
-//			
+			 // TODO add validation for output file template
 
-			return promptChainFiles; //new PromptFiles(chainPath, null);
+			return promptChainFiles;
 		}
 		
 	}
@@ -142,7 +138,6 @@ public class SystemPromptConfiguration {
 					try {
 						bodyFileAsString = Files.readString(bodyFile);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					
@@ -151,7 +146,6 @@ public class SystemPromptConfiguration {
 					try {
 						outputFileAsString = Files.readString(outputFile);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					

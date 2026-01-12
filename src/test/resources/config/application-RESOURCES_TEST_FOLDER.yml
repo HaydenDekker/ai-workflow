@@ -22,4 +22,3 @@ app:
     model: gemma3:4b
 scanner:
   url: file:/test/project-root
-  output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests

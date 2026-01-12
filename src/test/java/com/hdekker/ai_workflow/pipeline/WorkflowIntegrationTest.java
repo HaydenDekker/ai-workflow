@@ -36,16 +36,14 @@ import reactor.core.publisher.Flux;
  * information source. Useful to provide guidance
  * while allowing the user to take the lead, i.e a sidekick.
  * 
- * TODO rename to workflow integration test
- * 
  */
 @SpringBootTest
 @ActiveProfiles({
 	TestProfiles.RESOURCES_TEST_FOLDER,
 	TestProfiles.FIXED_LLM_TEST_RESPONSE})
-public class PromptPipelineTest {
+public class WorkflowIntegrationTest {
 	
-	Logger log = LoggerFactory.getLogger(PromptPipelineTest.class);
+	Logger log = LoggerFactory.getLogger(WorkflowIntegrationTest.class);
 	
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
@@ -66,8 +64,6 @@ public class PromptPipelineTest {
 	@TempDir 
 	static Path rootDirectory;
 	
-	// TODO - Replace all directory access for testing with temp directory instances
-	// including prompt directory and root directory
 	@DynamicPropertySource 
     static void registerTempDirProperty(DynamicPropertyRegistry registry) {
         registry.add("prompt-config.predefinedPromptFilePath", () -> promptDirectory.toAbsolutePath().toString());

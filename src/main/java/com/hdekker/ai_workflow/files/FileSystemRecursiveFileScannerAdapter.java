@@ -81,7 +81,7 @@ public class FileSystemRecursiveFileScannerAdapter{
 							WatchEventType.MODIFY, 
 							WatchEventType.DELETE),
 				e-> e.poller(
-						Pollers.fixedRate(Duration.ofSeconds(1), Duration.ofSeconds(2)))
+						Pollers.fixedRate(Duration.ofMillis(10), Duration.ofSeconds(2)))
 			)
 			.log()
 			.transform(Files.toStringTransformer())

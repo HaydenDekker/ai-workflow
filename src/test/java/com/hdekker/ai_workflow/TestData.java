@@ -44,7 +44,7 @@ public class TestData {
 		return new PromptRequest(fileContentStub, fileName);
 	}
 	
-	// TODO include document abstraction in prompt req, resp.
+	// TODO include the spring document abstraction in prompt req, resp.
 	public static Document createDocument(String body, String fileName) {
 		
 		ByteArrayResource resource = new ByteArrayResource(body.getBytes()) {

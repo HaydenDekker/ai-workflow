@@ -32,8 +32,6 @@ public class FileSystemRecursiveFilterScannerAdapterTest {
 	@TempDir 
 	static Path rootDirectory;
 	
-	// TODO - Replace all directory access for testing with temp directory instances
-	// including prompt directory and root directory
 	@DynamicPropertySource 
     static void registerTempDirProperty(DynamicPropertyRegistry registry) {
         registry.add("prompt-config.predefinedPromptFilePath", () -> promptDirectory.toAbsolutePath().toString());

@@ -88,7 +88,6 @@ public class PromptPipelineConfiguration {
 		
 		Consumer<PromptResponse> persisterAdapter = pr-> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
 		
-		// TODO swap in
 		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
 				fileScanner.flux(),
 				prompter,

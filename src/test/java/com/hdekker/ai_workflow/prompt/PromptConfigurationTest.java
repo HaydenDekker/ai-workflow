@@ -32,8 +32,6 @@ public class PromptConfigurationTest {
 	@TempDir 
 	static Path directory;
 	
-	// TODO - Replace all directory access for testing with temp directory instances
-	// including prompt directory and root directory
 	@DynamicPropertySource 
     static void registerTempDirProperty(DynamicPropertyRegistry registry) {
         registry.add("prompt-config.predefinedPromptFilePath", () -> directory.toAbsolutePath().toString());

@@ -25,7 +25,6 @@ app:
     #model: gemma3:27b
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
-  output-folder: /Users/hayde/OneDrive/Documents/2025/10 Oct/AI Tests
   
 # user configured space. pre-packaged prompts will be copied here first. see src/main/resources/prompt-chains
 prompt-config:

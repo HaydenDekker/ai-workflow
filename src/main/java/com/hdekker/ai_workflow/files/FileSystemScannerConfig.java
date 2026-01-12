@@ -24,20 +24,10 @@ public class FileSystemScannerConfig {
 		this.url = url;
 	}
 	
-	String outputFolder;
-	
-	public String getOutputFolder() {
-		return outputFolder;
-	}
-
-	public void setOutputFolder(String outputFolder) {
-		this.outputFolder = outputFolder;
-	}
-
 	@PostConstruct
 	public void log() {
 		log.info(url.getFilename());
-		log.info(outputFolder);
+		
 	}
 
 }
