@@ -1,7 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
 import com.hdekker.ai_workflow.llm.Prompter;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
@@ -10,11 +10,11 @@ import reactor.core.publisher.Flux;
 public class LLMReducerAdapter implements LLMAdapter {
 	
 	final Prompter prompter;
-	PipelinePrompt pipelinePrompt;
+	AgentDefinition agentDefinition;
 	
-	public LLMReducerAdapter(Prompter prompter, PipelinePrompt pipelinePrompt){
+	public LLMReducerAdapter(Prompter prompter, AgentDefinition agentDefinition){
 		this.prompter = prompter;
-		this.pipelinePrompt = pipelinePrompt;
+		this.agentDefinition = agentDefinition;
 	}
 
 	String latestResponse = "";
@@ -26,9 +26,9 @@ public class LLMReducerAdapter implements LLMAdapter {
 			
 			String fileContent = "Current Snapshot: \r\n\r\n" + latestResponse + "New aspect for analysis: \r\n\r\n" + pp.file();
 
-			return prompter.call(pipelinePrompt.body() + "\n\r" + "```code" + fileContent + "\n\r" + "```" + "\n\r" + pipelinePrompt.outputStructure())
+			return prompter.call(agentDefinition.body() + "\n\r" + "```code" + fileContent + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
 				.reduce((a,b)-> a+b)
-				.map(s-> new PromptResponse(pipelinePrompt, pp.fileURL(), fileContent, s))
+				.map(s-> new PromptResponse(agentDefinition, pp.fileURL(), fileContent, s))
 					.doOnNext(p -> {
 						latestResponse = p.response();
 					});

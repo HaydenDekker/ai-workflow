@@ -15,7 +15,7 @@ import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.llm.Prompter;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
@@ -71,7 +71,7 @@ public class PromptPipelineConfiguratorTest {
 	@Test
 	public void givenPipelineWithSingleStage_ExpectSingleFluxReturned() {
 		
-		PipelinePrompt pp = TestData.basicPrompt();
+		AgentDefinition pp = TestData.basicPrompt();
 		
 		List<Flux<PromptResponse>> flux = configurator.configure(List.of(pp));
 		

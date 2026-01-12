@@ -9,7 +9,7 @@ import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
@@ -25,7 +25,7 @@ public class PromptPipelineBuilderTest {
 	@Test
 	public void givenFileMatchingPromptInputRegex_PipelineFilterPassesFile()  {
 		
-		PipelinePrompt pp = TestData.basicPrompt();
+		AgentDefinition pp = TestData.basicPrompt();
 		PromptResponse basicResponse = TestData.basicResponse();
 		Consumer<PromptResponse> persister = (p) -> {
 			outputFilename = p.createOutputFileName();
@@ -63,7 +63,7 @@ public class PromptPipelineBuilderTest {
 	@Test
 	public void givenFileNotMatchingPromptInputRegex_ExpectFilterBlocksFile() {
 		
-		PipelinePrompt pp = TestData.basicPrompt();
+		AgentDefinition pp = TestData.basicPrompt();
 		PromptResponse basicResponse = TestData.basicResponse();
 		Consumer<PromptResponse> persister = (p) -> {};
 		PromptRequest basicRequest = TestData.basicRequest("diff-type.json");

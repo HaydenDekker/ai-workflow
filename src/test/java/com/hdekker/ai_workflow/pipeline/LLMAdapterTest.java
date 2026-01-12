@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.llm.Prompter;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
@@ -31,7 +31,7 @@ public class LLMAdapterTest {
 	@Test
 	public void reducerAdapterCombinesPreviousPrompt() {
 		
-		PipelinePrompt pp = TestData.basicPrompt();
+		AgentDefinition pp = TestData.basicPrompt();
 		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter,pp);
 		
 		PromptRequest pr = new PromptRequest("Test one", "/dont/care");

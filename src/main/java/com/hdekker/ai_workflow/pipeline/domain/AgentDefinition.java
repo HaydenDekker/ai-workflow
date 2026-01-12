@@ -5,11 +5,9 @@ import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
 /**
  *  To capture configuration of a prompt for
  *  a pipeline
- *  
- *  // TODO split API from prompt object. Don't need event or type in prompt
  * 
  */
-public record PipelinePrompt(
+public record AgentDefinition(
 		String fileInputRegex,
 		String title,
 		String type,

@@ -22,7 +22,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.pipeline.domain.PromptChain;
 
 import reactor.util.function.Tuple2;
@@ -76,7 +76,7 @@ public class SystemPromptConfiguration {
 		
 		public static PromptChainFiles validate(PromptChainFiles promptChainFiles) {
 			
-			 Optional<Tuple2<PipelinePrompt, Path>> bodyFilesIsMissing = promptChainFiles.chain().chain().stream().map(pp->{
+			 Optional<Tuple2<AgentDefinition, Path>> bodyFilesIsMissing = promptChainFiles.chain().chain().stream().map(pp->{
 				return Tuples.of(pp, promptChainFiles.supportingFile().get(pp.body()));
 			}).filter(tup->(tup.getT2()==null))
 			.findAny();
@@ -155,7 +155,7 @@ public class SystemPromptConfiguration {
 						e.printStackTrace();
 					}
 					
-					return new PipelinePrompt(
+					return new AgentDefinition(
 							pp.fileInputRegex(),
 							pp.title(),
 							pp.type(),

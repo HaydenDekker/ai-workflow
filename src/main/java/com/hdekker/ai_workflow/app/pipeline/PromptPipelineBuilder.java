@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
@@ -17,7 +17,7 @@ import reactor.core.publisher.Flux;
 public class PromptPipelineBuilder {
 	
 	public static interface WithPipelineDefinition {
-		Triggered withDefinition(PipelinePrompt pipelinePrompt);
+		Triggered withDefinition(AgentDefinition agentDefinition);
 	}
 
 	public static interface Triggered {
@@ -55,19 +55,19 @@ public class PromptPipelineBuilder {
 		Consumer<PromptResponse> outputConsumer;
 		SplittableStrategy splitter;
 		Optional<Enrichable> enrichable = Optional.empty();
-		PipelinePrompt pipelinePrompt;
+		AgentDefinition agentDefinition;
 		
 		@Override
-		public Triggered withDefinition(PipelinePrompt pipelinePrompt) {
-			this.pipelinePrompt = pipelinePrompt;
+		public Triggered withDefinition(AgentDefinition agentDefinition) {
+			this.agentDefinition = agentDefinition;
 			return this;
 		}
 		
 		@Override
 		public PromptMapped withTrigger(Flux<PromptRequest> trigger) {
 			this.trigger = trigger
-					.filter(pr-> pipelinePrompt.inputRegexMatches(pr.fileURL()))
-					.doOnNext(pr-> log.info("Agent: " + pipelinePrompt.title() + " accepted file " + pr.fileURL()));
+					.filter(pr-> agentDefinition.inputRegexMatches(pr.fileURL()))
+					.doOnNext(pr-> log.info("Agent: " + agentDefinition.title() + " accepted file " + pr.fileURL()));
 			return this;
 		}
 		

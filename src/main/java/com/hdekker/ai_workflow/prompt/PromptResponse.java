@@ -3,9 +3,9 @@ package com.hdekker.ai_workflow.prompt;
 import com.hdekker.ai_workflow.app.pipeline.OutputFilenameTemplate;
 import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
 import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 
-public record PromptResponse(PipelinePrompt prompt, String fileName, String fileContents, String response) {
+public record PromptResponse(AgentDefinition prompt, String fileName, String fileContents, String response) {
 
 	public String createOutputFileName() {
 		

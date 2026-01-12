@@ -9,7 +9,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.TextReader;
 import org.springframework.core.io.ByteArrayResource;
 
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
@@ -18,8 +18,8 @@ public class TestData {
 	public static String fileNameStub = "input-file.txt";
 	static String fileContentStub = "This is the content of the input file.";
 	
-	public static PipelinePrompt basicPrompt() {
-		return new PipelinePrompt( 
+	public static AgentDefinition basicPrompt() {
+		return new AgentDefinition( 
 				"(?:.*/)?(?<name>.*\\.txt)",
 				"BASIC PROMPT TEST", 
 				"STANDARD",

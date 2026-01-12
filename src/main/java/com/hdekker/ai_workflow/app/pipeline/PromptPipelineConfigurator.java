@@ -11,7 +11,7 @@ import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.LLMReducerAdapter;
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
@@ -35,7 +35,7 @@ public class PromptPipelineConfigurator {
 		this.persister = persister;
 	}
 
-	public List<Flux<PromptResponse>> configure(List<PipelinePrompt> promptChain) {
+	public List<Flux<PromptResponse>> configure(List<AgentDefinition> promptChain) {
 		
 		if(promptChain.size()==0) {
 			log.warn("Empty prompt list, dev: consider adding validation to interface.");

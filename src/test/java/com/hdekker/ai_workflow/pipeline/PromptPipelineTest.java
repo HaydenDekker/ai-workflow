@@ -25,7 +25,7 @@ import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.Prompter;
-import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
@@ -141,7 +141,7 @@ public class PromptPipelineTest {
 		String inputTwo = "Another test input";
 		String title = "Prompt Event Stage Test";
 		
-		PipelinePrompt pipelinePrompt = new PipelinePrompt(
+		AgentDefinition agentDefinition = new AgentDefinition(
 				"",
 				title, 
 				"Reduction not used",
@@ -149,10 +149,10 @@ public class PromptPipelineTest {
 				"List the items in the response.",
 				"");
 		
-		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter, pipelinePrompt);
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter, agentDefinition);
 		
 		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
-			.withDefinition(pipelinePrompt)
+			.withDefinition(agentDefinition)
 			.withTrigger(Flux.just(inputOne, inputTwo)
 					.map(s->{
 						return new PromptRequest(s, "some/url");
