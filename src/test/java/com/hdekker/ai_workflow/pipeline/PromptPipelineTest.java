@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,17 +106,24 @@ public class PromptPipelineTest {
 		assertThat(config.prompterCalled)
 			.isTrue();
 		
-		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE + ".md");
+		Path outputFilePath = Paths.get(configuredDirectory.getPath() + "/" + "output/solid-priorty/non-compliance/" + "SOLIDPromptCaller" + ".md");
 		
 		log.info("Checking file exists, " + outputFilePath.toString() );
 		
 		assertThat(Files.exists(outputFilePath))
 			.isTrue();
 		
-		Thread.sleep(1000);
+		Thread.sleep(2000);
 		
-		Path secondPromptFilePath = Paths.get(configuredDirectory.getPath() + "/" + "SOLID_NON_COMPLIANCE_PRIORITY_ORDER_" + TestFiles.FILE_POOR_SOLID_COMPLIANCE + ".md");
+		Path secondPromptFilePath = Paths.get(configuredDirectory.getPath() + "/" + "output/solid-priorty/priorty-order/" + "SOLIDPromptCaller" + ".md");
 	
+		try (Stream<Path> stream = Files.walk(Paths.get(configuredDirectory.getPath()))) {
+		    stream.filter(Files::isRegularFile)
+		          .forEach(p -> log.info("Found file: " + p.getFileName()));
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+		
 		assertThat(Files.exists(secondPromptFilePath))
 			.isTrue();
 		

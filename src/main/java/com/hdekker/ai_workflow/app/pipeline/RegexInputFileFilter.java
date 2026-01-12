@@ -18,6 +18,11 @@ public class RegexInputFileFilter {
 			String name = groups.get("name");
 			return (name!=null)? name: "";
 		}
+
+		public String ext() {
+			String ext = groups.get("ext");
+			return (ext!=null)? ext: "";
+		}
 		
 	}
 	
@@ -25,19 +30,25 @@ public class RegexInputFileFilter {
         if (input == null || regex == null) {
             return new FilterResult(false, null);
         }
+        
+        String normalizedInput = input.replace("\\", "/");
 
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(input);
+        Matcher matcher = pattern.matcher(normalizedInput);
         
         Map<String, String> groups = new HashMap<>();
 
         if (matcher.matches()) {
             // Extract groups safely, checking if the named groups exist in the regex
+        	// TODO variables as enum.
             if(hasGroup(matcher, "path")){
             	groups.put("path", matcher.group("path"));
             }
             if(hasGroup(matcher, "name")) {
             	groups.put("name", matcher.group("name"));
+            }
+            if(hasGroup(matcher, "ext")) {
+            	groups.put("ext", matcher.group("ext"));
             }
             
             return new FilterResult(true, groups);

@@ -108,104 +108,13 @@ public class PromptPipelineConfiguration {
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
 			.flatMap(pc-> ppc.configure(pc.chain()).stream())
-			//.map(pc-> build(pc.chain()))
 			.forEach(flux-> {
-				log.info("starting");
+				log.info("starting flux");
 				flux.subscribe();
 			});
 		
 	}
 	
-	PromptRequest convert(PipelinePrompt pipelinePrompt, PromptResponse response) {
-		
-		return new PromptRequest(
-				response.prompt().title() + "\n\r\n\r" +  response.prompt().body() + " Response: \n\r\n\r" + response.response(), 
-				response.fileName());
-		
-	}
 	
-	
-	private Flux<PromptResponse> build(List<PipelinePrompt> promptPipeline){
-		
-		if(promptPipeline.size()==0) {
-			log.warn("Empty prompt list, dev: consider adding validation to interface.");
-			return Flux.empty();
-		}
-		
-		Map<String, Flux<PromptResponse>> promptTitleMap = new HashMap<String, Flux<PromptResponse>>();
-		
-		List<PipelinePrompt> responsePrompts = new ArrayList<PipelinePrompt>();
-		
-		promptPipeline.stream()
-			.forEach(pp-> {
-				if(pp.event().equals(PromptTriggerEvent.FILE_SYS_HASH_CHANGED_EVENT.name())) {
-					
-					LLMAdapter gp = flux->flux.flatMap(fpe-> 
-						prompter.call(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
-							.reduce((a,b)-> a+b)
-							.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
-				
-					LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-							new LLMReducerAdapter(prompter, pp):
-								gp;
-					
-					Flux<PromptResponse> prf = PromptPipelineBuilder.instance()
-						.withDefinition(pp)
-						.withTrigger(fileScanner.flux()
-								.map(fh-> new PromptRequest(fh.currentFile().body(), fh.currentFile().url())))
-						.prompting(adapter::call)
-						.persist(pr->{
-							PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-						})
-						.split(jsonItemListConverter)
-						.build();
-
-					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), prf);
-				
-				}else {
-					responsePrompts.add(pp);
-				}
-	
-			});
-		
-		responsePrompts.forEach(pp->{
-			
-			Flux<PromptResponse> fs = promptTitleMap.get(pp.event());
-			
-			LLMAdapter gp = flux->flux.flatMap(fpe-> 
-				prompter.call(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
-					.reduce((a,b)-> a+b)
-					.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
-			
-			LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
-					new LLMReducerAdapter(prompter, pp):
-						gp;
-			
-			Flux<PromptResponse> fs2 = PromptPipelineBuilder.instance()
-					.withDefinition(pp)
-					.withTrigger(
-							fs.map(presp-> convert(pp, presp)))
-					.prompting(adapter::call)
-					.persist(pr->{
-						PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-					})
-					.split(SplittableStrategy.noSPLT())
-					.build();
-			
-			promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), fs2);
-		});
-		
-		PipelinePrompt subscribePrompt = promptPipeline.get(promptPipeline.size()-1);
-	
-		Flux<PromptResponse> fs = promptTitleMap.get(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + subscribePrompt.title())
-				.doOnNext(pr -> log.info(subscribePrompt.title()));
-
-		return fs;
-		
-	}
-
-	public Flux<PromptResponse> configure(List<PipelinePrompt> promptChain) {
-		return null;
-	}
 
 }

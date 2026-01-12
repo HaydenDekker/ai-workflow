@@ -1,15 +1,15 @@
 chain:
   - 
     event: FILE_SYS_HASH_CHANGED_EVENT
-    fileInputRegex: (?:.*/)?(?<name>.*\.java)
+    fileInputRegex: (?:.*/)?(?<name>.*)\.(?<ext>java)
     title: SOLID_NON_COMPLIANCE
     body: solid-compliance.md
     outputStructure: solid-compliance-output.md
-    outputFilenameTemplate: SOLID_NON_COMPLIANCE_${name}.md
+    outputFilenameTemplate: output/solid-priorty/non-compliance/${name}.md
   -
     event: PROMPT_RESPONSE_EVENT_SOLID_NON_COMPLIANCE
-    fileInputRegex: (?:.*/)?(?<name>.*\.md)
+    fileInputRegex: .*output/solid-priorty/non-compliance/(?<name>.*)\.(?<ext>md)
     title: PRIORITY_ORDER
     body: solid-priority.md
     outputStructure: solid-priority-output.md
-    outputFilenameTemplate: SOLID_NON_COMPLIANCE_PRIORITY_ORDER_${name}.md
+    outputFilenameTemplate: output/solid-priorty/priorty-order/${name}.md

@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -12,6 +14,8 @@ import reactor.core.publisher.Flux;
 @Configuration
 @Profile(TestProfiles.FIXED_LLM_TEST_RESPONSE)
 public class PromptPipelineTestConfig {
+	
+	Logger log = LoggerFactory.getLogger(PromptPipelineTestConfig.class);
 	
 	Boolean prompterCalled = false;
 	
@@ -44,7 +48,8 @@ public class PromptPipelineTestConfig {
 	Prompter prompter() {
 		return (s) -> 
 			Flux.just(stub)
-				.doOnNext(res-> setPrompterCalled(true));
+				.doOnNext(res-> setPrompterCalled(true))
+				.doOnNext(res-> log.info("Test LLM Called."));
 		
 	}
 

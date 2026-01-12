@@ -70,10 +70,11 @@ The database is still required for file-system hash monitoring so that the entir
 - (done) Update pipeline to output document to the prompt file template where the file name is a function of the input file url.
 - (done) Refactor Builder - remove generics, now very explicit, and input type and output type based around the prompt definition.
 - (cancel) Not needed as outputs stored as clear files. UI only needed for observability, later on problem. Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.
-- Update chain defintion's to listen to new response file events rather than receive events via the in-mem chain config.
+- (done) Update chain defintion's to listen to new response file events rather than receive events via the in-mem chain config.
+- (done) Normalise windows paths in filename so input regex can use just unix path '/'
 - Externalise fan-out declaring the type of edge as a fan-out (one to many) as opposed to a reduction/aggregation edge.
 - (done) Create PromptResponseFileSystemAdapter to implement PromptResponsePort
-- Update input file regex to accomodate extension where file/filename.txt would be path=file, name=filename and ext=txt.
+- (done) Update input file regex to accomodate extension where file/filename.txt would be path=file, name=filename and ext=txt.
 - Remove PromptResponseDatabaseAdapter from program.
 - Remove event based prompt chain configuration as new events occur only on file change.
 

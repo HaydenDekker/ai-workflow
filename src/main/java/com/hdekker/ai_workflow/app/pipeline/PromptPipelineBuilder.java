@@ -4,6 +4,9 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.pipeline.domain.PipelinePrompt;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
@@ -45,6 +48,8 @@ public class PromptPipelineBuilder {
 	Persistable,
 	Splittable {
 		
+		Logger log = LoggerFactory.getLogger(BuilderImpl.class);
+		
 		Flux<PromptRequest> trigger;
 		Function<Flux<PromptRequest>, Flux<PromptResponse>> prompt;
 		Consumer<PromptResponse> outputConsumer;
@@ -61,7 +66,8 @@ public class PromptPipelineBuilder {
 		@Override
 		public PromptMapped withTrigger(Flux<PromptRequest> trigger) {
 			this.trigger = trigger
-					.filter(pr-> pipelinePrompt.inputRegexMatches(pr.fileURL()));
+					.filter(pr-> pipelinePrompt.inputRegexMatches(pr.fileURL()))
+					.doOnNext(pr-> log.info("Agent: " + pipelinePrompt.title() + " accepted file " + pr.fileURL()));
 			return this;
 		}
 		

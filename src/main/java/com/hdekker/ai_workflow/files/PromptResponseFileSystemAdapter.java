@@ -13,9 +13,15 @@ public class PromptResponseFileSystemAdapter {
 		
 		Path file = directory.resolve(testPromptResponse.createOutputFileName());
 		try {
+			
+			if (file.getParent() != null) {
+		        Files.createDirectories(file.getParent());
+		    }
+			
 			BufferedWriter writer = Files.newBufferedWriter(file);
 			writer.write(testPromptResponse.response());
 			writer.close();
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
