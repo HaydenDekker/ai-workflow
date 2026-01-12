@@ -1,13 +1,11 @@
 chain:
   - 
-    event: FILE_SYS_HASH_CHANGED_EVENT
     fileInputRegex: (?:.*/)?(?<name>.*\\.java)
     title: FUNCTION_ANALYSIS
     body: function-analysis.md
     outputStructure: function-analysis-output.md
     outputFilenameTemplate: FUNCTION_ANALYSIS/${name}
   -
-    event: PROMPT_RESPONSE_EVENT_FUNCTION_ANALYSIS
     fileInputRegex: (?:.*/)?(?<name>.*\\.java)
     title: FUNCTION_SUMMARY
     type: REDUCTION

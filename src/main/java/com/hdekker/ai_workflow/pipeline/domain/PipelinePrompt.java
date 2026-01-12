@@ -10,7 +10,6 @@ import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
  * 
  */
 public record PipelinePrompt(
-		String event,
 		String fileInputRegex,
 		String title,
 		String type,

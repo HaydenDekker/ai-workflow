@@ -139,11 +139,9 @@ public class PromptPipelineTest {
 		
 		String inputOne = "This is a test input";
 		String inputTwo = "Another test input";
-		String dummyEvent = "TEST_EVENT";
 		String title = "Prompt Event Stage Test";
 		
 		PipelinePrompt pipelinePrompt = new PipelinePrompt(
-				dummyEvent,
 				"",
 				title, 
 				"Reduction not used",

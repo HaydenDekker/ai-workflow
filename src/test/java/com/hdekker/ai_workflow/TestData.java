@@ -19,8 +19,7 @@ public class TestData {
 	static String fileContentStub = "This is the content of the input file.";
 	
 	public static PipelinePrompt basicPrompt() {
-		return new PipelinePrompt(
-				"", 
+		return new PipelinePrompt( 
 				"(?:.*/)?(?<name>.*\\.txt)",
 				"BASIC PROMPT TEST", 
 				"STANDARD",

@@ -156,7 +156,6 @@ public class SystemPromptConfiguration {
 					}
 					
 					return new PipelinePrompt(
-							pp.event(), 
 							pp.fileInputRegex(),
 							pp.title(),
 							pp.type(),

@@ -23,7 +23,7 @@ The database is used to capture file hash's. This assists at startup ensuring th
 - (done) file scanner to listen to all file event types
 - (done) Update pipeline configuration to filter on file regex.
 - (done) Normalise windows paths in filename so input regex can use just unix path '/'
-- (done) Update input file regex to accomodate extension where file/filename.txt would be path=file, name=filename and ext=txt.
+- (done) Update input file regex to accommodate extension where file/filename.txt would be path=file, name=filename and ext=txt.
 
 ## File Outputs
 
@@ -44,7 +44,7 @@ The database is used to capture file hash's. This assists at startup ensuring th
  
 ### Tool Call
  
-- Tool call - file read, allow agent to read from filesystem.
+ - Tool call - file read, allow agent to read from filesystem.
 
 ### Multimodal
 
