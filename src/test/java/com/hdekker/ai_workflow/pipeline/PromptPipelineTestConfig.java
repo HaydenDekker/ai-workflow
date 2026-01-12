@@ -13,6 +13,8 @@ import reactor.core.publisher.Flux;
 @Profile(TestProfiles.FIXED_LLM_TEST_RESPONSE)
 public class PromptPipelineTestConfig {
 	
+	Boolean prompterCalled = false;
+	
 	String stub = """
 			Just a simple test response as if its from the raw output of the LLM "
 			```json 
@@ -33,10 +35,17 @@ public class PromptPipelineTestConfig {
 			]```
 			""";
 
+	public void setPrompterCalled(Boolean wasCalled) {
+		prompterCalled = wasCalled;
+	}
+	
 	@Bean
 	@Primary
 	Prompter prompter() {
-		return (s) -> Flux.just(stub);
+		return (s) -> 
+			Flux.just(stub)
+				.doOnNext(res-> setPrompterCalled(true));
+		
 	}
 
 	

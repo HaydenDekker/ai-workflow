@@ -84,7 +84,7 @@ public class SystemPromptConfiguration {
 			 if(bodyFilesIsMissing.isPresent()) {
 				 SystemPromptConfiguration.log.error("Missing body file " + bodyFilesIsMissing.get().getT1().title());
 				 return null;
-			 }		
+			 }
 			
 			 // TODO output file
 //			List<Tuple2<PipelinePrompt, Path>> outputFiles = promptChainFiles.chain().chain().stream().map(pp->{
@@ -157,12 +157,12 @@ public class SystemPromptConfiguration {
 					
 					return new PipelinePrompt(
 							pp.event(), 
-							"",
+							pp.fileInputRegex(),
 							pp.title(),
 							pp.type(),
 							bodyFileAsString, 
 							outputFileAsString,
-							"");
+							pp.outputFilenameTemplate());
 					
 				}).toList());
 		}

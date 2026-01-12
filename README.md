@@ -68,10 +68,11 @@ The database is still required for file-system hash monitoring so that the entir
 - (done) Update file scanner to listen to all event
 - (done) Update pipeline configuration to filter on file regex.
 - (done) Update pipeline to output document to the prompt file template where the file name is a function of the input file url.
-- Refactor Builder - remove generics, now very explicit, and input type and output type based around the prompt definition.
-- Update pipeline configuration to listen to new response file events/thoughts.
+- (done) Refactor Builder - remove generics, now very explicit, and input type and output type based around the prompt definition.
 - Create PromptResponsePort that bridges the PromptResponseDatabaseAdapter.
 - Update View to utilise new port.
+- Update chain defintion's to listen to new response file events rather than receive events via the in-mem chain config.
+- Externalise fan-out declaring the type of edge as a fan-out (one to many) as opposed to a reduction/aggregation edge.
 - (done) Create PromptResponseFileSystemAdapter to implement PromptResponsePort
 - Remove PromptResponseDatabaseAdapter from program.
 - Remove event based prompt chain configuration as new events occur only on file change.

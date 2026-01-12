@@ -51,6 +51,9 @@ public class PromptPipelineTest {
 	@Autowired
 	ReportRestController reportRestController;
 	
+	@Autowired
+	PromptPipelineTestConfig config;
+	
 	public static final String TEXT_IN_SOLID_PRIORITY_PROMPT = "Priority of SOLID Non-Compliance Rectification";
 	
 	File configuredDirectory;
@@ -101,12 +104,15 @@ public class PromptPipelineTest {
 		
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		
-		// TODO name taken from current config. Need to create test config.
-		List<PromptResponse> reportItems = reportRestController.resultsForPrompt("SOLID_NON_COMPLIANCE")
+		Thread.sleep(1000);
+		
+		List<PromptResponse> reportItems = reportRestController.resultsForPrompt(TestFiles.FILE_SOLID_NON_COMPLIANCE_OUTPUT_DIR)
 				.collectList()
 				.block();
+		
+		assertThat(config.prompterCalled)
+			.isTrue();
 
-		// TODO make explicit - split after save.
 		assertThat(reportItems)
 			.hasSize(1);
 		

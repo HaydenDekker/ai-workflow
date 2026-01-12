@@ -164,9 +164,7 @@ public class PromptPipelineConfiguration {
 					promptTitleMap.put(PromptTriggerEvent.PROMPT_RESPONSE_EVENT.name() + "_" + pp.title(), prf);
 				
 				}else {
-					
 					responsePrompts.add(pp);
-					
 				}
 	
 			});
