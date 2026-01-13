@@ -10,8 +10,8 @@ import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
 public record AgentDefinition(
 		String fileInputRegex,
 		String title,
-		String type,
 		String body,
+		String agentType,
 		String outputStructure,
 		String outputFilenameTemplate
 		) {

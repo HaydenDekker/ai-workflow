@@ -51,7 +51,7 @@ public class PromptPipelineConfigurator {
 					.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
 		
 			
-				LLMAdapter adapter = (pp.type()!=null && pp.type().equals("REDUCTION")) ? 
+				LLMAdapter adapter = (pp.agentType()!=null && pp.agentType().equals("Reduction")) ? 
 						new LLMReducerAdapter(prompter, pp):
 							gp;
 				

@@ -7,6 +7,8 @@ import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.hdekker.ai_workflow.pipeline.LLMAdapter;
+
 import reactor.core.publisher.Flux;
 
 

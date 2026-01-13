@@ -3,11 +3,13 @@ chain:
     fileInputRegex: (?:.*/)?(?<name>.*)\.(?<ext>java)
     title: SOLID_NON_COMPLIANCE
     body: solid-compliance.md
+    agentType: List
     outputStructure: solid-compliance-output.md
     outputFilenameTemplate: output/solid-priorty/non-compliance/${name}.md
   -
     fileInputRegex: .*output/solid-priorty/non-compliance/(?<name>.*)\.(?<ext>md)
     title: PRIORITY_ORDER
     body: solid-priority.md
+    agentType: Map
     outputStructure: solid-priority-output.md
     outputFilenameTemplate: output/solid-priorty/priorty-order/${name}.md

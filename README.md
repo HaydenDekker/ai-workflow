@@ -30,19 +30,27 @@ The database is used to capture file hash's. This assists at startup ensuring th
 - (done) Create PromptResponseFileSystemAdapter to receive and store prompt responses.
 - (done) Create FileOutput stage for prompt chain builder and enable configuration to define target file type.
 - (done) Update pipeline to output document to the prompt file template where the file name is a function of the input file url.
-- outputs for conditional logic, how to define, parse and execute branches. Potentially a variable in the template that the LLM produces. Simply creates that branch file.
+- Outputs for conditional logic, how to define, parse and execute branches. Potentially a variable in the template that the LLM produces. Simply creates that branch file.
 
 ## Agent types
 
-### Fan Out / Splitter
+### Transform / Map
 
-- Prompt provides 0,1,n of responses - always returns a list. Easy api really.
+- (done) take input pipe to LLM and save output
+
+### Fan Out / Splitter / List
+
+- Configuration allows agent type fan-out. The user needs to be able to designate and edge that should fan out into many documents.
+- Configuration allows outputFilenameTemplate variable of ${itemKey}, this allows the agent to extract the variable provided by the llm and insert it into the output file name essentially splitting the response.
+- Prompt provides 0,1,n of responses.
 
 ### Aggregation / Reduce
 
  - List of outputs aggregated to single prompt, a map().reduce() operation. Requires local state and feedback to ensure the prompt output is ready for the next response. For the api, the stage to select this is in the enrich phase, setting a flag for reduce. The domain model would need to carry this so that the prompt stage will cache the previous response for input. Surely this is ok.
  
 ### Tool Call
+
+All agents can utilise tools to attend to their query.
  
  - Tool call - file read, allow agent to read from filesystem.
 

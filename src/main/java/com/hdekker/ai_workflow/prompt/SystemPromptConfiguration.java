@@ -152,7 +152,7 @@ public class SystemPromptConfiguration {
 					return new AgentDefinition(
 							pp.fileInputRegex(),
 							pp.title(),
-							pp.type(),
+							pp.agentType(),
 							bodyFileAsString, 
 							outputFileAsString,
 							pp.outputFilenameTemplate());

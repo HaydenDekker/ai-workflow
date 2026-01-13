@@ -3,12 +3,13 @@ chain:
     fileInputRegex: (?:.*/)?(?<name>.*)\.(?<ext>java)
     title: FUNCTION_ANALYSIS
     body: function-analysis.md
+    agentType: Map
     outputStructure: function-analysis-output.md
     outputFilenameTemplate: output/function-analysis/analysis/${name}.md
   -
     fileInputRegex: .*output/function-analysis/analysis/(?<name>.*)\.(?<ext>md)
     title: FUNCTION_SUMMARY
-    type: REDUCTION
+    agentType: Reduce
     body: function-summary.md
     outputStructure: function-summary-output.md
     outputFilenameTemplate: output/function-analysis/summary.md
