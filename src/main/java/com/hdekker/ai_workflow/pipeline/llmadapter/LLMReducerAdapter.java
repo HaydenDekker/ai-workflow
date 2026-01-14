@@ -1,6 +1,7 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.pipeline.llmadapter;
 
 import com.hdekker.ai_workflow.llm.Prompter;
+import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;

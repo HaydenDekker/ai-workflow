@@ -13,6 +13,7 @@ import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
