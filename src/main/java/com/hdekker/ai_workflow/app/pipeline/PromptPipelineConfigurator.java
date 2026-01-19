@@ -12,6 +12,7 @@ import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
+import com.hdekker.ai_workflow.pipeline.llmadapter.SplitterLLMAdapter;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
@@ -56,6 +57,8 @@ public class PromptPipelineConfigurator {
 			
 				LLMAdapter adapter = (pp.agentType()!=null && pp.agentType().equals("Reduction")) ?
 						new LLMReducerAdapter(chatClient, pp):
+						(pp.agentType()!=null && pp.agentType().equals("Split")) ?
+						new SplitterLLMAdapter(chatClient, pp):
 							gp;
 				
 				return PromptPipelineBuilder.instance()

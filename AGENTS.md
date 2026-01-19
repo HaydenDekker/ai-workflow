@@ -63,3 +63,29 @@ No Cursor/Copilot rules configured; use IDE default formatting.
 |---------|------|-------------|
 | **MapAgentLLMAdapter** | Adapter | Transforms each `PromptRequest` into a `PromptResponse` using the provided `Prompter`. Stateless and suitable for simple pipelines. |
 | **ReducerLLMAdapter** | Adapter | Concatenates responses across a sequence of `PromptRequest` objects, maintaining state between calls. Useful for summarization or incremental context building. |
+| **SplitterLLMAdapter** | Adapter | Parses LLM responses split by `--- ItemKey ---` tokens and emits multiple `PromptResponse` objects, each with the key incorporated into the filename for separate file outputs. Stateless and suitable for multi-file generation from single prompts. |
+
+### SplitterLLMAdapter Architecture
+
+**Purpose**: Enables the LLM to generate multiple distinct outputs from a single prompt, each saved as a separate file. Used for chain configurations with `agentType: Split`.
+
+**Key Components**:
+- **Input**: Single `PromptRequest` (file content and URL).
+- **LLM Interaction**: Builds prompt with body, code, and output structure (similar to MapAgentLLMAdapter). Expects LLM to respond with content split by `--- ItemKey ---` tokens.
+- **Response Parsing**: Uses regex `---\\s*(?<key>[^\\n]+)\\s*---` to extract key-content pairs. Each pair becomes a `PromptResponse`.
+- **Output**: `Flux<PromptResponse>` with:
+  - `response`: Content after the token (trimmed).
+  - `fileName`: Modified to `${originalFileName}-${key}` for unique filenames.
+  - `fileContents`: Original input content.
+  - `prompt`: Shared `AgentDefinition`.
+- **Edge Cases**:
+  - No splits: Emits empty Flux (no responses).
+  - Malformed splits: Skips invalid segments.
+  - Streaming: Concatenates chunks before parsing.
+- **Integration**: Activated in `PromptPipelineConfigurator` when `agentType.equals("Split")`. Filename template uses regex groups from modified `fileName` for output paths.
+
+**Design Decisions**:
+- Hardcoded token `--- ItemKey ---` for simplicity.
+- Stateless, one-to-many transformation.
+- Filename modification ensures multiple outputs without changing `PromptResponse` structure.
+- No error emission for invalid responses; silent failure for robustness.

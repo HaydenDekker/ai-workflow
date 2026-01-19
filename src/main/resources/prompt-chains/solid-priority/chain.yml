@@ -3,7 +3,7 @@ chain:
     fileInputRegex: (?:.*/)?(?<name>.*)\.(?<ext>java)
     title: SOLID_NON_COMPLIANCE
     body: solid-compliance.md
-    agentType: List
+    agentType: Split
     outputStructure: solid-compliance-output.md
     outputFilenameTemplate: output/solid-priorty/non-compliance/${name}.md
   -
