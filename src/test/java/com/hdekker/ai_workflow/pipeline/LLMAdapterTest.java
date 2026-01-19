@@ -21,7 +21,6 @@ import reactor.core.publisher.Flux;
 
 @SpringBootTest
 @ActiveProfiles({
-	TestProfiles.MOCK_LLM_PROMPT_ADAPTER,
 	TestProfiles.RESOURCES_TEST_FOLDER
 	})
 public class LLMAdapterTest {

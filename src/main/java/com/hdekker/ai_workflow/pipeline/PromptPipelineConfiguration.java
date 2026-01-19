@@ -8,7 +8,6 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -73,13 +72,13 @@ public class PromptPipelineConfiguration {
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig,
-			OllamaChatModel ollamaChatModel) {
+			ChatClient chatClient) {
 
 		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		this.fileScannerConfig = fileScannerConfig;
-		this.chatClient = ChatClient.builder(ollamaChatModel).build();
+		this.chatClient = chatClient;
 
 		try {
 			outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();

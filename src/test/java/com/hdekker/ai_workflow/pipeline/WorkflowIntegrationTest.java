@@ -139,8 +139,8 @@ public class WorkflowIntegrationTest {
 		String title = "Prompt Event Stage Test";
 		
 		AgentDefinition agentDefinition = new AgentDefinition(
-				"",
-				title, 
+				".*",
+				title,
 				"Reduction not used",
 				"Accumulate this new input into the previous response.",
 				"List the items in the response.",

@@ -2,9 +2,11 @@ package com.hdekker.ai_workflow.ollama;
 
 import java.util.List;
 
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,6 +24,12 @@ public class OllamaInstanceConfiguration {
 				.filter(m-> m.getDefaultOptions().getModel().equals(ollamaInstanceConfigurationProperties.model))
 				.findFirst()
 				.orElseThrow();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean(ChatClient.class)
+	public ChatClient chatClient(OllamaChatModel ollamaChatModel) {
+		return ChatClient.builder(ollamaChatModel).build();
 	}
 	
 }
