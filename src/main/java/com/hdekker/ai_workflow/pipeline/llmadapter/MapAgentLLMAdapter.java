@@ -19,7 +19,7 @@ public class MapAgentLLMAdapter implements LLMAdapter {
     @Override
     public Flux<PromptResponse> call(Flux<com.hdekker.ai_workflow.prompt.PromptRequest> request) {
         return request.flatMap(fpe ->
-                chatClient.prompt(agentDefinition.body() + "\n\r" + "`" + "``code" + fpe.file() + "\n\r" + "`" + "``" + "\n\r" + agentDefinition.outputStructure())
+                chatClient.prompt(agentDefinition.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
                         .stream()
                         .content()
                         .reduce((a, b) -> a + b)

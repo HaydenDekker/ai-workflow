@@ -61,6 +61,7 @@ No Cursor/Copilot rules configured; use IDE default formatting.
 
 | Adapter | Type | Description |
 |---------|------|-------------|
+| **LLMAdapterFactory** | Factory | Creates appropriate LLMAdapter instances based on `AgentDefinition.agentType`. Supports "Reduction", "Split", and default MapAgent adapters. |
 | **MapAgentLLMAdapter** | Adapter | Transforms each `PromptRequest` into a `PromptResponse` using the provided `Prompter`. Stateless and suitable for simple pipelines. |
 | **ReducerLLMAdapter** | Adapter | Concatenates responses across a sequence of `PromptRequest` objects, maintaining state between calls. Useful for summarization or incremental context building. |
 | **SplitterLLMAdapter** | Adapter | Parses LLM responses split by `--- ItemKey ---` tokens and emits multiple `PromptResponse` objects, each with the key incorporated into the filename for separate file outputs. Stateless and suitable for multi-file generation from single prompts. |
@@ -82,7 +83,7 @@ No Cursor/Copilot rules configured; use IDE default formatting.
   - No splits: Emits empty Flux (no responses).
   - Malformed splits: Skips invalid segments.
   - Streaming: Concatenates chunks before parsing.
-- **Integration**: Activated in `PromptPipelineConfigurator` when `agentType.equals("Split")`. Filename template uses regex groups from modified `fileName` for output paths.
+- **Integration**: Activated via `LLMAdapterFactory` in `PromptPipelineConfigurator` when `agentType.equals("Split")`. Filename template uses regex groups from modified `fileName` for output paths.
 
 **Design Decisions**:
 - Hardcoded token `--- ItemKey ---` for simplicity.

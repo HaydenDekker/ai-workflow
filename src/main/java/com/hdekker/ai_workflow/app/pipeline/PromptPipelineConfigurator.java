@@ -11,8 +11,7 @@ import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
-import com.hdekker.ai_workflow.pipeline.llmadapter.SplitterLLMAdapter;
+import com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
@@ -45,21 +44,8 @@ public class PromptPipelineConfigurator {
 		
 		return promptChain.stream()
 			.map(pp->{
-				
-				LLMAdapter gp = flux->flux.flatMap(fpe->
-					chatClient.prompt(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
-						.stream()
-						.content()
-						.reduce((a,b)-> a+b)
-						.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s))
-				);
-		
-			
-				LLMAdapter adapter = (pp.agentType()!=null && pp.agentType().equals("Reduction")) ?
-						new LLMReducerAdapter(chatClient, pp):
-						(pp.agentType()!=null && pp.agentType().equals("Split")) ?
-						new SplitterLLMAdapter(chatClient, pp):
-							gp;
+
+				LLMAdapter adapter = LLMAdapterFactory.create(chatClient, pp);
 				
 				return PromptPipelineBuilder.instance()
 						.withDefinition(pp)
