@@ -7,7 +7,10 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -17,7 +20,6 @@ import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
-import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -60,9 +62,8 @@ public class PromptPipelineConfiguration {
 	
 	@Autowired
 	SystemPromptConfiguration systemPromptConfiguration;
-	
-	@Autowired
-	Prompter prompter;
+
+	ChatClient chatClient;
 	
 	// TODO component and pass in.
 	Path outputFolderPath;
@@ -72,13 +73,13 @@ public class PromptPipelineConfiguration {
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig,
-			Prompter prompter) {
-		
+			OllamaChatModel ollamaChatModel) {
+
 		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		this.fileScannerConfig = fileScannerConfig;
-		this.prompter = prompter;
+		this.chatClient = ChatClient.builder(ollamaChatModel).build();
 
 		try {
 			outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
@@ -90,7 +91,7 @@ public class PromptPipelineConfiguration {
 		
 		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
 				fileScanner.flux(),
-				prompter,
+				chatClient,
 				persisterAdapter
 				);
 	

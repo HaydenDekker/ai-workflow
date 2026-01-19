@@ -1,5 +1,6 @@
 # AGENTS.md
 
+
 ## Build Commands
 These commands use the Maven wrapper (`./mvnw`).
 The project expects JDK 21. Ensure `java -version` reports 21.x before running.

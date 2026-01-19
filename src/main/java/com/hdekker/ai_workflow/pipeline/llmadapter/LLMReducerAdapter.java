@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.pipeline.llmadapter;
 
-import com.hdekker.ai_workflow.llm.Prompter;
+import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
@@ -9,12 +9,12 @@ import com.hdekker.ai_workflow.prompt.PromptResponse;
 import reactor.core.publisher.Flux;
 
 public class LLMReducerAdapter implements LLMAdapter {
-	
-	final Prompter prompter;
+
+	final ChatClient chatClient;
 	AgentDefinition agentDefinition;
-	
-	public LLMReducerAdapter(Prompter prompter, AgentDefinition agentDefinition){
-		this.prompter = prompter;
+
+	public LLMReducerAdapter(ChatClient chatClient, AgentDefinition agentDefinition){
+		this.chatClient = chatClient;
 		this.agentDefinition = agentDefinition;
 	}
 
@@ -29,7 +29,9 @@ public class LLMReducerAdapter implements LLMAdapter {
                                  + (latestResponse.isEmpty() ? "" : "\n\r\n")
                                  + "New aspect for analysis: \r\n\r\n" + pp.file();
 
-			return prompter.call(agentDefinition.body() + "\n\r" + "```code" + fileContent + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
+			return chatClient.prompt(agentDefinition.body() + "\n\r" + "```code" + fileContent + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
+				.stream()
+				.content()
 				.reduce((a,b)-> a+b)
 				.map(s-> new PromptResponse(agentDefinition, pp.fileURL(), fileContent, s))
 					.doOnNext(p -> {

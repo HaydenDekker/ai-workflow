@@ -9,16 +9,19 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
+import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
 
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.llm.Prompter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
+import static org.mockito.Mockito.*;
 
 /***
  *  To take the users list of graph structures and initialise
@@ -45,15 +48,21 @@ public class PromptPipelineConfiguratorTest {
 						FileHash.hash(mockFileBody)), 
 					Optional.empty());
 		
-		Prompter prompter = (s) -> Flux.just(expectedMockResult);
-		
+		ChatClient chatClient = mock(ChatClient.class);
+		ChatClientRequestSpec requestSpec = mock(ChatClientRequestSpec.class);
+		StreamResponseSpec streamSpec = mock(StreamResponseSpec.class);
+
+		when(chatClient.prompt(anyString())).thenReturn(requestSpec);
+		when(requestSpec.stream()).thenReturn(streamSpec);
+		when(streamSpec.content()).thenReturn(Flux.just(expectedMockResult));
+
 		Consumer<PromptResponse> persister = (pr) -> {
 			persistCalled = true;
 		};
-		
+
 		configurator = new PromptPipelineConfigurator(
-				Flux.just(fh), 
-				prompter, 
+				Flux.just(fh),
+				chatClient,
 				persister);
 	
 	}

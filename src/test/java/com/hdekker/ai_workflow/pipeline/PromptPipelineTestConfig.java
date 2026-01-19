@@ -1,14 +1,15 @@
 package com.hdekker.ai_workflow.pipeline;
 
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.llm.Prompter;
 import reactor.core.publisher.Flux;
 
 @Configuration
@@ -45,12 +46,18 @@ public class PromptPipelineTestConfig {
 	
 	@Bean
 	@Primary
-	Prompter prompter() {
-		return (s) -> 
-			Flux.just(stub)
-				.doOnNext(res-> setPrompterCalled(true))
-				.doOnNext(res-> log.info("Test LLM Called."));
-		
+	ChatClient chatClient() {
+		ChatClient mock = Mockito.mock(ChatClient.class);
+		ChatClient.ChatClientRequestSpec requestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
+		ChatClient.StreamResponseSpec streamSpec = Mockito.mock(ChatClient.StreamResponseSpec.class);
+
+		Mockito.when(mock.prompt(Mockito.anyString())).thenReturn(requestSpec);
+		Mockito.when(requestSpec.stream()).thenReturn(streamSpec);
+		Mockito.when(streamSpec.content()).thenReturn(Flux.just(stub)
+			.doOnNext(res -> setPrompterCalled(true))
+			.doOnNext(res -> log.info("Test LLM Called.")));
+
+		return mock;
 	}
 
 	

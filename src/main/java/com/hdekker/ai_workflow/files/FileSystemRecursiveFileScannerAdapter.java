@@ -24,7 +24,6 @@ import org.springframework.stereotype.Component;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.llm.OllamaWorld;
 
 import reactor.core.publisher.Flux;
 
@@ -55,7 +54,6 @@ public class FileSystemRecursiveFileScannerAdapter{
 	
 	FileSystemRecursiveFileScannerAdapter(FileSystemScannerConfig config,
 			IntegrationFlowContext context,
-			OllamaWorld ollamaWorld,
 			ApplicationContext applicationContext,
 			FileMetadataDatabase fileMetadataDatabase){
 		

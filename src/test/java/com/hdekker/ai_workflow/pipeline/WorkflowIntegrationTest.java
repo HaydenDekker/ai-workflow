@@ -24,7 +24,7 @@ import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.llm.Prompter;
+import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
@@ -127,7 +127,7 @@ public class WorkflowIntegrationTest {
 	}
 	
 	@Autowired
-	Prompter prompter;
+	ChatClient chatClient;
 	
 	// TODO move this to builder test or lower as a LLMAdapter test. The adapter has to get
 	// the latest file before proceeding, potentially a factory method.
@@ -146,7 +146,7 @@ public class WorkflowIntegrationTest {
 				"List the items in the response.",
 				"");
 		
-		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(prompter, agentDefinition);
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(chatClient, agentDefinition);
 		
 		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
 			.withDefinition(agentDefinition)
