@@ -21,7 +21,7 @@ public class OllamaAdapterTest {
 	
 	Logger log = LoggerFactory.getLogger(OllamaAdapterTest.class);
 	
-	public static final String TEST_ENDPOINT_OLLAMA = "http://127.0.0.1:11434";
+	public static final String TEST_ENDPOINT_OLLAMA = "http://0.0.0.0:11434";
 			//"http://192.168.2.108:11434";
 
 	@Test

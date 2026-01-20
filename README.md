@@ -40,9 +40,9 @@ The database is used to capture file hash's. This assists at startup ensuring th
 
 ### Fan Out / Splitter / List
 
-- Configuration allows agent type fan-out. The user needs to be able to designate and edge that should fan out into many documents.
-- Configuration allows outputFilenameTemplate variable of ${itemKey}, this allows the agent to extract the variable provided by the llm and insert it into the output file name essentially splitting the response.
-- Prompt provides 0,1,n of responses.
+- (done) Configuration allows agent type fan-out. The user needs to be able to designate and edge that should fan out into many documents.
+- (done) Configuration allows outputFilenameTemplate variable of ${itemKey}, this allows the agent to extract the variable provided by the llm and insert it into the output file name essentially splitting the response.
+- (done) Prompt provides 0,1,n of responses.
 
 ### Aggregation / Reduce
 

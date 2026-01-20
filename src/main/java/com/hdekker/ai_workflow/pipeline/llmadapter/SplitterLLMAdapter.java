@@ -9,9 +9,6 @@ import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class SplitterLLMAdapter implements LLMAdapter {
 
     private final ChatClient chatClient;
@@ -34,31 +31,42 @@ public class SplitterLLMAdapter implements LLMAdapter {
     }
 
     private Flux<PromptResponse> parseAndEmitResponses(com.hdekker.ai_workflow.prompt.PromptRequest fpe, String fullResponse) {
-        Pattern pattern = Pattern.compile("---\\s*(?<key>[^\\n]+)\\s*---", Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(fullResponse);
         List<PromptResponse> responses = new ArrayList<>();
-        List<String> keys = new ArrayList<>();
-        List<Integer> positions = new ArrayList<>();
-        positions.add(0);
-
-        while (matcher.find()) {
-            positions.add(matcher.start());
-            positions.add(matcher.end());
-            keys.add(matcher.group("key").trim());
+        
+        // Debug: log the input to see what we're working with
+        System.out.println("=== SPLITTER DEBUG ===");
+        System.out.println("Input length: " + fullResponse.length());
+        System.out.println("Input content:\n" + fullResponse);
+        
+        // Use a simple approach: split the entire response by the --- KEY --- markers
+        String[] parts = fullResponse.split("---");
+        
+        if (parts.length < 3) {
+            System.out.println("Not enough parts found, expected at least 3 (empty, key, content)");
+            return Flux.fromIterable(responses);
         }
-        positions.add(fullResponse.length());
-
-        for (int i = 0; i < keys.size(); i++) {
-            int start = positions.get(2 * i + 2);
-            int end = positions.get(2 * i + 3);
-            String content = fullResponse.substring(start, end).trim();
+        
+        // Process pairs: parts[1]=key marker, parts[2]=content, parts[3]=next key marker, parts[4]=next content, etc.
+        for (int i = 1; i < parts.length - 1; i += 2) {
+            String keyMarker = parts[i].trim();
+            String content = parts[i + 1].trim();
+            
+            // Extract just the key part from the marker (remove any leading/trailing dashes and spaces)
+            String key = keyMarker.replaceAll("-+", "").trim();
+            
+            System.out.println("Found split - Key: '" + key + "', Content: '" + content + "'");
+            
             if (!content.isEmpty()) {
-                String key = keys.get(i).replaceAll("\\s+", "_").toUpperCase();
-                String modifiedFileName = fpe.fileURL() + "-" + key;
-                responses.add(new PromptResponse(agentDefinition, modifiedFileName, fpe.file(), content));
+                String normalizedKey = key.replaceAll("\\s+", "_").toUpperCase();
+                String modifiedFileName = fpe.fileURL() + "-" + normalizedKey;
+                PromptResponse response = new PromptResponse(agentDefinition, modifiedFileName, fpe.file(), content);
+                responses.add(response);
+                System.out.println("Created response: " + modifiedFileName);
             }
         }
-
+        
+        System.out.println("Total responses created: " + responses.size());
+        
         return Flux.fromIterable(responses);
     }
 }
