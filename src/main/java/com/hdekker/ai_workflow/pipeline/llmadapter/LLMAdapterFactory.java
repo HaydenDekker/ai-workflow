@@ -8,9 +8,9 @@ public class LLMAdapterFactory {
 
     public static LLMAdapter create(ChatClient chatClient, AgentDefinition agentDefinition) {
         String type = agentDefinition.agentType();
-        if ("Reduction".equals(type)) {
+        if (type != null && "Reduction".equals(type)) {
             return new LLMReducerAdapter(chatClient, agentDefinition);
-        } else if ("Split".equals(type)) {
+        } else if (type != null && "Split".equals(type)) {
             return new SplitterLLMAdapter(chatClient, agentDefinition);
         } else {
             return new MapAgentLLMAdapter(chatClient, agentDefinition);

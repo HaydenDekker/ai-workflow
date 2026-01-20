@@ -16,8 +16,8 @@ public class TestConfigurationFactory {
         return new AgentDefinition(
             ".*\\.java",  // Match Java files
             "FUNCTION_ANALYSIS",
-            "Analyze the function and provide details.",
             "Process this Java function and return a structured analysis.",
+            "Map",
             "Return a JSON object with function name, details, and category.",
             "output/function-analysis/analysis/${name}.md"
         );
@@ -31,8 +31,8 @@ public class TestConfigurationFactory {
         return new AgentDefinition(
             ".*\\.java",  // Match Java files
             "SOLID_NON_COMPLIANCE",
-            "Analyze SOLID principle violations.",
             "Analyze this Java code for SOLID principle violations and categorize them.",
+            "Split",
             "Split the analysis into different violation categories using --- ItemKey --- format.",
             "output/solid-priority/non-compliance/${name}.md"
         );
@@ -46,8 +46,8 @@ public class TestConfigurationFactory {
         return new AgentDefinition(
             ".*\\.md",   // Match markdown files
             "FUNCTION_SUMMARY",
-            "Summarize function analyses.",
             "Accumulate this new function analysis into the previous response.",
+            "Reduction",
             "List all analyzed functions with their categories and provide a system summary.",
             "output/function-analysis/summary.md"
         );
@@ -60,8 +60,8 @@ public class TestConfigurationFactory {
         return new AgentDefinition(
             ".*\\.java",
             "DEFAULT_PROCESSING",
-            "Process input file.",
             "Process this file and return a structured response.",
+            null, // null agentType should default to Map
             "Return a JSON object with processing results.",
             "output/default/${name}.md"
         );

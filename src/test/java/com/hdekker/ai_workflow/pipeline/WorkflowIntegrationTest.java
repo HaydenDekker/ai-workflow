@@ -211,20 +211,20 @@ public class WorkflowIntegrationTest {
 	/**
 	 * Creates test input data based on the adapter test case requirements.
 	 */
-	private List<PromptRequest> createTestInputs(AdapterTestCase testCase) {
-		if (testCase.isReducerAdapter()) {
-			// Reducer needs multiple inputs to test state accumulation
-			return Arrays.asList(
-				new PromptRequest("First function analysis", "test/function1.java"),
-				new PromptRequest("Second function analysis", "test/function2.java")
-			);
-		} else {
-			// Map and Split adapters work with single input
-			return Arrays.asList(
-				new PromptRequest("Test input content", "test/TestFile.java")
-			);
-		}
-	}
+    private List<PromptRequest> createTestInputs(AdapterTestCase testCase) {
+        if (testCase.isReducerAdapter()) {
+            // Reducer needs multiple inputs to test state accumulation
+            return Arrays.asList(
+                new PromptRequest("First function analysis", "test/function1.md"),
+                new PromptRequest("Second function analysis", "test/function2.md")
+            );
+        } else {
+            // Map and Split adapters work with single input
+            return Arrays.asList(
+                new PromptRequest("Test input content", "test/TestFile.java")
+            );
+        }
+    }
 	
 	/**
 	 * Performs adapter-specific verification beyond document count.

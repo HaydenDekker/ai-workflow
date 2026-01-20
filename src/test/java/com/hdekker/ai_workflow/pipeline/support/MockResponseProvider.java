@@ -134,7 +134,7 @@ public class MockResponseProvider {
     public static String[] getSplitterKeys() {
         return new String[]{
             "Single_Responsibility_Principle",
-            "Open_Closed_Principle", 
+            "Open/Closed_Principle",
             "Dependency_Inversion_Principle"
         };
     }
