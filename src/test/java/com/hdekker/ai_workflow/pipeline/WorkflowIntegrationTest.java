@@ -2,7 +2,6 @@ package com.hdekker.ai_workflow.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -17,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -26,14 +26,15 @@ import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import org.springframework.ai.chat.client.ChatClient;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
 import com.hdekker.ai_workflow.pipeline.support.AdapterTestCase;
+import com.hdekker.ai_workflow.pipeline.support.ChatClientTestConfig;
+import com.hdekker.ai_workflow.pipeline.support.MockConfiguration;
 import com.hdekker.ai_workflow.pipeline.support.MockResponseProvider;
 import com.hdekker.ai_workflow.pipeline.support.TestConfigurationFactory;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
-
+ 
 import reactor.core.publisher.Flux;
 
 /**
@@ -55,23 +56,22 @@ import reactor.core.publisher.Flux;
  * - Adapter-specific behavior validation
  */
 @SpringBootTest()
-@ActiveProfiles({
-	TestProfiles.RESOURCES_TEST_FOLDER,
-	TestProfiles.FIXED_LLM_TEST_RESPONSE})
+@Import(ChatClientTestConfig.class)
+@ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
 public class WorkflowIntegrationTest {
 	
 	Logger log = LoggerFactory.getLogger(WorkflowIntegrationTest.class);
 	
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
-	
-	@Autowired
-	PromptPipelineTestConfig config;
-	
+
 	Path configuredDirectory;
 	
 	@Autowired
 	TestFiles testFiles;
+	
+	@Autowired
+	ChatClientTestConfig chatClientTestConfig;
 	
 	@TempDir 
 	static Path promptDirectory;
@@ -108,7 +108,8 @@ public class WorkflowIntegrationTest {
 				1, // inputCount
 				1, // expectedOutputCount
 				"MapAgent 1:1 transformation",
-				null // no split keys for Map agent
+				null, // no split keys for Map agent
+				MockConfiguration.builder().response(MockResponseProvider.getMapAgentResponse()).build()
 			),
 			
 			// Split Agent Test Case
@@ -119,7 +120,8 @@ public class WorkflowIntegrationTest {
 				1, // inputCount
 				3, // expectedOutputCount (3 splits in mock response)
 				"Splitter 1:N transformation",
-				MockResponseProvider.getSplitterKeys()
+				MockResponseProvider.getSplitterKeys(),
+				MockConfiguration.builder().response(MockResponseProvider.getSplitterResponse()).build()
 			),
 			
 			// Reducer Agent Test Case
@@ -130,7 +132,8 @@ public class WorkflowIntegrationTest {
 				2, // inputCount
 				2, // expectedOutputCount (1:1 but with state accumulation)
 				"Reducer stateful transformation",
-				null // no split keys for Reducer agent
+				null, // no split keys for Reducer agent
+				MockConfiguration.builder().responses(java.util.Arrays.asList(MockResponseProvider.getReducerResponses())).build()
 			),
 			
 			// Default Map Agent Test Case (null agentType)
@@ -141,7 +144,8 @@ public class WorkflowIntegrationTest {
 				1, // inputCount
 				1, // expectedOutputCount
 				"Default Map agent fallback",
-				null // no split keys for Default Map agent
+				null, // no split keys for Default Map agent
+				MockConfiguration.builder().response(MockResponseProvider.getDefaultMapResponse()).build()
 			)
 		);
 	}
@@ -163,14 +167,12 @@ public class WorkflowIntegrationTest {
 		
 		log.info("Testing adapter type: {}", testCase.adapterType());
 		
-	// Reset mock configuration for this test
-		config.resetResponses();
-		
-		// Set appropriate mock responses based on adapter type
+		// Create ChatClient mock with appropriate responses based on adapter type
+		ChatClient mockChatClient;
 		if (testCase.isReducerAdapter()) {
-			config.setMockResponses(MockResponseProvider.getReducerResponses());
+			mockChatClient = chatClientTestConfig.createReducerAdapterMock(Arrays.asList(MockResponseProvider.getReducerResponses()));
 		} else {
-			config.setMockResponse(testCase.mockResponse());
+			mockChatClient = chatClientTestConfig.createMapAdapterMock(testCase.mockResponse());
 		}
 		
 		// Create test input data based on adapter requirements
@@ -182,9 +184,11 @@ public class WorkflowIntegrationTest {
 			.withTrigger(Flux.fromIterable(inputs))
 			.prompting(pr -> {
 				// The adapter will be selected based on agentType in the definition
-				return com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory
-					.create(config.chatClient(), testCase.agentDefinition())
-					.call(pr);
+				// We directly create and use the mock ChatClient
+				LLMAdapter adapter = 
+					com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory
+					.create(mockChatClient, testCase.agentDefinition());
+				return adapter.call(pr);
 			})
 			.persist(l -> log.info("Persisting response: {}", l))
 			.split(com.hdekker.ai_workflow.pipeline.SplittableStrategy.noSPLT())
@@ -193,13 +197,13 @@ public class WorkflowIntegrationTest {
 		// Execute the pipeline and collect results
 		List<PromptResponse> responses = pipeline.collectList().block();
 		
-		// Verify the mock was called
-		assertThat(config.prompterCalled)
-			.isTrue();
-		
 		// Verify document creation count matches expectations
 		assertThat(responses)
 			.hasSize(testCase.expectedOutputCount());
+		
+		// Verify that responses are not empty (indicates mock was called)
+		assertThat(responses)
+			.noneMatch(r -> r.response() == null || r.response().trim().isEmpty());
 		
 		// Additional adapter-specific verification
 		verifyAdapterSpecificBehavior(testCase, responses, inputs);
@@ -284,24 +288,20 @@ public class WorkflowIntegrationTest {
 	@MethodSource("reducerTestCases")
 	public void givenPromptChainWithReduceAdapterSet_ExpectOutputResultsFromThePipeline(AdapterTestCase testCase) {
 		
-		// Set up the mock response for this test
-		config.resetResponses();
-		config.setMockResponses(Arrays.asList(
+		// Set up the mock response for this test using new interface
+		ChatClient mockChatClient = chatClientTestConfig.createReducerAdapterMock(Arrays.asList(
 			MockResponseProvider.getReducerInitialResponse(),
 			MockResponseProvider.getReducerAccumulatedResponse()
 		));
 		
-		String inputOne = "This is a test input";
-		String inputTwo = "Another test input";
+		// Create test inputs using the same approach as the working tests
+		List<PromptRequest> inputs = createTestInputs(testCase);
 		
-		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(chatClient, testCase.agentDefinition());
+		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(mockChatClient, testCase.agentDefinition());
 		
 		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
 			.withDefinition(testCase.agentDefinition())
-			.withTrigger(Flux.just(inputOne, inputTwo)
-					.map(s->{
-						return new PromptRequest(s, "some/url");
-					}))
+			.withTrigger(Flux.fromIterable(inputs))
 			.prompting(llmReducerAdapter::call)
 			.persist(l-> log.info("persisting " + l))
 			.split(com.hdekker.ai_workflow.pipeline.SplittableStrategy.noSPLT())
@@ -326,11 +326,12 @@ public class WorkflowIntegrationTest {
 			new AdapterTestCase(
 				"Reduction",
 				TestConfigurationFactory.createReducerAgentDefinition(),
-				MockResponseProvider.getReducerInitialResponse(),
+				MockResponseProvider.getReducerInitialResponse(), // This will be unused but kept for compatibility
 				2, // inputCount
 				2, // expectedOutputCount
 				"Legacy Reducer Test",
-				null
+				null,
+				MockConfiguration.builder().responses(java.util.Arrays.asList(MockResponseProvider.getReducerResponses())).build()
 			)
 		);
 	}

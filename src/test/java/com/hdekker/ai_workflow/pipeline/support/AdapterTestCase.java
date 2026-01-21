@@ -1,5 +1,6 @@
 package com.hdekker.ai_workflow.pipeline.support;
 
+import java.util.List;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 
 /**
@@ -13,7 +14,8 @@ public record AdapterTestCase(
     int inputCount,
     int expectedOutputCount,
     String testName,
-    String[] expectedFileKeys
+    String[] expectedFileKeys,
+    MockConfiguration mockConfig
 ) {
     
     /**
@@ -44,5 +46,68 @@ public record AdapterTestCase(
      */
     public boolean isMapAdapter() {
         return !isSplitAdapter() && !isReducerAdapter();
+    }
+
+    /**
+     * Factory method for creating Map adapter test cases with responses.
+     */
+    public static AdapterTestCase forMapAdapterWithResponses(String... responses) {
+        MockConfiguration config = MockConfiguration.builder()
+            .responses(List.of(responses))
+            .build();
+        AgentDefinition def = TestConfigurationFactory.createMapAgentDefinition();
+        return new AdapterTestCase(
+            "Map",
+            def,
+            responses.length > 0 ? responses[0] : "",
+            1,
+            1,
+            "Map Adapter Test",
+            new String[]{},
+            config
+        );
+    }
+
+    /**
+     * Factory method for creating Splitter adapter test cases.
+     */
+    public static AdapterTestCase forSplitterWorkflow(List<String> splitResponses) {
+        MockConfiguration config = MockConfiguration.builder()
+            .responses(splitResponses)
+            .build();
+        AgentDefinition def = TestConfigurationFactory.createSplitterAgentDefinition();
+        return new AdapterTestCase(
+            "Split",
+            def,
+            splitResponses.isEmpty() ? "" : splitResponses.get(0),
+            1,
+            splitResponses.size(),
+            "Splitter Adapter Test",
+            MockResponseProvider.getSplitterKeys(),
+            config
+        );
+    }
+
+    /**
+     * Factory method for creating Reducer adapter test cases.
+     */
+    public static AdapterTestCase forReducerChain(List<List<String>> accumulatedResponses) {
+        List<String> allResponses = accumulatedResponses.stream()
+            .flatMap(List::stream)
+            .toList();
+        MockConfiguration config = MockConfiguration.builder()
+            .responses(allResponses)
+            .build();
+        AgentDefinition def = TestConfigurationFactory.createReducerAgentDefinition();
+        return new AdapterTestCase(
+            "Reduction",
+            def,
+            allResponses.isEmpty() ? "" : allResponses.get(0),
+            accumulatedResponses.size(),
+            1,
+            "Reducer Adapter Test",
+            new String[]{},
+            config
+        );
     }
 }

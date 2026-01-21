@@ -9,7 +9,6 @@ import org.mockito.Mockito;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
 import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
-import org.springframework.ai.chat.model.ChatResponse;
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import reactor.core.publisher.Flux;
@@ -18,8 +17,6 @@ import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
-
-import reactor.core.publisher.Flux;
 
 public class PromptPipelineBuilderTest {
 	
