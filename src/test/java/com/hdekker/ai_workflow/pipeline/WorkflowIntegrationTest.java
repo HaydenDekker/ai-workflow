@@ -21,7 +21,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import com.hdekker.ai_workflow.TestFiles;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
@@ -66,9 +65,6 @@ public class WorkflowIntegrationTest {
 	FileSystemScannerConfig fileSystemScannerConfig;
 
 	Path configuredDirectory;
-	
-	@Autowired
-	TestFiles testFiles;
 	
 	@Autowired
 	ChatClientTestConfig chatClientTestConfig;
