@@ -85,7 +85,7 @@ public class EndToEndTestHarness {
                 Flux<PromptRequest> requestFlux = Flux.fromIterable(requests);
                 Flux<PromptResponse> responseFlux = adapter.call(requestFlux);
                 
-                // Collect responses
+                // Collect responses - PromptResponse objects should work correctly now
                 List<PromptResponse> adapterResponses = responseFlux.collectList().block();
                 if (adapterResponses != null) {
                     responses.addAll(adapterResponses);
@@ -192,16 +192,19 @@ public class EndToEndTestHarness {
         // Find matching input files
         if (Files.exists(structure.inputDir())) {
             try (var stream = Files.list(structure.inputDir())) {
-                stream.filter(path -> definition.inputRegexMatches(path.getFileName().toString()))
-                      .forEach(path -> {
-                          try {
-                              String content = Files.readString(path);
-                              String fileURL = "file:/" + path.toAbsolutePath().toString();
-                              requests.add(new PromptRequest(content, fileURL));
-                          } catch (IOException e) {
-                              throw new RuntimeException("Failed to read input file: " + path, e);
-                          }
-                      });
+                stream.filter(path -> {
+                    String fileURL = "file:/" + path.toAbsolutePath().toString();
+                    return definition.inputRegexMatches(fileURL);
+                })
+                .forEach(path -> {
+                    try {
+                        String content = Files.readString(path);
+                        String fileURL = "file:/" + path.toAbsolutePath().toString();
+                        requests.add(new PromptRequest(content, fileURL));
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to read input file: " + path, e);
+                    }
+                });
             }
         }
         

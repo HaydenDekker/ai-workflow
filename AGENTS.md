@@ -13,10 +13,11 @@ The project expects JDK 21. Ensure `java -version` reports 21.x before running.
 ## Test Commands
 Run unit or integration tests via the wrapper:
 
-- `./mvnw test` – all tests.
-- `./mvnw test -Dtest=ClassName` – single test class.
-- `./mvnw test -Dtest=ClassName#methodName` – specific test method.
-- `./mvnw test -Dit.test=ClassName` – integration tests that are annotated with `@IntegrationTest`.
+- `./mvnw test` – all tests with verbose output.
+- `./mvnw test -q` – all tests with minimal output (recommended for LLM context).
+- `./mvnw test -Dtest=ClassName -q` – single test class with minimal output.
+- `./mvnw test -Dtest=ClassName#methodName -q` – specific test method with minimal output.
+- `./mvnw test -Dit.test=ClassName -q` – integration tests with minimal output.
 
 ## Tooling & Environment
 

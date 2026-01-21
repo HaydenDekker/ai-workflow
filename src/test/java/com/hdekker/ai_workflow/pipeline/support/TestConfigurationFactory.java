@@ -14,7 +14,7 @@ public class TestConfigurationFactory {
      */
     public static AgentDefinition createMapAgentDefinition() {
         return new AgentDefinition(
-            ".*\\.java",  // Match Java files
+            ".*[/\\\\](?<name>[^.]+)\\.java$",  // Match full URL path and capture Java filename
             "FUNCTION_ANALYSIS",
             "Process this Java function and return a structured analysis.",
             "Map",
@@ -29,7 +29,7 @@ public class TestConfigurationFactory {
      */
     public static AgentDefinition createSplitterAgentDefinition() {
         return new AgentDefinition(
-            ".*\\.java",  // Match Java files
+            ".*[/\\\\](?<name>[^.]+)\\.java$",  // Match full URL path and capture Java filename
             "SOLID_NON_COMPLIANCE",
             "Analyze this Java code for SOLID principle violations and categorize them.",
             "Split",
@@ -58,7 +58,7 @@ public class TestConfigurationFactory {
      */
     public static AgentDefinition createDefaultMapAgentDefinition() {
         return new AgentDefinition(
-            ".*\\.java",
+            ".*[/\\\\](?<name>[^.]+)\\.java$",  // Match full URL path and capture Java filename
             "DEFAULT_PROCESSING",
             "Process this file and return a structured response.",
             null, // null agentType should default to Map

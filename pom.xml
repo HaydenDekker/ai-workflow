@@ -132,6 +132,18 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <trimStackTrace>true</trimStackTrace>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <disableXmlReport>false</disableXmlReport>
+                    <printSummary>false</printSummary>
+                    <useFile>true</useFile>
+                    <failIfNoTests>false</failIfNoTests>
+                </configuration>
+            </plugin>
 		</plugins>
 	</build>
 	
