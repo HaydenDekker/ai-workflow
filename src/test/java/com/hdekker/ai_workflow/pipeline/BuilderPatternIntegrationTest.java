@@ -12,9 +12,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.pipeline.support.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.pipeline.support.ChatClientTestConfig;
-import com.hdekker.ai_workflow.pipeline.support.MockConfiguration;
+import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
 
 /**
  * Test demonstrating the new builder pattern for ChatClient mocking.

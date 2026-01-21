@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.support;
+package com.hdekker.ai_workflow.test.pipeline.mock;
 
 /**
  * Provider for mock LLM responses tailored to each adapter type.

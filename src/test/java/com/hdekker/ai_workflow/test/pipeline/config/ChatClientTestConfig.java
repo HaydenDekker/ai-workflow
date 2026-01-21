@@ -1,9 +1,13 @@
-package com.hdekker.ai_workflow.pipeline.support;
+package com.hdekker.ai_workflow.test.pipeline.config;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
+
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
 
 /**
  * Test configuration for dynamic ChatClient mock creation.

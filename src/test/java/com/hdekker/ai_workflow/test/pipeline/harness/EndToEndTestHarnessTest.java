@@ -1,7 +1,11 @@
-package com.hdekker.ai_workflow.pipeline.support;
+package com.hdekker.ai_workflow.test.pipeline.harness;
 
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

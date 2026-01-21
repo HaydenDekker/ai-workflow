@@ -1,8 +1,6 @@
-package com.hdekker.ai_workflow.pipeline.support;
+package com.hdekker.ai_workflow.test.pipeline.filesystem;
 
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.support.YamlTestUtils;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

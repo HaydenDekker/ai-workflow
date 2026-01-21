@@ -1,6 +1,8 @@
-package com.hdekker.ai_workflow.pipeline.support;
+package com.hdekker.ai_workflow.test.pipeline.filesystem;
 
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

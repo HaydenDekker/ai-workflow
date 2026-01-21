@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.support;
+package com.hdekker.ai_workflow.test.pipeline.mock;
 
 import java.util.ArrayList;
 import java.util.HashMap;

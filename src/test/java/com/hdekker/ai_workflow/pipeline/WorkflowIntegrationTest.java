@@ -26,11 +26,11 @@ import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
-import com.hdekker.ai_workflow.pipeline.support.AdapterTestCase;
-import com.hdekker.ai_workflow.pipeline.support.ChatClientTestConfig;
-import com.hdekker.ai_workflow.pipeline.support.MockConfiguration;
-import com.hdekker.ai_workflow.pipeline.support.MockResponseProvider;
-import com.hdekker.ai_workflow.pipeline.support.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;
+import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
  

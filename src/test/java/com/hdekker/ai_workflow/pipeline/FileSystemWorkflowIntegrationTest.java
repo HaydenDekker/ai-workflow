@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,11 +24,11 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.support.ChatClientTestConfig;
-import com.hdekker.ai_workflow.pipeline.support.EndToEndTestHarness;
-import com.hdekker.ai_workflow.pipeline.support.FileSystemTestBuilder;
-import com.hdekker.ai_workflow.pipeline.support.MockResponseProvider;
-import com.hdekker.ai_workflow.pipeline.support.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.pipeline.harness.EndToEndTestHarness;
+import com.hdekker.ai_workflow.test.pipeline.filesystem.FileSystemTestBuilder;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 /**
