@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
 
 @RestController

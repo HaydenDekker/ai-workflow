@@ -12,8 +12,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.hdekker.ai_workflow.TestData;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

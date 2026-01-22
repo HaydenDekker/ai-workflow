@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.management;
+package com.hdekker.ai_workflow.app.pipeline.management;
 
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.management;
+package com.hdekker.ai_workflow.app.pipeline.management;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,6 +16,7 @@ import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
 import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
 
 import com.hdekker.ai_workflow.TestData;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
