@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,6 +20,7 @@ import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
+import com.hdekker.ai_workflow.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
@@ -62,10 +64,13 @@ public class PromptPipelineConfiguration {
 	SystemPromptConfiguration systemPromptConfiguration;
 
 	ChatClient chatClient;
-	
+
 	// TODO component and pass in.
 	Path outputFolderPath;
-	
+
+	@Autowired
+	DynamicPipelineManager dynamicPipelineManager;
+
 	public PromptPipelineConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			PromptConfiguration promptConfiguration,
@@ -84,26 +89,24 @@ public class PromptPipelineConfiguration {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		Consumer<PromptResponse> persisterAdapter = pr-> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-		
+
 		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
 				fileScanner.flux(),
 				chatClient,
 				persisterAdapter
 				);
-	
+
+		// Legacy initialization (keep for backward compatibility)
 		systemPromptConfiguration.getPromptChains()
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
-			.flatMap(pc-> ppc.configure(pc.chain()).stream())
+			.flatMap(pc-> pc.chain().stream())
+			.map(pc->ppc.configure(pc))
 			.forEach(flux-> {
 				log.info("starting flux");
 				flux.subscribe();
 			});
-		
 	}
-	
-	
-
 }

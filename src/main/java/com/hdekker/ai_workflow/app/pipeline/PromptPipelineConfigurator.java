@@ -35,29 +35,19 @@ public class PromptPipelineConfigurator {
 		this.persister = persister;
 	}
 
-	public List<Flux<PromptResponse>> configure(List<AgentDefinition> promptChain) {
+	public Flux<PromptResponse> configure(AgentDefinition agentDefintion) {
 		
-		if(promptChain.size()==0) {
-			log.warn("Empty prompt list, dev: consider adding validation to interface.");
-			return List.of();
-		}
-		
-		return promptChain.stream()
-			.map(pp->{
+			LLMAdapter adapter = LLMAdapterFactory.create(chatClient, agentDefintion);
+			
+			return PromptPipelineBuilder.instance()
+					.withDefinition(agentDefintion)
+					.withTrigger(fileInputFlux
+							.map(fh-> fh.to()))
+					.prompting(adapter::call)
+					.persist(persister)
+					.split(SplittableStrategy.noSPLT())
+					.build();
 
-				LLMAdapter adapter = LLMAdapterFactory.create(chatClient, pp);
-				
-				return PromptPipelineBuilder.instance()
-						.withDefinition(pp)
-						.withTrigger(fileInputFlux
-								.map(fh-> fh.to()))
-						.prompting(adapter::call)
-						.persist(persister)
-						.split(SplittableStrategy.noSPLT())
-						.build();
-		
-			})
-			.toList();
 			
 	}
 

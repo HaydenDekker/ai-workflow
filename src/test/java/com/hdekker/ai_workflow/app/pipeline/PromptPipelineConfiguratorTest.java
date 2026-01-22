@@ -66,30 +66,16 @@ public class PromptPipelineConfiguratorTest {
 				persister);
 	
 	}
-	
-	@Test
-	public void givenPipelineWithZeroStages_ExpectEmptyFluxReturned() {
-		
-		List<Flux<PromptResponse>> flux = configurator.configure(List.of());
-		
-		assertThat(flux)
-			.hasSize(0);
-		
-	}
+
 	
 	@Test
 	public void givenPipelineWithSingleStage_ExpectSingleFluxReturned() {
 		
 		AgentDefinition pp = TestData.basicPrompt();
 		
-		List<Flux<PromptResponse>> flux = configurator.configure(List.of(pp));
+		Flux<PromptResponse> flux = configurator.configure(pp);
 		
-		assertThat(flux)
-			.hasSize(1);
-		
-		Flux<PromptResponse> promptFlux = flux.get(0);
-		
-		PromptResponse pr = promptFlux.blockFirst(Duration.ofSeconds(3));
+		PromptResponse pr = flux.blockFirst(Duration.ofSeconds(3));
 		
 		assertThat(pr.prompt())
 			.isEqualTo(pp);

@@ -10,15 +10,19 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
 import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
+import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
+import java.io.IOException;
+import java.nio.file.Path;
 
 public class DynamicPipelineManager {
 
@@ -35,33 +39,41 @@ public class DynamicPipelineManager {
         this.pipelineConfigurator = new PromptPipelineConfigurator(fileInputFlux, chatClient, persister);
     }
 
+    // Constructor for Spring injection
+    public DynamicPipelineManager(
+            FileSystemRecursiveFileScannerAdapter fileScanner,
+            FileSystemScannerConfig fileScannerConfig,
+            ChatClient chatClient) throws IOException {
+
+        Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
+        Consumer<PromptResponse> persister = pr -> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
+
+        this.pipelineConfigurator = new PromptPipelineConfigurator(fileScanner.flux(), chatClient, persister);
+    }
+
     public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
         yamlAgents.forEach(agent -> {
-            List<Flux<PromptResponse>> fluxes = pipelineConfigurator.configure(List.of(agent));
-            fluxes.forEach(flux -> {
-                Disposable subscription = flux.subscribe();
-                PipelineRegistryEntry entry = new PipelineRegistryEntry(
-                    agent.title(), // Use title as ID for YAML pipelines
-                    agent,
-                    flux,
-                    LocalDateTime.now(),
-                    "YAML",
-                    subscription
-                );
-                pipelineRegistry.put(agent.title(), entry);
-                log.info("Initialized YAML pipeline: {}", agent.title());
-            });
+           
+        	Flux<PromptResponse> flux = pipelineConfigurator.configure(agent);
+            
+            Disposable subscription = flux.subscribe();
+            PipelineRegistryEntry entry = new PipelineRegistryEntry(
+                agent.title(), // Use title as ID for YAML pipelines
+                agent,
+                flux,
+                LocalDateTime.now(),
+                "YAML",
+                subscription
+            );
+            pipelineRegistry.put(agent.title(), entry);
+            log.info("Initialized YAML pipeline: {}", agent.title());
+            
         });
     }
 
     public PipelineInfo addDynamicPipeline(AgentDefinition def) {
         String id = UUID.randomUUID().toString();
-        List<Flux<PromptResponse>> fluxes = pipelineConfigurator.configure(List.of(def));
-        if (fluxes.isEmpty()) {
-            throw new IllegalArgumentException("Failed to create pipeline for agent definition: " + def.title());
-        }
-
-        Flux<PromptResponse> flux = fluxes.get(0); // Assuming single flux per agent
+        Flux<PromptResponse> flux = pipelineConfigurator.configure(def);
         Disposable subscription = flux.subscribe();
 
         PipelineRegistryEntry entry = new PipelineRegistryEntry(
