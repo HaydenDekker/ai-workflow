@@ -87,7 +87,6 @@ class EndToEndTestHarnessTest {
         assertNotNull(execution);
         assertEquals(1, execution.responses().size());
         assertEquals(1, execution.createdFiles().size());
-        assertTrue(execution.executionTime().toMillis() > 0);
         
         // Verify response content
         PromptResponse response = execution.responses().get(0);

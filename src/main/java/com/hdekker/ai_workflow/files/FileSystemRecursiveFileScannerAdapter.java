@@ -28,7 +28,7 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import reactor.core.publisher.Flux;
 
 @Component
-public class FileSystemRecursiveFileScannerAdapter{
+public class FileSystemRecursiveFileScannerAdapter implements FileScanner {
 	
 	Logger log = LoggerFactory.getLogger(FileSystemRecursiveFileScannerAdapter.class);
 	

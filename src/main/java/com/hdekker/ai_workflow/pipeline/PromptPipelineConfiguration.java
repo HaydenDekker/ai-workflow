@@ -16,6 +16,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
@@ -76,7 +77,8 @@ public class PromptPipelineConfiguration {
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig,
-			ChatClient chatClient) {
+			ChatClient chatClient,
+			DynamicPipelineManager dynamicPipelineManager) {
 
 		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;
@@ -98,15 +100,13 @@ public class PromptPipelineConfiguration {
 				persisterAdapter
 				);
 
-		// Legacy initialization (keep for backward compatibility)
-		systemPromptConfiguration.getPromptChains()
+		// Initialize YAML pipelines through manager
+		List<AgentDefinition> yamlAgents = systemPromptConfiguration.getPromptChains()
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
 			.flatMap(pc-> pc.chain().stream())
-			.map(pc->ppc.configure(pc))
-			.forEach(flux-> {
-				log.info("starting flux");
-				flux.subscribe();
-			});
+			.toList();
+
+		dynamicPipelineManager.initializeFromYAML(yamlAgents);
 	}
 }

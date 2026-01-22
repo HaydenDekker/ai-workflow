@@ -1,15 +1,16 @@
 package com.hdekker.ai_workflow.pipeline.llmadapter;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
-import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+
+
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import reactor.core.publisher.Flux;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+
 
 public class MapAgentLLMAdapterTest {
 
@@ -27,13 +28,7 @@ public class MapAgentLLMAdapterTest {
                 "out-${title}.txt" // outputFilenameTemplate
         );
 
-        ChatClient mockChatClient = mock(ChatClient.class);
-        ChatClientRequestSpec requestSpec = mock(ChatClientRequestSpec.class);
-        StreamResponseSpec streamSpec = mock(StreamResponseSpec.class);
-
-        when(mockChatClient.prompt(anyString())).thenReturn(requestSpec);
-        when(requestSpec.stream()).thenReturn(streamSpec);
-        when(streamSpec.content()).thenReturn(Flux.just(STUB_RESPONSE));
+        ChatClient mockChatClient = ChatClientMockBuilder.forMapAdapter(STUB_RESPONSE);
 
         MapAgentLLMAdapter adapter = new MapAgentLLMAdapter(mockChatClient, def);
 

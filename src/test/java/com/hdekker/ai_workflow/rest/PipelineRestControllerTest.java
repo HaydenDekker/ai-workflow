@@ -7,25 +7,34 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
 
-@WebFluxTest(PipelineRestController.class)
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@WebMvcTest(PipelineRestController.class)
 public class PipelineRestControllerTest {
 
     @Autowired
-    private WebTestClient webTestClient;
+    private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
     private DynamicPipelineManager dynamicPipelineManager;
 
     @Test
-    public void givenValidAgentDefinition_whenPostPipeline_thenPipelineCreated() {
+    public void givenValidAgentDefinition_whenPostPipeline_thenPipelineCreated() throws Exception {
         // Given
         AgentDefinition agentDef = TestData.basicPrompt();
         PipelineInfo expectedInfo = new PipelineInfo("test-id", agentDef.title(), agentDef.agentType(), java.time.LocalDateTime.now(), true, "DYNAMIC");
@@ -33,14 +42,15 @@ public class PipelineRestControllerTest {
         when(dynamicPipelineManager.addDynamicPipeline(any(AgentDefinition.class))).thenReturn(expectedInfo);
 
         // When & Then - POST to create pipeline
-        PipelineInfo response = webTestClient.post()
-            .uri("/api/pipelines")
-            .bodyValue(agentDef)
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody(PipelineInfo.class)
-            .returnResult()
-            .getResponseBody();
+        String responseContent = mockMvc.perform(post("/api/pipelines")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(agentDef)))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        PipelineInfo response = objectMapper.readValue(responseContent, PipelineInfo.class);
 
         assertThat(response).isNotNull();
         assertThat(response.id()).isEqualTo("test-id");
@@ -50,7 +60,7 @@ public class PipelineRestControllerTest {
     }
 
     @Test
-    public void whenGetPipelines_thenListOfPipelinesReturned() {
+    public void whenGetPipelines_thenListOfPipelinesReturned() throws Exception {
         // Given
         List<PipelineInfo> pipelines = List.of(
             new PipelineInfo("id1", "Title1", "Map", java.time.LocalDateTime.now(), true, "DYNAMIC"),
@@ -59,13 +69,13 @@ public class PipelineRestControllerTest {
         when(dynamicPipelineManager.listPipelines()).thenReturn(pipelines);
 
         // When & Then - GET pipelines
-        List<PipelineInfo> response = webTestClient.get()
-            .uri("/api/pipelines")
-            .exchange()
-            .expectStatus().isOk()
-            .expectBodyList(PipelineInfo.class)
-            .returnResult()
-            .getResponseBody();
+        String responseContent = mockMvc.perform(get("/api/pipelines"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        List<PipelineInfo> response = objectMapper.readValue(responseContent, objectMapper.getTypeFactory().constructCollectionType(List.class, PipelineInfo.class));
 
         assertThat(response).hasSize(2);
         assertThat(response.get(0).id()).isEqualTo("id1");
@@ -73,14 +83,12 @@ public class PipelineRestControllerTest {
     }
 
     @Test
-    public void givenExistingPipeline_whenDeletePipeline_thenPipelineRemoved() {
+    public void givenExistingPipeline_whenDeletePipeline_thenPipelineRemoved() throws Exception {
         // Given
         String pipelineId = "test-id";
 
         // When & Then - DELETE pipeline
-        webTestClient.delete()
-            .uri("/api/pipelines/{id}", pipelineId)
-            .exchange()
-            .expectStatus().isNoContent();
+        mockMvc.perform(delete("/api/pipelines/{id}", pipelineId))
+            .andExpect(status().isNoContent());
     }
 }

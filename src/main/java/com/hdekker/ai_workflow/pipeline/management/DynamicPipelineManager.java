@@ -12,8 +12,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
 import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -49,6 +51,18 @@ public class DynamicPipelineManager {
         Consumer<PromptResponse> persister = pr -> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
 
         this.pipelineConfigurator = new PromptPipelineConfigurator(fileScanner.flux(), chatClient, persister);
+    }
+
+    // Constructor with abstractions
+    public DynamicPipelineManager(
+            FileScanner fileScanner,
+            FileWriter fileWriter,
+            Path outputDirectory,
+            ChatClient chatClient) {
+        this.pipelineConfigurator = new PromptPipelineConfigurator(
+                fileScanner.flux(),
+                chatClient,
+                fileWriter.createPersister(outputDirectory));
     }
 
     public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
