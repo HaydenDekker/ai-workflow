@@ -1,17 +1,16 @@
 package com.hdekker.ai_workflow.pipeline.llmadapter;
 
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
-import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+
 import reactor.core.publisher.Flux;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import java.util.ArrayList;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 /**
  * Test for {@link LLMReducerAdapter}. It verifies two main behaviors:
@@ -36,16 +35,10 @@ public class LLMReducerAdapterTest {
         );
 
         List<String> prompts = new ArrayList<>();
-        ChatClient mockChatClient = mock(ChatClient.class);
-        ChatClientRequestSpec requestSpec = mock(ChatClientRequestSpec.class);
-        StreamResponseSpec streamSpec = mock(StreamResponseSpec.class);
-
-        when(mockChatClient.prompt(anyString())).thenAnswer(invocation -> {
-            prompts.add(invocation.getArgument(0, String.class));
-            return requestSpec;
-        });
-        when(requestSpec.stream()).thenReturn(streamSpec);
-        when(streamSpec.content()).thenReturn(Flux.just(STUB_RESPONSE));
+        ChatClient mockChatClient = ChatClientMockBuilder.forReducerAdapter(
+            List.of(STUB_RESPONSE),
+            prompts  // Enable prompt capturing
+        );
 
         LLMReducerAdapter adapter = new LLMReducerAdapter(mockChatClient, def);
 

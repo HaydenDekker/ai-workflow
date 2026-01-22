@@ -47,6 +47,8 @@ public class MockConfiguration {
         private List<String> responses = new ArrayList<>();
         private MockBehavior behavior = MockBehavior.SUCCESS;
         private Map<String, Object> properties = new HashMap<>();
+        private boolean capturePrompts = false;
+        private List<String> promptCaptureList = null;
 
         public Builder responses(List<String> responses) {
             this.responses = new ArrayList<>(responses);
@@ -68,7 +70,15 @@ public class MockConfiguration {
             return this;
         }
 
+        public Builder capturePrompts(List<String> promptList) {
+            this.capturePrompts = true;
+            this.promptCaptureList = promptList;
+            return this;
+        }
+
         public MockConfiguration build() {
+            properties.put("capturePrompts", capturePrompts);
+            properties.put("promptList", promptCaptureList);
             return new MockConfiguration(responses, behavior, properties);
         }
     }

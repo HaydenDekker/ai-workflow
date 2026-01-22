@@ -12,9 +12,35 @@ import org.springframework.context.annotation.Bean;
 
 import reactor.core.publisher.Flux;
 
+@Deprecated
 @TestConfiguration
+/**
+ * @deprecated Use {@link com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder.ConfigurableChatClientMock} instead.
+ * Migration example:
+ * <pre>
+ * // Old approach with PromptPipelineTestConfig
+ * @Autowired
+ * PromptPipelineTestConfig config;
+ *
+ * @BeforeEach
+ * void setup() {
+ *     config.setMockResponses(responses);
+ * }
+ *
+ * // New approach with ChatClientMockBuilder
+ * ChatClientMockBuilder.ConfigurableChatClientMock mockBuilder;
+ *
+ * @BeforeEach
+ * void setup() {
+ *     mockBuilder = ChatClientMockBuilder.forParameterizedTesting(defaultResponse);
+ *     mockBuilder.setMockResponses(responses);
+ *     ChatClient chatClient = mockBuilder.build();
+ *     // Use chatClient in test
+ * }
+ * </pre>
+ */
 public class PromptPipelineTestConfig {
-	
+
 	Logger log = LoggerFactory.getLogger(PromptPipelineTestConfig.class);
 	
 	Boolean prompterCalled = false;
@@ -43,14 +69,17 @@ public class PromptPipelineTestConfig {
 			]```
 			""";
 
+	@Deprecated
 	public void setPrompterCalled(Boolean wasCalled) {
 		prompterCalled = wasCalled;
 	}
-	
+
 	/**
 	 * Set mock responses for parameterized testing.
 	 * Each call to the LLM will return the next response in the list.
+	 * @deprecated Use {@link com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder.ConfigurableChatClientMock#setMockResponses(List)} instead
 	 */
+	@Deprecated
 	public void setMockResponses(List<String> responses) {
 		this.mockResponses.clear();
 		this.mockResponses.addAll(responses);
@@ -59,7 +88,9 @@ public class PromptPipelineTestConfig {
 	
 	/**
 	 * Set mock responses from array for reducer testing.
+	 * @deprecated Use {@link com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder.ConfigurableChatClientMock#setMockResponses(String[])} instead
 	 */
+	@Deprecated
 	public void setMockResponses(String[] responses) {
 		this.mockResponses.clear();
 		this.mockResponses.addAll(java.util.Arrays.asList(responses));
@@ -68,7 +99,9 @@ public class PromptPipelineTestConfig {
 	
 	/**
 	 * Set a single mock response (for backward compatibility).
+	 * @deprecated Use {@link com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder.ConfigurableChatClientMock#setMockResponse(String)} instead
 	 */
+	@Deprecated
 	public void setMockResponse(String response) {
 		this.mockResponses.clear();
 		this.mockResponses.add(response);
@@ -91,11 +124,14 @@ public class PromptPipelineTestConfig {
 	
 	/**
 	 * Reset the response index for test isolation.
+	 * @deprecated Use {@link com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder.ConfigurableChatClientMock#reset()} instead
 	 */
+	@Deprecated
 	public void resetResponses() {
 		this.currentResponseIndex = 0;
 	}
 	
+	// TODO bring into ChatMock
 	@Bean
 	ChatClient chatClient() {
 		ChatClient mock = Mockito.mock(ChatClient.class);

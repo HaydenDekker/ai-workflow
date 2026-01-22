@@ -1,6 +1,8 @@
 package com.hdekker.ai_workflow.test.pipeline.mock;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.mockito.Mockito;
@@ -30,8 +32,13 @@ public class ChatClientMockBuilder {
      * Map adapter provides 1:1 transformation from input to output.
      */
     public static ChatClient forMapAdapter(String... responses) {
+        return forMapAdapter(List.of(responses), null);
+    }
+
+    public static ChatClient forMapAdapter(List<String> responses, List<String> promptCaptureList) {
         MockConfiguration config = MockConfiguration.builder()
-            .responses(List.of(responses))
+            .responses(responses)
+            .capturePrompts(promptCaptureList)
             .build();
         return createMock(config);
     }
@@ -41,8 +48,13 @@ public class ChatClientMockBuilder {
      * Split adapter parses responses with --- ItemKey --- tokens.
      */
     public static ChatClient forSplitterAdapter(List<String> responses) {
+        return forSplitterAdapter(responses, null);
+    }
+
+    public static ChatClient forSplitterAdapter(List<String> responses, List<String> promptCaptureList) {
         MockConfiguration config = MockConfiguration.builder()
             .responses(responses)
+            .capturePrompts(promptCaptureList)
             .build();
         return createMock(config);
     }
@@ -52,8 +64,13 @@ public class ChatClientMockBuilder {
      * Reducer adapter maintains state across multiple inputs.
      */
     public static ChatClient forReducerAdapter(List<String> accumulatedResponses) {
+        return forReducerAdapter(accumulatedResponses, null);
+    }
+
+    public static ChatClient forReducerAdapter(List<String> accumulatedResponses, List<String> promptCaptureList) {
         MockConfiguration config = MockConfiguration.builder()
             .responses(accumulatedResponses)
+            .capturePrompts(promptCaptureList)
             .build();
         return createMock(config);
     }
@@ -87,6 +104,59 @@ public class ChatClientMockBuilder {
         return createMock(config);
     }
 
+    /**
+     * Create a configurable ChatClient mock for parameterized testing.
+     * Allows setting responses dynamically like PromptPipelineTestConfig.
+     */
+    public static ConfigurableChatClientMock forParameterizedTesting(String defaultResponse) {
+        return new ConfigurableChatClientMock(defaultResponse);
+    }
+
+    /**
+     * Nested class for configurable ChatClient mock with dynamic response management.
+     */
+    public static class ConfigurableChatClientMock {
+        private List<String> responses = new ArrayList<>();
+        private int currentIndex = 0;
+        private boolean prompterCalled = false;
+        private List<String> capturedPrompts = new ArrayList<>();
+
+        public ConfigurableChatClientMock(String defaultResponse) {
+            responses.add(defaultResponse);
+        }
+
+        public void setMockResponses(List<String> responses) {
+            this.responses = new ArrayList<>(responses);
+            reset();
+        }
+
+        public void setMockResponses(String[] responses) {
+            setMockResponses(Arrays.asList(responses));
+        }
+
+        public void setMockResponse(String response) {
+            setMockResponses(List.of(response));
+        }
+
+        public void reset() {
+            currentIndex = 0;
+            prompterCalled = false;
+            capturedPrompts.clear();
+        }
+
+        public boolean wasPrompterCalled() {
+            return prompterCalled;
+        }
+
+        public List<String> getCapturedPrompts() {
+            return new ArrayList<>(capturedPrompts);
+        }
+
+        public ChatClient build() {
+            return createConfigurableMock(this);
+        }
+    }
+
     private static ChatClient createMock(MockConfiguration config) {
         // Reset counters for new mock instance
         callCounter = 0;
@@ -96,7 +166,19 @@ public class ChatClientMockBuilder {
         ChatClient.ChatClientRequestSpec requestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.StreamResponseSpec streamSpec = Mockito.mock(ChatClient.StreamResponseSpec.class);
 
-        Mockito.when(mock.prompt(Mockito.anyString())).thenReturn(requestSpec);
+        if ((Boolean) config.getProperties().getOrDefault("capturePrompts", false)) {
+            Mockito.when(mock.prompt(Mockito.anyString())).thenAnswer(invocation -> {
+                String prompt = invocation.getArgument(0, String.class);
+                @SuppressWarnings("unchecked")
+                List<String> promptList = (List<String>) config.getProperties().get("promptList");
+                if (promptList != null) {
+                    promptList.add(prompt);
+                }
+                return requestSpec;
+            });
+        } else {
+            Mockito.when(mock.prompt(Mockito.anyString())).thenReturn(requestSpec);
+        }
         Mockito.when(requestSpec.stream()).thenReturn(streamSpec);
 
         switch (config.getBehavior()) {
@@ -118,6 +200,32 @@ public class ChatClientMockBuilder {
                 Mockito.when(streamSpec.content()).thenReturn(Flux.<String>empty());
                 break;
         }
+
+        return mock;
+    }
+
+    private static ChatClient createConfigurableMock(ConfigurableChatClientMock config) {
+        ChatClient mock = Mockito.mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec requestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.StreamResponseSpec streamSpec = Mockito.mock(ChatClient.StreamResponseSpec.class);
+
+        Mockito.when(mock.prompt(Mockito.anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0, String.class);
+            config.capturedPrompts.add(prompt);
+            config.prompterCalled = true;
+            return requestSpec;
+        });
+        Mockito.when(requestSpec.stream()).thenReturn(streamSpec);
+
+        Mockito.when(streamSpec.content()).thenAnswer(invocation -> {
+            if (config.responses.isEmpty()) {
+                return Flux.just("");
+            }
+            String response = config.responses.get(config.currentIndex % config.responses.size());
+            config.currentIndex++;
+            config.prompterCalled = true;
+            return Flux.just(response);
+        });
 
         return mock;
     }

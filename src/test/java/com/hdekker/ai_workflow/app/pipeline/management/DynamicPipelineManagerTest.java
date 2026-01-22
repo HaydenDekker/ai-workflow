@@ -23,6 +23,7 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;
 
@@ -46,13 +47,7 @@ public class DynamicPipelineManagerTest {
                         FileHash.hash(mockFileBody)),
                     Optional.empty());
 
-        ChatClient chatClient = mock(ChatClient.class);
-        ChatClientRequestSpec requestSpec = mock(ChatClientRequestSpec.class);
-        StreamResponseSpec streamSpec = mock(StreamResponseSpec.class);
-
-        when(chatClient.prompt(anyString())).thenReturn(requestSpec);
-        when(requestSpec.stream()).thenReturn(streamSpec);
-        when(streamSpec.content()).thenReturn(Flux.just(expectedMockResult));
+        ChatClient chatClient = ChatClientMockBuilder.forMapAdapter(expectedMockResult);
 
         Consumer<PromptResponse> persister = (pr) -> {
             persistCalled = true;

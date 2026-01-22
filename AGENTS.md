@@ -52,6 +52,7 @@ Run the IDE formatter with 4‑space indentation and no tabs. No dedicated Maven
 - When modifying UI, update corresponding Vaadin components
 - All tests must pass before merge
 - Refactor incrementally using TDD
+- When planning and making change, attempt non-breaking changes with tests in between each step before removing the existing code.
 - Avoid modifying existing test data structures
 - Check for memory leaks in resource streams
 - Prefer immutable collections where applicable
