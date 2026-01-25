@@ -34,25 +34,6 @@ public class DynamicPipelineManager {
 
     private final PromptPipelineConfigurator pipelineConfigurator;
 
-    public DynamicPipelineManager(
-            Flux<FileHistory> fileInputFlux,
-            ChatClient chatClient,
-            Consumer<PromptResponse> persister) {
-        this.pipelineConfigurator = new PromptPipelineConfigurator(fileInputFlux, chatClient, persister);
-    }
-
-    // Constructor for Spring injection
-    public DynamicPipelineManager(
-            FileSystemRecursiveFileScannerAdapter fileScanner,
-            FileSystemScannerConfig fileScannerConfig,
-            ChatClient chatClient) throws IOException {
-
-        Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
-        Consumer<PromptResponse> persister = pr -> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-
-        this.pipelineConfigurator = new PromptPipelineConfigurator(fileScanner.flux(), chatClient, persister);
-    }
-
     // Constructor with abstractions
     public DynamicPipelineManager(
             FileScanner fileScanner,

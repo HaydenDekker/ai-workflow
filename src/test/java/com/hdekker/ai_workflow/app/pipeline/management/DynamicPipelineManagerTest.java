@@ -1,10 +1,11 @@
 package com.hdekker.ai_workflow.app.pipeline.management;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -19,6 +20,8 @@ import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.files.FileScanner;
+import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -49,14 +52,21 @@ public class DynamicPipelineManagerTest {
 
         ChatClient chatClient = ChatClientMockBuilder.forMapAdapter(expectedMockResult);
 
-        Consumer<PromptResponse> persister = (pr) -> {
+        FileScanner fileScanner = mock(FileScanner.class);
+        when(fileScanner.flux()).thenReturn(Flux.just(fh));
+
+        FileWriter fileWriter = mock(FileWriter.class);
+        when(fileWriter.createPersister(any(Path.class))).thenReturn((pr) -> {
             persistCalled = true;
-        };
+        });
+
+        Path outputDirectory = Path.of("/test/output");
 
         manager = new DynamicPipelineManager(
-                Flux.just(fh),
-                chatClient,
-                persister);
+                fileScanner,
+                fileWriter,
+                outputDirectory,
+                chatClient);
     }
 
     @Test
@@ -120,7 +130,7 @@ public class DynamicPipelineManagerTest {
     @Test
     public void givenMultiplePipelines_ExpectAllListed() {
         AgentDefinition agent1 = TestData.basicPrompt();
-        AgentDefinition agent2 = new AgentDefinition("*.txt", "TestAgent2", "Test body 2", "Map", "Test structure 2", "output-{filename}");
+        AgentDefinition agent2 = new AgentDefinition(".*\\.txt", "TestAgent2", "Test body 2", "Map", "Test structure 2", "output-{filename}");
 
         PipelineInfo info1 = manager.addDynamicPipeline(agent1);
         PipelineInfo info2 = manager.addDynamicPipeline(agent2);
@@ -135,7 +145,7 @@ public class DynamicPipelineManagerTest {
     @Test
     public void givenYAMLandDynamicPipelines_ExpectAllListed() {
         AgentDefinition yamlAgent = TestData.basicPrompt();
-        AgentDefinition dynamicAgent = new AgentDefinition("*.md", "DynamicAgent", "Dynamic body", "Map", "Dynamic structure", "dynamic-{filename}");
+        AgentDefinition dynamicAgent = new AgentDefinition(".*\\.md", "DynamicAgent", "Dynamic body", "Map", "Dynamic structure", "dynamic-{filename}");
 
         manager.initializeFromYAML(List.of(yamlAgent));
         manager.addDynamicPipeline(dynamicAgent);
