@@ -83,7 +83,7 @@ public class DynamicPipelineManager {
         pipelineRegistry.put(id, entry);
         log.info("Added dynamic pipeline: {}", id);
 
-        return new PipelineInfo(id, def.title(), def.agentType(), entry.createdAt(), true, "DYNAMIC");
+        return new PipelineInfo(id, def, entry.createdAt(), true, "DYNAMIC");
     }
 
     public void removePipeline(String id) {
@@ -100,8 +100,7 @@ public class DynamicPipelineManager {
         return pipelineRegistry.values().stream()
             .map(entry -> new PipelineInfo(
                 entry.id(),
-                entry.agentDefinition().title(),
-                entry.agentDefinition().agentType(),
+                entry.agentDefinition(),
                 entry.createdAt(),
                 true, // active as long as in registry
                 entry.source()

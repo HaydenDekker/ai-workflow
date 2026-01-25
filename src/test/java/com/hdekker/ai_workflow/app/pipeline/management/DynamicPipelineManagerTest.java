@@ -88,8 +88,8 @@ public class DynamicPipelineManagerTest {
 
         PipelineInfo info = pipelines.get(0);
         assertThat(info.id()).isEqualTo(agent.title());
-        assertThat(info.title()).isEqualTo(agent.title());
-        assertThat(info.agentType()).isEqualTo(agent.agentType());
+        assertThat(info.agentDefinition().title()).isEqualTo(agent.title());
+        assertThat(info.agentDefinition().agentType()).isEqualTo(agent.agentType());
         assertThat(info.source()).isEqualTo("YAML");
         assertThat(info.active()).isTrue();
     }
@@ -100,8 +100,8 @@ public class DynamicPipelineManagerTest {
 
         PipelineInfo info = manager.addDynamicPipeline(agent);
 
-        assertThat(info.title()).isEqualTo(agent.title());
-        assertThat(info.agentType()).isEqualTo(agent.agentType());
+        assertThat(info.agentDefinition().title()).isEqualTo(agent.title());
+        assertThat(info.agentDefinition().agentType()).isEqualTo(agent.agentType());
         assertThat(info.source()).isEqualTo("DYNAMIC");
         assertThat(info.active()).isTrue();
 

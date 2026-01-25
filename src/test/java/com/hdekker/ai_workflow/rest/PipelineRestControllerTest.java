@@ -37,7 +37,7 @@ public class PipelineRestControllerTest {
     public void givenValidAgentDefinition_whenPostPipeline_thenPipelineCreated() throws Exception {
         // Given
         AgentDefinition agentDef = TestData.basicPrompt();
-        PipelineInfo expectedInfo = new PipelineInfo("test-id", agentDef.title(), agentDef.agentType(), java.time.LocalDateTime.now(), true, "DYNAMIC");
+        PipelineInfo expectedInfo = new PipelineInfo("test-id", agentDef, java.time.LocalDateTime.now(), true, "DYNAMIC");
 
         when(dynamicPipelineManager.addDynamicPipeline(any(AgentDefinition.class))).thenReturn(expectedInfo);
 
@@ -54,17 +54,19 @@ public class PipelineRestControllerTest {
 
         assertThat(response).isNotNull();
         assertThat(response.id()).isEqualTo("test-id");
-        assertThat(response.title()).isEqualTo(agentDef.title());
-        assertThat(response.agentType()).isEqualTo(agentDef.agentType());
+        assertThat(response.agentDefinition().title()).isEqualTo(agentDef.title());
+        assertThat(response.agentDefinition().agentType()).isEqualTo(agentDef.agentType());
         assertThat(response.source()).isEqualTo("DYNAMIC");
     }
 
     @Test
     public void whenGetPipelines_thenListOfPipelinesReturned() throws Exception {
         // Given
+        AgentDefinition agent1 = new AgentDefinition(".*\\.txt$", "Title1", "Body1", "Map", "Output1", "Template1");
+        AgentDefinition agent2 = new AgentDefinition(".*\\.md$", "Title2", "Body2", "Reducer", "Output2", "Template2");
         List<PipelineInfo> pipelines = List.of(
-            new PipelineInfo("id1", "Title1", "Map", java.time.LocalDateTime.now(), true, "DYNAMIC"),
-            new PipelineInfo("id2", "Title2", "Reducer", java.time.LocalDateTime.now(), true, "YAML")
+            new PipelineInfo("id1", agent1, java.time.LocalDateTime.now(), true, "DYNAMIC"),
+            new PipelineInfo("id2", agent2, java.time.LocalDateTime.now(), true, "YAML")
         );
         when(dynamicPipelineManager.listPipelines()).thenReturn(pipelines);
 
