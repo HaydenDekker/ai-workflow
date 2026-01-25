@@ -24,3 +24,35 @@ vaadin-markdown code {
     line-height: 1.6;
     margin-bottom: var(--lumo-space-m);
 }
+
+/* Basic styles for the Pipeline Info Grid View */
+
+.main-layout {
+    padding: 16px;
+    background-color: #f5f5f5;
+}
+
+.page-title {
+    margin-bottom: 24px;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+.grid-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .main-layout {
+        padding: 8px;
+    }
+    
+    .grid-container {
+        padding: 8px;
+    }
+}

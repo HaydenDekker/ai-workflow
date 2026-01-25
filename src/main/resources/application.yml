@@ -18,11 +18,11 @@ spring:
       ddl-auto: create-drop
 app:
   ai:
-    endpoint: http://127.0.0.1:11434
-    model: qwen3-16k:latest 
+    #endpoint: http://127.0.0.1:11434
+    #model: qwen3-16k:latest 
     #gemma3:4b
-    #endpoint: http://192.168.2.108:11434
-    #model: gemma3:27b
+    endpoint: http://192.168.2.108:11434
+    model: gemma3:27b
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   
