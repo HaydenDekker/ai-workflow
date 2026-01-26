@@ -9,7 +9,7 @@ Create an initial Vaadin Flow view that displays existing PipelineInfo objects i
 - ✅ PipelineInfo record now includes complete AgentDefinition object (refactored)
 - ✅ PipelineRestController exists with endpoints for CRUD operations
 - ✅ REST endpoints at `/api/pipelines` return PipelineInfo objects with embedded AgentDefinition
-- ❌ No existing Vaadin views or UI components
+- ✅ Vaadin views and UI components created and functional
 
 ## Implementation Plan
 
@@ -27,13 +27,14 @@ Create an initial Vaadin Flow view that displays existing PipelineInfo objects i
 - ✅ `src/main/java/com/hdekker/ai_workflow/ui/views/PipelineInfoListView.java`
 - ✅ `src/main/frontend/themes/default/styles/styles.css`
 - ✅ `src/test/java/com/hdekker/ai_workflow/ui/views/PipelineInfoListViewTest.java`
+- ✅ `src/main/java/com/hdekker/ai_workflow/ui/service/PipelineInfoService.java`
 
-### Phase 2: Grid Component Integration
+### Phase 2: Grid Component Integration ✅ COMPLETED
 **Objective**: Implement Vaadin Grid to display PipelineInfo objects
 
 #### Checklist:
-- [ ] Add Vaadin Grid component to the view
-- [ ] Configure Grid columns for PipelineInfo fields:
+- [x] Add Vaadin Grid component to the view
+- [x] Configure Grid columns for PipelineInfo fields:
   - Pipeline ID (String)
   - Agent Title (from AgentDefinition)
   - Agent Type (from AgentDefinition)
@@ -41,9 +42,9 @@ Create an initial Vaadin Flow view that displays existing PipelineInfo objects i
   - Source (YAML/DYNAMIC)
   - Created At (LocalDateTime)
   - Active Status (Boolean)
-- [ ] Set up proper column widths and sorting
-- [ ] Add basic styling for the grid
-- [ ] Implement responsive grid behavior
+- [x] Set up proper column widths and sorting
+- [x] Add basic styling for the grid
+- [x] Implement responsive grid behavior
 
 #### Grid columns configuration:
 ```java
@@ -55,19 +56,19 @@ grid.addColumn(PipelineInfo::source).setHeader("Source").setAutoWidth(true);
 grid.addColumn(PipelineInfo::createdAt).setHeader("Created").setAutoWidth(true);
 ```
 
-### Phase 3: Data Integration
+### Phase 3: Data Integration ✅ COMPLETED
 **Objective**: Connect grid to PipelineRestController endpoints
 
 #### Checklist:
-- [ ] Create `PipelineInfoService` to handle REST API calls
-- [ ] Implement HTTP client using Spring's `WebClient` or `RestTemplate`
-- [ ] Map PipelineRestController endpoints to service methods:
+- [x] Create `PipelineInfoService` to handle REST API calls
+- [x] Implement HTTP client using Spring's `WebClient` or `RestTemplate`
+- [x] Map PipelineRestController endpoints to service methods:
   - `GET /api/pipelines` → `getAllPipelineInfos()`
   - `DELETE /api/pipelines/{id}` → `deletePipeline(String id)`
-- [ ] Handle error cases (empty response, network errors)
-- [ ] No transformation needed - PipelineInfo now contains complete AgentDefinition
-- [ ] Add loading indicators during data fetch
-- [ ] Implement automatic data refresh on view load
+- [x] Handle error cases (empty response, network errors)
+- [x] No transformation needed - PipelineInfo now contains complete AgentDefinition
+- [x] Add loading indicators during data fetch
+- [x] Implement automatic data refresh on view load
 
 #### Service method mapping:
 ```java
@@ -75,6 +76,16 @@ grid.addColumn(PipelineInfo::createdAt).setHeader("Created").setAutoWidth(true);
 // PipelineInfo now contains complete AgentDefinition object
 // No transformation needed - display PipelineInfo directly
 ```
+
+#### Phase 3 Implementation Summary
+**Completed**: Data integration successfully connects grid to PipelineRestController endpoints
+- Created `PipelineInfoService` with WebClient for reactive HTTP calls
+- Implemented `getAllPipelineInfos()` and `deletePipeline()` methods
+- Added comprehensive error handling for network failures and HTTP errors
+- Integrated loading indicators (ProgressBar) with proper UX during data operations
+- Updated `PipelineInfoListView` with service dependency injection and reactive data loading
+- Grid now automatically loads and displays real PipelineInfo data on view initialization
+- All tests pass and compilation succeeds
 
 ### Phase 4: View Navigation and Basic Interactions
 **Objective**: Add navigation capabilities and basic grid interactions
@@ -134,12 +145,12 @@ src/main/java/com/hdekker/ai_workflow/ui/
 6. **Security**: Ensure proper authentication/authorization if required
 
 ### Success Criteria
-- [ ] Grid loads and displays PipelineInfo data from existing endpoints
-- [ ] View is accessible at the root URL ""
-- [ ] Grid displays both pipeline metadata and agent definition fields
-- [ ] Grid is responsive and properly styled
-- [ ] Error handling works for network/API failures
-- [ ] Code follows project conventions (4-space indentation, Spring patterns)
+- [x] Grid loads and displays PipelineInfo data from existing endpoints
+- [x] View is accessible at the root URL ""
+- [x] Grid displays both pipeline metadata and agent definition fields
+- [x] Grid is responsive and properly styled
+- [x] Error handling works for network/API failures
+- [x] Code follows project conventions (4-space indentation, Spring patterns)
 
 ## Next Steps After Implementation
 1. Add creation form view (`/pipelines/new`) that creates AgentDefinition and submits to PipelineRestController

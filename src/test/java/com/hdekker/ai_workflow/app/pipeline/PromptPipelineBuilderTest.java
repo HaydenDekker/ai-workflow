@@ -5,10 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
-import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import reactor.core.publisher.Flux;

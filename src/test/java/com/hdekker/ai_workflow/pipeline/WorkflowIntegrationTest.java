@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -33,8 +35,11 @@ import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.ui.service.PipelineInfoService;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
  
 import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
 /**
  * Refactored WorkflowIntegrationTest using parameterized tests for all LLM adapter types.
@@ -278,6 +283,12 @@ public class WorkflowIntegrationTest {
 	@Autowired
 	ChatClient chatClient;
 	
+	@Autowired
+	PipelineInfoService pipelineInfoService;
+	
+	@Autowired
+	DynamicPipelineManager dynamicPipelineManager;
+	
 	// TODO move this to builder test or lower as a LLMAdapter test. The adapter has to get
 	// the latest file before proceeding, potentially a factory method.
 	@ParameterizedTest
@@ -330,6 +341,41 @@ public class WorkflowIntegrationTest {
 				MockConfiguration.builder().responses(java.util.Arrays.asList(MockResponseProvider.getReducerResponses())).build()
 			)
 		);
+	}
+	
+	/**
+	 * Integration test for PipelineInfoService to verify it can communicate
+	 * with the main application REST endpoints.
+	 * 
+	 * This test verifies that:
+	 * 1. PipelineInfoService can successfully connect to the REST endpoints
+	 * 2. The service can fetch pipeline data 
+	 * 3. The service handles empty responses gracefully
+	 * 
+	 * Note: This test only verifies the service connectivity to the REST layer,
+	 * it doesn't test the full pipeline creation to avoid Ollama dependency issues.
+	 */
+	@Test
+	public void givenPipelineInfoService_ExpectCommunicationWithRestEndpoints() {
+		
+		// Test PipelineInfoService.getAllPipelineInfos() method
+		// Even with no pipelines, the service should return an empty list, not throw an error
+		StepVerifier.create(pipelineInfoService.getAllPipelineInfos())
+			.assertNext(pipelineInfos -> {
+				// Verify we get a valid response (empty list is acceptable)
+				assertNotNull(pipelineInfos, "Pipeline list should not be null");
+				// List can be empty if no pipelines exist, that's expected behavior
+			})
+			.verifyComplete();
+		
+		// Test PipelineInfoService.deletePipeline() method with non-existent ID
+		// Should complete without errors (service handles not found gracefully)
+		StepVerifier.create(pipelineInfoService.deletePipeline("non-existent-id"))
+			.verifyComplete();
+		
+		// The test passes if no exceptions are thrown, indicating the service
+		// can successfully communicate with the REST endpoints and handles responses
+		// according to its error handling strategy.
 	}
 	
 

@@ -8,23 +8,16 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
-import org.springframework.ai.chat.client.ChatClient.StreamResponseSpec;
-
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 

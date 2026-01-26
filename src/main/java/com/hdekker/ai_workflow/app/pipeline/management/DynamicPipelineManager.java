@@ -5,25 +5,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
-import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileScanner;
-import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
-import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.files.PromptResponseFileSystemAdapter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import java.io.IOException;
 import java.nio.file.Path;
 
 public class DynamicPipelineManager {
