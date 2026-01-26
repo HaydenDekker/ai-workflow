@@ -20,7 +20,6 @@ public class PromptPipelineConfigurator {
 	Logger log = LoggerFactory.getLogger(PromptPipelineConfigurator.class);
 	
 	final Flux<FileHistory> fileInputFlux;
-	// TODO more a llm adapter.
 	ChatClient chatClient;
 	Consumer<PromptResponse> persister;
 

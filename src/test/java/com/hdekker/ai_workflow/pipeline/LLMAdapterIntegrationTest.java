@@ -62,38 +62,15 @@ import reactor.test.StepVerifier;
 @SpringBootTest()
 @Import(ChatClientTestConfig.class)
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
-public class WorkflowIntegrationTest {
+public class LLMAdapterIntegrationTest {
 	
-	Logger log = LoggerFactory.getLogger(WorkflowIntegrationTest.class);
+	Logger log = LoggerFactory.getLogger(LLMAdapterIntegrationTest.class);
 	
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
-
-	Path configuredDirectory;
 	
 	@Autowired
 	ChatClientTestConfig chatClientTestConfig;
-	
-	@TempDir 
-	static Path promptDirectory;
-	
-	@TempDir 
-	static Path rootDirectory;
-	
-	@DynamicPropertySource 
-    static void registerTempDirProperty(DynamicPropertyRegistry registry) {
-        registry.add("prompt-config.predefinedPromptFilePath", () -> promptDirectory.toAbsolutePath().toString());
-        registry.add("scanner.url", () -> "file:/" + rootDirectory.toAbsolutePath().toString());
-    }
-	
-	@BeforeEach
-	public void captureConfiguration() {
-		try {
-			configuredDirectory = Paths.get(fileSystemScannerConfig.getUrl().getURI());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 	
 	/**
 	 * Provides test cases for all LLM adapter types.

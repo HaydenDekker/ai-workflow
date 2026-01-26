@@ -91,20 +91,14 @@ public class PromptPipelineConfiguration {
 			e.printStackTrace();
 		}
 
-		Consumer<PromptResponse> persisterAdapter = pr-> PromptResponseFileSystemAdapter.createFile(pr, outputFolderPath);
-
-		PromptPipelineConfigurator ppc = new PromptPipelineConfigurator(
-				fileScanner.flux(),
-				chatClient,
-				persisterAdapter
-				);
-
 		// Initialize YAML pipelines through manager
 		List<AgentDefinition> yamlAgents = systemPromptConfiguration.getPromptChains()
 			.stream()
 			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
 			.flatMap(pc-> pc.chain().stream())
 			.toList();
+		
+		log.info("" + yamlAgents.size() + " pre-configured.");
 
 		dynamicPipelineManager.initializeFromYAML(yamlAgents);
 	}
