@@ -28,7 +28,7 @@ public class MapAgentLLMAdapterTest {
                 "out-${title}.txt" // outputFilenameTemplate
         );
 
-        ChatClient mockChatClient = ChatClientMockBuilder.forMapAdapter(STUB_RESPONSE);
+        ChatClient mockChatClient = ChatClientMockBuilder.createMock(STUB_RESPONSE);
 
         MapAgentLLMAdapter adapter = new MapAgentLLMAdapter(mockChatClient, def);
 

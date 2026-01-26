@@ -43,7 +43,7 @@ public class DynamicPipelineManagerTest {
                         FileHash.hash(mockFileBody)),
                     Optional.empty());
 
-        ChatClient chatClient = ChatClientMockBuilder.forMapAdapter(expectedMockResult);
+        ChatClient chatClient = ChatClientMockBuilder.createMock(expectedMockResult);
 
         FileScanner fileScanner = mock(FileScanner.class);
         when(fileScanner.flux()).thenReturn(Flux.just(fh));

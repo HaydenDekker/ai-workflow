@@ -171,9 +171,10 @@ public class WorkflowIntegrationTest {
 		// Create ChatClient mock with appropriate responses based on adapter type
 		ChatClient mockChatClient;
 		if (testCase.isReducerAdapter()) {
-			mockChatClient = chatClientTestConfig.createReducerAdapterMock(Arrays.asList(MockResponseProvider.getReducerResponses()));
+			mockChatClient = chatClientTestConfig.createMock(Arrays.asList(MockResponseProvider.getReducerResponses()));
+			
 		} else {
-			mockChatClient = chatClientTestConfig.createMapAdapterMock(testCase.mockResponse());
+			mockChatClient = chatClientTestConfig.createMock(testCase.mockResponse());
 		}
 		
 		// Create test input data based on adapter requirements
@@ -296,7 +297,7 @@ public class WorkflowIntegrationTest {
 	public void givenPromptChainWithReduceAdapterSet_ExpectOutputResultsFromThePipeline(AdapterTestCase testCase) {
 		
 		// Set up the mock response for this test using new interface
-		ChatClient mockChatClient = chatClientTestConfig.createReducerAdapterMock(Arrays.asList(
+		ChatClient mockChatClient = chatClientTestConfig.createMock(Arrays.asList(
 			MockResponseProvider.getReducerInitialResponse(),
 			MockResponseProvider.getReducerAccumulatedResponse()
 		));

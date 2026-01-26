@@ -43,23 +43,17 @@ public class ChatClientTestConfig {
     }
 
     /**
-     * Convenience method for creating Map adapter mock.
+     * Convenience method for creating generic mock.
      */
-    public ChatClient createMapAdapterMock(String... responses) {
-        return ChatClientMockBuilder.forMapAdapter(responses);
+    public ChatClient createMock(String... responses) {
+        return ChatClientMockBuilder.createMock(responses);
     }
 
     /**
-     * Convenience method for creating Splitter adapter mock.
+     * Convenience method for creating generic mock with list.
      */
-    public ChatClient createSplitterAdapterMock(java.util.List<String> responses) {
-        return ChatClientMockBuilder.forSplitterAdapter(responses);
+    public ChatClient createMock(java.util.List<String> responses) {
+        return ChatClientMockBuilder.createMock(responses, null);
     }
 
-    /**
-     * Convenience method for creating Reducer adapter mock.
-     */
-    public ChatClient createReducerAdapterMock(java.util.List<String> accumulatedResponses) {
-        return ChatClientMockBuilder.forReducerAdapter(accumulatedResponses);
-    }
 }

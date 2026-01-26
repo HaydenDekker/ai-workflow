@@ -28,7 +28,7 @@ public class SplitterLLMAdapterTest {
                 "out-${name}.md" // outputFilenameTemplate
         );
 
-        ChatClient mockChatClient = ChatClientMockBuilder.forSplitterAdapter(List.of(STUB_RESPONSE));
+        ChatClient mockChatClient = ChatClientMockBuilder.createMock(List.of(STUB_RESPONSE), null);
 
         SplitterLLMAdapter adapter = new SplitterLLMAdapter(mockChatClient, def);
 

@@ -30,7 +30,7 @@ public class BuilderPatternIntegrationTest {
     @Test
     public void testMapAdapterWithBuilder() {
         // Create a ChatClient mock using the builder pattern
-        ChatClient mockClient = testConfig.createMapAdapterMock("custom map response");
+        ChatClient mockClient = testConfig.createMock("custom map response");
 
         assertThat(mockClient).isNotNull();
         // Verify the mock can be used in tests

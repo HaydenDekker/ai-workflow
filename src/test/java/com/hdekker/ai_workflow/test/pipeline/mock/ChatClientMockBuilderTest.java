@@ -11,8 +11,8 @@ import org.springframework.ai.chat.client.ChatClient;
 public class ChatClientMockBuilderTest {
 
     @Test
-    public void testForMapAdapter() {
-        ChatClient mock = ChatClientMockBuilder.forMapAdapter("test response");
+    public void testCreateMock() {
+        ChatClient mock = ChatClientMockBuilder.createMock("test response");
 
         assertThat(mock).isNotNull();
         // Additional assertions can be added for mock behavior

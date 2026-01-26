@@ -32,7 +32,7 @@ public class PromptPipelineBuilderTest {
 		};
 		fileInputFlux = Flux.just(TestData.basicRequest(TestData.fileNameStub));
 
-		this.chatClient = ChatClientMockBuilder.forMapAdapter(basicResponse.response()); //mockChatClient;
+		this.chatClient = ChatClientMockBuilder.createMock(basicResponse.response()); //mockChatClient;
 
 		LLMAdapter adapter = flux->flux.flatMap(fpe->
 		chatClient.prompt(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
@@ -70,7 +70,7 @@ public class PromptPipelineBuilderTest {
 		
 		fileInputFlux = Flux.just(basicRequest);
 
-		chatClient = ChatClientMockBuilder.forMapAdapter(basicResponse.response());
+		chatClient = ChatClientMockBuilder.createMock(basicResponse.response());
 
 		LLMAdapter adapter = flux->flux.flatMap(fpe->
 		chatClient.prompt(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())

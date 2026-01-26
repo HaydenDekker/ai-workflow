@@ -35,7 +35,7 @@ public class LLMReducerAdapterTest {
         );
 
         List<String> prompts = new ArrayList<>();
-        ChatClient mockChatClient = ChatClientMockBuilder.forReducerAdapter(
+        ChatClient mockChatClient = ChatClientMockBuilder.createMock(
             List.of(STUB_RESPONSE),
             prompts  // Enable prompt capturing
         );

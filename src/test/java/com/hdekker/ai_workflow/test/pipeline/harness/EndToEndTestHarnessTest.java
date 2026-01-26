@@ -33,7 +33,7 @@ class EndToEndTestHarnessTest {
     @BeforeEach
     void setUp() {
         // Use the existing ChatClientMockBuilder for proper mocking
-        mockChatClient = ChatClientMockBuilder.forMapAdapter(MockResponseProvider.getMapAgentResponse());
+        mockChatClient = ChatClientMockBuilder.createMock(MockResponseProvider.getMapAgentResponse());
     }
 
     @Test
@@ -205,7 +205,7 @@ class EndToEndTestHarnessTest {
         AgentDefinition definition = TestConfigurationFactory.createSplitterAgentDefinition();
         
         // Setup mock for splitter response using ChatClientMockBuilder
-        mockChatClient = ChatClientMockBuilder.forSplitterAdapter(List.of(MockResponseProvider.getSplitterResponse()));
+        mockChatClient = ChatClientMockBuilder.createMock(List.of(MockResponseProvider.getSplitterResponse()), null);
         
         EndToEndTestHarness.TestScenario scenario = new EndToEndTestHarness.TestScenario(
             List.of(definition),

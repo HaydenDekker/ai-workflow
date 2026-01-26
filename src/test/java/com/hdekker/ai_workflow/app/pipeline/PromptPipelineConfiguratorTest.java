@@ -45,7 +45,7 @@ public class PromptPipelineConfiguratorTest {
                         FileHash.hash(mockFileBody)), 
                         Optional.empty());
         
-        ChatClient chatClient = ChatClientMockBuilder.forMapAdapter(expectedMockResult);
+        ChatClient chatClient = ChatClientMockBuilder.createMock(expectedMockResult);
         
         Consumer<PromptResponse> persister = (pr) -> {
             persistCalled = true;

@@ -172,18 +172,18 @@ public class FileSystemWorkflowIntegrationTest {
      */
     private ChatClient createChatClientForAdapter(String adapterType) {
         if ("Reduction".equals(adapterType)) {
-            return chatClientTestConfig.createReducerAdapterMock(Arrays.asList(
+            return chatClientTestConfig.createMock(Arrays.asList(
                 MockResponseProvider.getReducerInitialResponse(),
                 MockResponseProvider.getReducerAccumulatedResponse()
             ));
         } else if ("Split".equals(adapterType)) {
-            return chatClientTestConfig.createSplitterAdapterMock(java.util.List.of(MockResponseProvider.getSplitterResponse()));
+            return chatClientTestConfig.createMock(java.util.List.of(MockResponseProvider.getSplitterResponse()));
         } else if (adapterType == null) {
             // Default Map agent
-            return chatClientTestConfig.createMapAdapterMock(MockResponseProvider.getDefaultMapResponse());
+            return chatClientTestConfig.createMock(MockResponseProvider.getDefaultMapResponse());
         } else {
             // Regular Map agent
-            return chatClientTestConfig.createMapAdapterMock(MockResponseProvider.getMapAgentResponse());
+            return chatClientTestConfig.createMock(MockResponseProvider.getMapAgentResponse());
         }
     }
     
