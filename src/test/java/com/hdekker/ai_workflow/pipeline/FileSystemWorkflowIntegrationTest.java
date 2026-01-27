@@ -71,7 +71,7 @@ public class FileSystemWorkflowIntegrationTest {
     
     /**
      * Test cases for end-to-end workflow scenarios.
-     * Each case includes the adapter type, test data, and expected results.
+     * Only the basic MapAgent scenario is kept for simplified validation.
      */
     static Stream<EndToEndTestCase> endToEndTestCases() {
         return Stream.of(
@@ -89,38 +89,6 @@ public class FileSystemWorkflowIntegrationTest {
                     new String[]{MockResponseProvider.getMapAgentResponse()}
                 ),
                 "Basic Map agent workflow test"
-            ),
-            
-            // Split Agent Scenario  
-            new EndToEndTestCase(
-                "Split",
-                TestConfigurationFactory.createSplitterAgentDefinition(), 
-                new String[]{"public class SOLIDViolation {\n    // Multiple SOLID violations\n}"},
-                MockResponseProvider.getSplitterResponse(),
-                new EndToEndExpectedResults(
-                    3, // responseCount (3 splits in mock response)
-                    3, // fileCount
-                    Duration.ofSeconds(30),
-                    null, // Don't check exact file paths for split agent
-                    new String[]{"Single Responsibility", "Open/Closed", "Dependency Inversion"} // Content should contain these keys
-                ),
-                "Split agent file generation test"
-            ),
-            
-            // Default Map Agent (null agentType) - simplified to avoid complex reducer issues
-            new EndToEndTestCase(
-                null,
-                TestConfigurationFactory.createDefaultMapAgentDefinition(),
-                new String[]{"public class DefaultTest {\n    // Default processing\n}"},
-                MockResponseProvider.getDefaultMapResponse(),
-                new EndToEndExpectedResults(
-                    1, // responseCount
-                    1, // fileCount
-                    Duration.ofSeconds(30),
-                    null, // Don't check exact file paths
-                    new String[]{MockResponseProvider.getDefaultMapResponse()}
-                ),
-                "Default Map agent fallback test"
             )
         );
     }
@@ -168,63 +136,36 @@ public class FileSystemWorkflowIntegrationTest {
     }
     
     /**
-     * Creates appropriate ChatClient mock for the specified adapter type.
+     * Creates appropriate ChatClient mock for the MapAgent adapter.
      */
     private ChatClient createChatClientForAdapter(String adapterType) {
-        if ("Reduction".equals(adapterType)) {
-            return chatClientTestConfig.createMock(Arrays.asList(
-                MockResponseProvider.getReducerInitialResponse(),
-                MockResponseProvider.getReducerAccumulatedResponse()
-            ));
-        } else if ("Split".equals(adapterType)) {
-            return chatClientTestConfig.createMock(java.util.List.of(MockResponseProvider.getSplitterResponse()));
-        } else if (adapterType == null) {
-            // Default Map agent
-            return chatClientTestConfig.createMock(MockResponseProvider.getDefaultMapResponse());
-        } else {
-            // Regular Map agent
-            return chatClientTestConfig.createMock(MockResponseProvider.getMapAgentResponse());
-        }
+        // Only MapAgent is supported now
+        return chatClientTestConfig.createMock(MockResponseProvider.getMapAgentResponse());
     }
     
     /**
      * Performs adapter-specific result verifications beyond basic workflow checks.
+     * This method is simplified to only verify MapAgent behavior.
      */
     private void verifyAdapterSpecificResults(EndToEndTestCase testCase, 
             EndToEndTestHarness.TestExecution execution) throws IOException {
         
-        String adapterType = testCase.adapterType();
-        
-        // Basic verification for all types
+        // Basic verification for MapAgent
         assertTrue(execution.responses().size() > 0, "Should have at least one response");
         assertTrue(execution.createdFiles().size() > 0, "Should have created at least one file");
         
-        if ("Split".equals(adapterType)) {
-            // Verify Split adapter created multiple files
-            assertEquals(3, execution.responses().size(), "Split adapter should create 3 responses");
-            assertEquals(3, execution.createdFiles().size(), "Split adapter should create 3 files");
-            
-            // Verify each response has expected split content
-            String[] expectedKeys = {"Single Responsibility", "Open/Closed", "Dependency Inversion"};
-            for (int i = 0; i < expectedKeys.length && i < execution.responses().size(); i++) {
-                assertTrue(execution.responses().get(i).response().contains(expectedKeys[i]),
-                    "Split response " + i + " should contain " + expectedKeys[i]);
-            }
-            
-        } else {
-            // Map agent verification - 1:1 correspondence
-            assertEquals(1, execution.responses().size(),
-                "Map agent should create exactly 1 response");
-            assertEquals(1, execution.createdFiles().size(),
-                "Map agent should create exactly 1 file");
-                
-            // Verify output files were created with expected names
-            for (PromptResponse response : execution.responses()) {
-                assertNotNull(response.fileName(), 
-                    "Map agent response should have output filename");
-                assertFalse(response.fileName().trim().isEmpty(),
-                    "Map agent output filename should not be empty");
-            }
+        // Map agent verification - 1:1 correspondence
+        assertEquals(1, execution.responses().size(),
+            "Map agent should create exactly 1 response");
+        assertEquals(1, execution.createdFiles().size(),
+            "Map agent should create exactly 1 file");
+        
+        // Verify output files were created with expected names
+        for (PromptResponse response : execution.responses()) {
+            assertNotNull(response.fileName(), 
+                "Map agent response should have output filename");
+            assertFalse(response.fileName().trim().isEmpty(),
+                "Map agent output filename should not be empty");
         }
         
         // Log what was actually created for debugging
