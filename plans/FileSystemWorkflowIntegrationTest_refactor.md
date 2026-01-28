@@ -9,38 +9,38 @@ This document tracks the progress of simplifying the FileSystemWorkflowIntegrati
   - Keep only basic MapAgent scenario
   - Simplify test configuration to use single adapter type
 
-- [ ] **2. Remove all Splitter and Reducer adapter logic**
+- [x] **2. Remove all Splitter and Reducer adapter logic**
   - Delete all test cases for "Split" and "Reduction" adapter types
   - Remove corresponding mock response providers
   - Eliminate adapter type checks in test logic
 
-- [ ] **3. Eliminate EndToEndTestCase and EndToEndExpectedResults records**
+- [x] **3. Eliminate EndToEndTestCase and EndToEndExpectedResults records**
   - Remove the EndToEndTestCase record class (lines 241-248)
   - Remove the EndToEndExpectedResults record class (lines 253-273)
   - Replace with direct parameter passing in test method
 
-- [ ] **4. Replace parameterized test with simple test method**
+- [x] **4. Replace parameterized test with simple test method**
   - Remove `@ParameterizedTest` and `@MethodSource`
   - Replace with simple `@Test` method
   - Remove stream generation for test cases
 
-- [ ] **5. Remove all adapter-specific verification code**
+- [x] **5. Remove all adapter-specific verification code**
   - Delete entire `verifyAdapterSpecificResults()` method (lines 193-236)
   - Remove all conditional logic based on adapter type
   - Keep only basic assertions for response and file counts
 
-- [ ] **6. Cleanup unused imports and dependencies**
+- [x] **6. Cleanup unused imports and dependencies**
   - Remove unused imports from removed components
   - Remove any remaining references to: EndToEndTestCase, EndToEndExpectedResults
   - Remove unused test harness dependencies if no longer needed
 
-- [ ] **7. Verify file creation and adapter call tracking**
+- [x] **7. Verify file creation and adapter call tracking**
   - Ensure `chatClientTestConfig.createMock()` is called and verified
   - Confirm files are created in output directory
   - Verify response count is 1 for MapAgent
   - Validate that file count matches response count (1:1)
 
-- [ ] **8. Run tests to ensure simplified version works**
+- [x] **8. Run tests to ensure simplified version works**
   - Execute `./mvnw test -Dtest=FileSystemWorkflowIntegrationTest -q`
   - Validate all assertions pass
   - Confirm no regressions in file system workflow
