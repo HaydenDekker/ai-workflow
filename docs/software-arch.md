@@ -1,10 +1,11 @@
 # Software Architecture
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\llmadapter\\SplitterLLMAdapter.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\PromptPipelineConfiguration.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\PromptPipelineConfigurator.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileScanner.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\ui\\views\\PipelineInfoListView.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\management\\DynamicPipelineManager.java
+- [x] SplitterLLMAdapter.java: Splits LLM responses into multiple files by parsing '---' tokens, generating separate output files per key.
+- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\pipeline\PromptPipelineConfiguration.java – Configures AI pipeline definitions and dynamic manager.
+- [x] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\PromptPipelineConfigurator.java – Configures AI pipeline definitions and dynamic manager for LLM adapters; builds pipelines using PromptPipelineBuilder.
+ - [x] FileScanner.java: Declares a reactive method `flux()` that emits `FileHistory` events, enabling streaming file system monitoring and change detection.
+- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\ui\views\PipelineInfoListView.java – Main dashboard view displaying PipelineInfo in a grid layout, fetching and displaying pipeline data.
+- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\app\pipeline\management\DynamicPipelineManager.java
+    - Manages dynamic and YAML-defined AI pipelines, handling creation, registration, lifecycle, and exposure via PipelineInfo objects.
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\ui\\service\\PipelineInfoService.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileSystemRecursiveFileScannerAdapter.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\rest\\dto\\PipelineInfo.java
