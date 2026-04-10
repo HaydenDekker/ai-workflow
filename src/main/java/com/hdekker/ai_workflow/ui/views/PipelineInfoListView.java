@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Main dashboard view displaying PipelineInfo in a grid layout.
  */
-@Route("")
+@Route("pipeline-info")
 @PageTitle("Pipeline Grid")
 public class PipelineInfoListView extends VerticalLayout implements AfterNavigationObserver {
     private final Grid<PipelineInfo> grid;

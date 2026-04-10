@@ -1,8 +1,5 @@
 package com.hdekker.ai_workflow.pipeline;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -20,13 +17,11 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
 import com.hdekker.ai_workflow.test.pipeline.harness.EndToEndTestHarness;
 
 import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 /**
  * True end-to-end integration test using real file system configuration.

@@ -9,9 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
@@ -27,14 +26,14 @@ import reactor.test.StepVerifier;
  * This test uses WebFluxTest to load only the web layer components,
  * avoiding the need for full application context with Ollama dependencies.
  */
-@WebFluxTest(controllers = PipelineRestController.class)
+//@WebFluxTest(controllers = PipelineRestController.class)
 @ContextConfiguration(classes = { PipelineInfoService.class, PipelineRestController.class })
 public class PipelineInfoServiceIntegrationTest {
 
     @Autowired
     private PipelineInfoService pipelineInfoService;
 
-    @MockBean
+    @MockitoBean
     private DynamicPipelineManager dynamicPipelineManager;
 
     @Autowired

@@ -1,21 +1,28 @@
+server:
+  port: ${PORT:8080}
+
+logging:
+  level:
+    org.atmosphere: warn
+
 spring:
   application:
     name: ai-workflow
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
   ai:
     chat:
       client:
         enabled: false
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/mydb
-    username: app_user
-    password: mysecretpassword
-  jpa:
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: create-drop
 app:
   ai:
     #endpoint: http://127.0.0.1:11434
@@ -29,3 +36,8 @@ scanner:
 # user configured space. pre-packaged prompts will be copied here first. see src/main/resources/prompt-chains
 prompt-config:
   predefinedPromptFilePath: /test/prompts
+
+# Vaadin/Hilla configuration
+vaadin:
+  launch-browser: true
+  allowed-packages: com.vaadin,org.vaadin,com.hdekker
