@@ -6,6 +6,14 @@ A few benefits to file first graph nodes: Outputting results as files, improves 
 
 I imagine working away, being creative, and the machine churning away in the background validating all of my work. I'm the expert, not the AI.
 
+Update: 11-04-2026
+
+  - Refactor terminology toward agents from pipeline
+  - Add sqlite support
+  - Add qdrant support
+  - Add opencode agents
+  - Add memory advisors
+
 ## Prompt Graphs
 
 Building up to an agent,
