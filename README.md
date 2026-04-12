@@ -1,10 +1,10 @@
 # AI Workflow
 
-Aiming to have AI act as the navigator rather than the driver of pair programming. A root directory is monitored for file events. The file is pushed into the configured prompt pipeline and a response is provided. The responses are stored back to the file system and trigger further events for any listening agent. Agents listen to file change events and filter for relevance using a regex.
+Configure agentic workflow's using a local browser or cli. Monitor full system health. Reconfigure on the fly.
 
-A few benefits to file first graph nodes: Outputting results as files, improves the git workflow, allowing state to be progressively captured and provides easy access the output by the user. Accessing is simply a matter of pulling up the directory and flicking through to see results.
+ - User defines agents, their input triggers and their output targets.
 
-I imagine working away, being creative, and the machine churning away in the background validating all of my work. I'm the expert, not the AI.
+## TODO 
 
 Update: 11-04-2026
 
@@ -13,6 +13,14 @@ Update: 11-04-2026
   - Add qdrant support
   - Add opencode agents
   - Add memory advisors
+
+## Example Navigator Workflow
+
+Aiming to have AI act as the navigator rather than the driver of pair programming. A root directory is monitored for file events. The file is pushed into the configured prompt pipeline and a response is provided. The responses are stored back to the file system and trigger further events for any listening agent. Agents listen to file change events and filter for relevance using a regex.
+
+A few benefits to file first graph nodes: Outputting results as files, improves the git workflow, allowing state to be progressively captured and provides easy access the output by the user. Accessing is simply a matter of pulling up the directory and flicking through to see results.
+
+I imagine working away, being creative, and the machine churning away in the background validating all of my work. I'm the expert, not the AI.
 
 ## Prompt Graphs
 
@@ -66,7 +74,7 @@ All agents can utilise tools to attend to their query.
 
 - images and audio files, secondary filter to ensure file type can be provided to LLMAdpater.
 
-## Pipeline Agent Configuration
+## Agent Configuration
 
 The configuration can be imagined as a flattened graph where each node n1 and n2 are files in and out. The edge or path is the agent/prompt runner.
 
