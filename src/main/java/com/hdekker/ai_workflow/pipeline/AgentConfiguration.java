@@ -22,13 +22,13 @@ import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 
 /**
- *  To build the configured pipelines ready for file processing.
+ *  To build the configured agents ready for file processing.
  * 
  */
 @Configuration
-public class PromptPipelineConfiguration {
+public class AgentConfiguration {
 	
-	Logger log = LoggerFactory.getLogger(PromptPipelineConfiguration.class);
+	Logger log = LoggerFactory.getLogger(AgentConfiguration.class);
 	
 	@Autowired
 	FileSystemScannerConfig fileScannerConfig;
@@ -67,7 +67,7 @@ public class PromptPipelineConfiguration {
 	@Autowired
 	DynamicPipelineManager dynamicPipelineManager;
 
-	public PromptPipelineConfiguration(
+	public AgentConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
@@ -87,14 +87,14 @@ public class PromptPipelineConfiguration {
 			e.printStackTrace();
 		}
 
-// Initialize YAML pipelines through manager
+// Initialize YAML agents through manager
 		List<AgentDefinition> yamlAgents = systemPromptConfiguration.getAgentWorkflows()
 			.stream()
-			.peek(wf-> log.info("Configuring " + wf.agents().get(0).title()))
+			.peek(wf-> log.info("Configuring agent workflow: " + wf.agents().get(0).title()))
 			.flatMap(wf-> wf.agents().stream())
 			.toList();
 		
-		log.info("" + yamlAgents.size() + " pre-configured.");
+		log.info("" + yamlAgents.size() + " agents pre-configured.");
 
 		dynamicPipelineManager.initializeFromYAML(yamlAgents);
 	}

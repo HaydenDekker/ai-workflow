@@ -17,7 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.app.pipeline.PromptPipelineBuilder;
+import com.hdekker.ai_workflow.app.pipeline.AgentBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
@@ -149,7 +149,7 @@ public class LLMAdapterIntegrationTest {
 		List<PromptRequest> inputs = createTestInputs(testCase);
 		
 		// Build the pipeline with the test configuration
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
+	Flux<PromptResponse> pipeline = AgentBuilder.instance()
 			.withDefinition(testCase.agentDefinition())
 			.withTrigger(Flux.fromIterable(inputs))
 			.prompting(pr -> {
@@ -272,7 +272,7 @@ public class LLMAdapterIntegrationTest {
 		
 		LLMReducerAdapter llmReducerAdapter = new LLMReducerAdapter(mockChatClient, testCase.agentDefinition());
 		
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
+Flux<PromptResponse> pipeline = AgentBuilder.instance()
 			.withDefinition(testCase.agentDefinition())
 			.withTrigger(Flux.fromIterable(inputs))
 			.prompting(llmReducerAdapter::call)

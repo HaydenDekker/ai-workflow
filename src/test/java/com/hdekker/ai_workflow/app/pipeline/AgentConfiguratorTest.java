@@ -25,9 +25,9 @@ import reactor.core.publisher.Flux;
  *  the edges in memory.
  * 
  */
-public class PromptPipelineConfiguratorTest {
+public class AgentConfiguratorTest {
     
-    PromptPipelineConfigurator configurator;
+    AgentConfigurator configurator;
     
     String expectedMockResult = "This is the expected result";
     
@@ -51,7 +51,7 @@ public class PromptPipelineConfiguratorTest {
             persistCalled = true;
         };
         
-        configurator = new PromptPipelineConfigurator(
+        configurator = new AgentConfigurator(
                 Flux.just(fh),
                 chatClient,
                 persister);
@@ -59,16 +59,16 @@ public class PromptPipelineConfiguratorTest {
     
     
     @Test
-    public void givenPipelineWithSingleStage_ExpectSingleFluxReturned() {
+    public void givenAgentWithSingleStage_ExpectSingleFluxReturned() {
         
-        AgentDefinition pp = TestData.basicPrompt();
+        AgentDefinition agent = TestData.basicPrompt();
         
-        Flux<PromptResponse> flux = configurator.configure(pp);
+        Flux<PromptResponse> flux = configurator.configure(agent);
         
         PromptResponse pr = flux.blockFirst(Duration.ofSeconds(3));
         
         assertThat(pr.prompt())
-            .isEqualTo(pp);
+            .isEqualTo(agent);
         
         assertThat(pr.response())
             .isEqualTo(expectedMockResult);

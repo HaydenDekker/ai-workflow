@@ -15,15 +15,15 @@ import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 
-public class PromptPipelineConfigurator {
+public class AgentConfigurator {
 	
-	Logger log = LoggerFactory.getLogger(PromptPipelineConfigurator.class);
+	Logger log = LoggerFactory.getLogger(AgentConfigurator.class);
 	
 	final Flux<FileHistory> fileInputFlux;
 	ChatClient chatClient;
 	Consumer<PromptResponse> persister;
 
-	public PromptPipelineConfigurator(
+	public AgentConfigurator(
 			Flux<FileHistory> fileInputFlux,
 			ChatClient chatClient,
 			Consumer<PromptResponse> persister
@@ -33,12 +33,12 @@ public class PromptPipelineConfigurator {
 		this.persister = persister;
 	}
 
-	public Flux<PromptResponse> configure(AgentDefinition agentDefintion) {
+	public Flux<PromptResponse> configure(AgentDefinition agentDefinition) {
 		
-			LLMAdapter adapter = LLMAdapterFactory.create(chatClient, agentDefintion);
+			LLMAdapter adapter = LLMAdapterFactory.create(chatClient, agentDefinition);
 			
-			return PromptPipelineBuilder.instance()
-					.withDefinition(agentDefintion)
+			return AgentBuilder.instance()
+					.withDefinition(agentDefinition)
 					.withTrigger(fileInputFlux
 							.map(fh-> fh.to()))
 					.prompting(adapter::call)

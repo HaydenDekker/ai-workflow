@@ -14,9 +14,9 @@ import com.hdekker.ai_workflow.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 
-public class PromptPipelineBuilder {
+public class AgentBuilder {
 	
-	public static interface WithPipelineDefinition {
+	public static interface WithAgentDefinition {
 		Triggered withDefinition(AgentDefinition agentDefinition);
 	}
 
@@ -42,7 +42,7 @@ public class PromptPipelineBuilder {
 	}
 	
 	public static class BuilderImpl implements
-	WithPipelineDefinition,
+	WithAgentDefinition,
 	Triggered, 
 	PromptMapped,
 	Persistable,
@@ -112,8 +112,8 @@ public class PromptPipelineBuilder {
 	}
 
 
-	
-	public static WithPipelineDefinition instance() {
+
+	public static WithAgentDefinition instance() {
 		return new BuilderImpl();
 	}
 

@@ -15,7 +15,7 @@ import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
-public class PromptPipelineBuilderTest {
+public class AgentBuilderTest {
 	
 	Flux<PromptRequest> fileInputFlux;
 	ChatClient chatClient;
@@ -23,33 +23,33 @@ public class PromptPipelineBuilderTest {
 	String outputFilename = "";
 	
 	@Test
-	public void givenFileMatchingPromptInputRegex_PipelineFilterPassesFile()  {
+	public void givenFileMatchingAgentInputRegex_AgentFilterPassesFile()  {
 		
-		AgentDefinition pp = TestData.basicPrompt();
+		AgentDefinition agent = TestData.basicPrompt();
 		PromptResponse basicResponse = TestData.basicResponse();
 		Consumer<PromptResponse> persister = (p) -> {
 			outputFilename = p.createOutputFileName();
 		};
 		fileInputFlux = Flux.just(TestData.basicRequest(TestData.fileNameStub));
 
-		this.chatClient = ChatClientMockBuilder.createMock(basicResponse.response()); //mockChatClient;
+		this.chatClient = ChatClientMockBuilder.createMock(basicResponse.response());
 
 		LLMAdapter adapter = flux->flux.flatMap(fpe->
-		chatClient.prompt(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
+		chatClient.prompt(agent.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + agent.outputStructure())
 			.stream()
 			.content()
 			.reduce((a,b)-> a+b)
-			.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
-		;
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
-			.withDefinition(pp)
+			.map(s-> new PromptResponse(agent, fpe.fileURL(), fpe.file(), s)));
+		
+		Flux<PromptResponse> flux = AgentBuilder.instance()
+			.withDefinition(agent)
 			.withTrigger(fileInputFlux)
 			.prompting(adapter::call)
 			.persist(persister)
 			.split(SplittableStrategy.noSPLT())
 			.build();
 		
-		PromptResponse resp = pipeline.blockFirst();
+		PromptResponse resp = flux.blockFirst();
 		
 		assertThat(resp.fileName())
 			.isEqualTo(basicResponse.fileName());
@@ -59,11 +59,11 @@ public class PromptPipelineBuilderTest {
 		
 	}
 
-	
+
 	@Test
-	public void givenFileNotMatchingPromptInputRegex_ExpectFilterBlocksFile() {
+	public void givenFileNotMatchingAgentInputRegex_ExpectFilterBlocksFile() {
 		
-		AgentDefinition pp = TestData.basicPrompt();
+		AgentDefinition agent = TestData.basicPrompt();
 		PromptResponse basicResponse = TestData.basicResponse();
 		Consumer<PromptResponse> persister = (p) -> {};
 		PromptRequest basicRequest = TestData.basicRequest("diff-type.json");
@@ -73,21 +73,21 @@ public class PromptPipelineBuilderTest {
 		chatClient = ChatClientMockBuilder.createMock(basicResponse.response());
 
 		LLMAdapter adapter = flux->flux.flatMap(fpe->
-		chatClient.prompt(pp.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + pp.outputStructure())
+		chatClient.prompt(agent.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + agent.outputStructure())
 			.stream()
 			.content()
 			.reduce((a,b)-> a+b)
-			.map(s-> new PromptResponse(pp, fpe.fileURL(), fpe.file(), s)));
-		;
-		Flux<PromptResponse> pipeline = PromptPipelineBuilder.instance()
-			.withDefinition(pp)
+			.map(s-> new PromptResponse(agent, fpe.fileURL(), fpe.file(), s)));
+		
+		Flux<PromptResponse> flux = AgentBuilder.instance()
+			.withDefinition(agent)
 			.withTrigger(fileInputFlux)
 			.prompting(adapter::call)
 			.persist(persister)
 			.split(SplittableStrategy.noSPLT())
 			.build();
 		
-		PromptResponse resp = pipeline.blockFirst();
+		PromptResponse resp = flux.blockFirst();
 		
 		assertThat(resp)
 			.isNull();

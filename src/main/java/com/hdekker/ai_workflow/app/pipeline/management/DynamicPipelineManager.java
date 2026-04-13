@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import com.hdekker.ai_workflow.app.pipeline.PromptPipelineConfigurator;
+import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
 import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
@@ -25,7 +25,7 @@ public class DynamicPipelineManager {
 
     private final Map<String, PipelineRegistryEntry> pipelineRegistry = new ConcurrentHashMap<>();
 
-    private final PromptPipelineConfigurator pipelineConfigurator;
+    private final AgentConfigurator agentConfigurator;
 
     // Constructor with abstractions
     public DynamicPipelineManager(
@@ -33,7 +33,7 @@ public class DynamicPipelineManager {
             FileWriter fileWriter,
             Path outputDirectory,
             ChatClient chatClient) {
-        this.pipelineConfigurator = new PromptPipelineConfigurator(
+        this.agentConfigurator = new AgentConfigurator(
                 fileScanner.flux(),
                 chatClient,
                 fileWriter.createPersister(outputDirectory));
@@ -42,7 +42,7 @@ public class DynamicPipelineManager {
     public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
         yamlAgents.forEach(agent -> {
            
-        	Flux<PromptResponse> flux = pipelineConfigurator.configure(agent);
+        	Flux<PromptResponse> flux = agentConfigurator.configure(agent);
             
             Disposable subscription = flux.subscribe();
             PipelineRegistryEntry entry = new PipelineRegistryEntry(
@@ -61,7 +61,7 @@ public class DynamicPipelineManager {
 
     public PipelineInfo addDynamicPipeline(AgentDefinition def) {
         String id = UUID.randomUUID().toString();
-        Flux<PromptResponse> flux = pipelineConfigurator.configure(def);
+        Flux<PromptResponse> flux = agentConfigurator.configure(def);
         Disposable subscription = flux.subscribe();
 
         PipelineRegistryEntry entry = new PipelineRegistryEntry(
