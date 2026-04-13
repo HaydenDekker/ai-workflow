@@ -33,8 +33,8 @@ public class SystemPromptConfiguration {
 	
 	static Logger log = LoggerFactory.getLogger(SystemPromptConfiguration.class);
 	
-	public static final String SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH = "prompt-chains";
-	public static final String SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH_CLASSPATH = "classpath*:"+ SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH + "/**";
+	public static final String SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH = "agent-workflows";
+	public static final String SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH_CLASSPATH = "classpath*:"+ SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH + "/**";
 	
 	@Autowired
 	PromptConfiguration promptConfiguration;
@@ -101,7 +101,7 @@ class AgentWorkflowFileExtractor {
 public static AgentWorkflowFiles extract(List<Path> paths) {
 			
 		Path chainPath = paths.stream()
-				.filter(p->p.getFileName().toString().contains("chain.yml"))
+				.filter(p->p.getFileName().toString().contains("agents.yml"))
 				.findAny()
 				.orElseThrow();
 	
@@ -203,7 +203,7 @@ public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles
 	private void copyConfigurationInto(Path directory) {
 		
 		try {
-			Resource[] promptDir = resourcePatternResolver.getResources(SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH_CLASSPATH);
+			Resource[] promptDir = resourcePatternResolver.getResources(SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH_CLASSPATH);
 			log.info("" + promptDir.length);
 			Streams.of(promptDir)
 				.forEach(r-> copyResourceToDirectory(r, directory));
@@ -215,7 +215,7 @@ public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles
 	private void copyResourceToDirectory(Resource resource, Path directory) {
 		try {
 			String fullPath = resource.getFile().getAbsolutePath();
-			String relativePath = PathUtility.getRelativePath(fullPath, SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH);
+			String relativePath = PathUtility.getRelativePath(fullPath, SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH);
 			Path filePath = directory.resolve(relativePath);
 			if(!Files.exists(filePath)){
 				Files.createDirectories(filePath);

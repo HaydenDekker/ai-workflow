@@ -484,7 +484,7 @@ public class AgentListView extends VerticalLayout {
 ### 7.1 Rename Directory
 
 **Task:**
-- [ ] Rename `src/main/resources/prompt-chains/` → `src/main/resources/agent-workflows/`
+- [x] Rename `src/main/resources/prompt-chains/` → `src/main/resources/agent-workflows/`
 
 **Update Constant:**
 **File:** `src/main/java/com/hdekker/ai_workflow/prompt/SystemPromptConfiguration.java`
@@ -499,10 +499,10 @@ public static final String SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH_CLASSPATH = "
 ```
 
 **Tasks:**
-- [ ] Rename constant: `SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH` → `SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH`
-- [ ] Rename constant: `SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH_CLASSPATH` → `SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH_CLASSPATH`
-- [ ] Update all references to these constants in the file
-- [ ] Rename physical directory
+- [x] Rename constant: `SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH` → `SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH`
+- [x] Rename constant: `SYSTEM_PROMPT_CHAIN_DIRECTORY_SEARCH_CLASSPATH` → `SYSTEM_PROMPT_WORKFLOW_DIRECTORY_SEARCH_CLASSPATH`
+- [x] Update all references to these constants in the file
+- [x] Rename physical directory
 
 ---
 
@@ -550,13 +550,13 @@ agents:
 ```
 
 **Tasks:**
-- [ ] Update `solid-priority/chain.yml`: Change `chain:` → `agents:`
-- [ ] Update `function-anlaysis/chain.yml`: Change `chain:` → `agents:`
+- [x] Update `solid-priority/chain.yml`: Change `chain:` → `agents:`
+- [x] Update `function-anlaysis/chain.yml`: Change `chain:` → `agents:`
 - [ ] Consider renaming `chain.yml` → `workflow.yml` (optional, but consistent)
 
 **Optional: Rename YAML Files**
-- [ ] Rename `chain.yml` → `workflow.yml` in both directories
-- [ ] Update `PromptChainFileExtractor` logic to look for `workflow.yml` instead of `chain.yml`
+- [x] Rename `chain.yml` → `agents.yml` in both directories
+- [x] Update `AgentWorkflowFileExtractor` logic to look for `agents.yml` instead of `chain.yml`
 
 ---
 
