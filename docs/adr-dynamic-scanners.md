@@ -31,9 +31,9 @@ We will implement a **dynamic multi-scanner architecture** where:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ REST API Layer                                                             │
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ POST /api/pipelines (with folderPattern in fileInputRegex)              │ │
+│ │ POST /api/agents (with folderPattern in fileInputRegex)              │ │
 │ │ GET  /api/scanners (list active scanners)                               │ │
-│ │ DELETE /api/pipelines/{id} (triggers scanner cleanup if empty)          │ │
+│ │ DELETE /api/agents/{id} (triggers scanner cleanup if empty)          │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 └──────────────────────────┬──────────────────────────────────────────────────┘
                            │
@@ -69,11 +69,11 @@ We will implement a **dynamic multi-scanner architecture** where:
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ DynamicPipelineManager (MODIFIED)                                          │
+│ DynamicAgentManager (MODIFIED)                                          │
 │ - Parses folderPattern from agent's fileInputRegex                         │
 │ - Subscribes agent to appropriate scanner(s) via ScannerRegistry           │
-│ - Tracks agent → scanner mappings in PipelineRegistryEntry                 │
-│ - On pipeline removal: unsubscribes agent, destroys empty scanners         │
+│ - Tracks agent → scanner mappings in AgentRegistryEntry                 │
+│ - On agent removal: unsubscribes agent, destroys empty scanners         │
 └──────────────────────────┬──────────────────────────────────────────────────┘
                            │
                            ▼
@@ -88,40 +88,40 @@ We will implement a **dynamic multi-scanner architecture** where:
 ### Data Flow
 
 1. **Agent Creation**:
-   ```
-   POST /api/pipelines
-   {
-     "fileInputRegex": "(?P<folderPattern>.*/src)/.*\\.java",
-     "title": "JavaProcessor",
-     ...
-   }
-   
-   ↓
-   RegexParser extracts folderPattern group → expands to concrete paths
-   ↓
-   For each unique folder path:
-     - ScannerRegistry.getOrCreateScanner("/projectA/src")
-     - If scanner doesn't exist: ScannerFactory creates new instance
-     - Register agent subscription
-   ↓
-   DynamicPipelineManager.configure(agent, scannerFlux)
-   ↓
-   Agent subscribes to filtered Flux<FileHistory>
-   ```
+    ```
+    POST /api/agents
+    {
+      "fileInputRegex": "(?P<folderPattern>.*/src)/.*\\.java",
+      "title": "JavaProcessor",
+      ...
+    }
+    
+    ↓
+    RegexParser extracts folderPattern group → expands to concrete paths
+    ↓
+    For each unique folder path:
+      - ScannerRegistry.getOrCreateScanner("/projectA/src")
+      - If scanner doesn't exist: ScannerFactory creates new instance
+      - Register agent subscription
+    ↓
+    DynamicAgentManager.configure(agent, scannerFlux)
+    ↓
+    Agent subscribes to filtered Flux<FileHistory>
+    ```
 
 2. **Agent Removal**:
-   ```
-   DELETE /api/pipelines/{id}
-   
-   ↓
-   DynamicPipelineManager looks up agent's scanner paths
-   ↓
-   For each scanner path:
-     - Unsubscribe agent from ScannerRegistry
-     - If subscription count == 0: destroy scanner
-   ↓
-   Dispose agent's pipeline subscription
-   ```
+    ```
+    DELETE /api/agents/{id}
+    
+    ↓
+    DynamicAgentManager looks up agent's scanner paths
+    ↓
+    For each scanner path:
+      - Unsubscribe agent from ScannerRegistry
+      - If subscription count == 0: destroy scanner
+    ↓
+    Dispose agent's subscription
+    ```
 
 ### Regex Format Specification
 
@@ -191,15 +191,15 @@ File metadata continues to use **absolute paths** as unique keys in `FileMetadat
 
 ### Phase 2: Integration (Week 2)
 
-5. Modify `DynamicPipelineManager` to use `ScannerRegistry` instead of single `FileScanner`
-6. Modify `PromptPipelineConfigurator` to accept scanner-specific Flux
-7. Extend `PipelineRegistryEntry` to track `Set<String> scannerPaths`
+5. Modify `DynamicAgentManager` to use `ScannerRegistry` instead of single `FileScanner`
+6. Modify `AgentConfigurator` to accept scanner-specific Flux
+7. Extend `AgentRegistryEntry` to track `Set<String> scannerPaths`
 8. Implement graceful shutdown hook for scanner cleanup
 
 ### Phase 3: REST API & Testing (Week 3)
 
 9. Create `ScannerRestController` for scanner management
-10. Extend `PipelineInfo` DTO with `scannerPaths` field
+10. Extend `AgentInfo` DTO with `scannerPaths` field
 11. Write integration tests for scanner lifecycle
 12. Add validation for `folderPattern` in agent creation
 
@@ -293,20 +293,20 @@ public interface RegexParser {
 }
 ```
 
-### DynamicPipelineManager Modifications
+### DynamicAgentManager Modifications
 
 ```java
-public class DynamicPipelineManager {
+public class DynamicAgentManager {
     
     private final ScannerRegistry scannerRegistry;
     
-    public PipelineInfo addDynamicPipeline(AgentDefinition def) {
+    public AgentInfo addDynamicAgent(AgentDefinition def) {
         Set<String> scannerPaths = RegexParser.extractFolderPaths(def.fileInputRegex());
-        // Subscribe to scanners, create pipelines, track mappings
+        // Subscribe to scanners, create agents, track mappings
     }
     
-    public void removePipeline(String id) {
-        PipelineRegistryEntry entry = pipelineRegistry.get(id);
+    public void removeAgent(String id) {
+        AgentRegistryEntry entry = agentRegistry.get(id);
         entry.scannerPaths().forEach(path -> 
             scannerRegistry.unsubscribeAgent(path, id));
         // Destroy empty scanners

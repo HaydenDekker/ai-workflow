@@ -635,11 +635,11 @@ agents:
 **File:** `README.md`
 
 **Search & Replace:**
-- [ ] "prompt chain" → "agent workflow" (where referring to YAML grouping)
-- [ ] "Pipeline Agent Configuration" → "Agent Configuration"
-- [ ] "multiple chains in configuration" → "multiple workflows in configuration"
-- [ ] Update section "Prompt Graphs" to clarify agent vs workflow terminology
-- [ ] Keep "pipeline" only when referring to data flow concept (not code)
+- [x] "prompt chain" → "agent workflow" (where referring to YAML grouping)
+- [x] "Pipeline Agent Configuration" → "Agent Configuration"
+- [x] "multiple chains in configuration" → "multiple workflows in configuration"
+- [x] Update section "Prompt Graphs" to clarify agent vs workflow terminology
+- [x] Keep "pipeline" only when referring to data flow concept (not code)
 
 ---
 
@@ -648,11 +648,11 @@ agents:
 **File:** `AGENTS.md`
 
 **Tasks:**
-- [ ] Update LLM Adapters section:
+- [x] Update LLM Adapters section:
   - "prompt chain" → "agent workflow"
   - "PromptPipelineConfigurator" → "AgentConfigurator"
-- [ ] Update SplitterLLMAdapter Architecture section
-- [ ] Keep adapter descriptions (unchanged behavior)
+- [x] Update SplitterLLMAdapter Architecture section
+- [x] Keep adapter descriptions (unchanged behavior)
 
 ---
 
@@ -661,27 +661,27 @@ agents:
 **Directory:** `docs/`
 
 **Files to check:**
-- [ ] `adr-dynamic-scanners.md` - update `PromptPipelineConfigurator` → `AgentConfigurator`
-- [ ] Any other ADRs referencing renamed classes
+- [x] `adr-dynamic-scanners.md` - update `PromptPipelineConfigurator` → `AgentConfigurator`
+- [x] Any other ADRs referencing renamed classes
 
 ---
 
 ### 9.4 Update Project Documentation
 
 **Files:**
-- [ ] `project/docs/software-arch.md` - update class references
-- [ ] `project/plans/observability-plan.md` - update span names
-- [ ] `project/state/source-file-checklist.md` - update file names
+- [x] `project/docs/software-arch.md` - update class references
+- [x] `project/plans/observability-plan.md` - update span names
+- [x] `project/state/source-file-checklist.md` - update file names
 
 ---
 
 ### 9.5 Code Comments & Javadoc
 
 **Global Search:**
-- [ ] Search for "pipeline configuration" → "agent configuration" (where appropriate)
-- [ ] Search for "prompt chain" → "agent workflow"
-- [ ] Update any inline comments referencing old terminology
-- [ ] Keep "pipeline" when referring to reactive streams/data flow
+- [x] Search for "pipeline configuration" → "agent configuration" (where appropriate)
+- [x] Search for "prompt chain" → "agent workflow"
+- [x] Update any inline comments referencing old terminology
+- [x] Keep "pipeline" when referring to reactive streams/data flow
 
 ---
 

@@ -1,16 +1,16 @@
 # Software Architecture
 - [x] SplitterLLMAdapter.java: Splits LLM responses into multiple files by parsing '---' tokens, generating separate output files per key.
-- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\pipeline\PromptPipelineConfiguration.java – Configures AI pipeline definitions and dynamic manager.
-- [x] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\PromptPipelineConfigurator.java – Configures AI pipeline definitions and dynamic manager for LLM adapters; builds pipelines using PromptPipelineBuilder.
+- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\AgentConfiguration.java – Configures AI agent definitions and dynamic manager.
+- [x] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\AgentConfigurator.java – Configures AI agent definitions and dynamic manager for LLM adapters; builds agents using AgentBuilder.
  - [x] FileScanner.java: Declares a reactive method `flux()` that emits `FileHistory` events, enabling streaming file system monitoring and change detection.
-- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\ui\views\PipelineInfoListView.java – Main dashboard view displaying PipelineInfo in a grid layout, fetching and displaying pipeline data.
-- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\app\pipeline\management\DynamicPipelineManager.java
-    - Manages dynamic and YAML-defined AI pipelines, handling creation, registration, lifecycle, and exposure via PipelineInfo objects.
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\ui\\service\\PipelineInfoService.java
+- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\ui\views\AgentListView.java – Main dashboard view displaying AgentInfo in a grid layout, fetching and displaying agent data.
+- [x] C:\Users\hayde\workspace_25\ai-workflow\src\main\java\com\hdekker\ai_workflow\app\pipeline\management\DynamicAgentManager.java
+    - Manages dynamic and YAML-defined AI agents, handling creation, registration, lifecycle, and exposure via AgentInfo objects.
+- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\ui\\service\\AgentInfoService.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileSystemRecursiveFileScannerAdapter.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\rest\\dto\\PipelineInfo.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\rest\\PipelineRestController.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\management\\DynamicPipelineManagerConfiguration.java
+- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\rest\\dto\\AgentInfo.java
+- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\rest\\AgentRestController.java
+- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\management\\DynamicAgentManagerConfiguration.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileSystemFileWriter.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileWriter.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\llmadapter\\LLMAdapterFactory.java
@@ -23,8 +23,8 @@
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileSystemScannerConfig.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\prompt\\PromptRequest.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\prompt\\PromptResponse.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\PromptPipelineBuilder.java
-- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\domain\\PromptChain.java
+- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\AgentBuilder.java
+- [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\pipeline\\domain\\AgentWorkflow.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\app\\pipeline\\RegexInputFileFilter.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\PromptResponseFileSystemAdapter.java
 - [ ] C:\\Users\\hayde\\workspace_25\\ai-workflow\\src\\main\\java\\com\\hdekker\\ai_workflow\\files\\FileHistory.java
