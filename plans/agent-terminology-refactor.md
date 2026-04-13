@@ -565,30 +565,30 @@ agents:
 ### 8.1 Unit Test Renames
 
 **Tasks:**
-- [ ] Rename `PromptPipelineConfiguratorTest.java` → `AgentConfiguratorTest.java`
+- [x] Rename `PromptPipelineConfiguratorTest.java` → `AgentConfiguratorTest.java`
   - Update all references to `PromptPipelineConfigurator` → `AgentConfigurator`
   - Update `PipelineInfo` → `AgentInfo`
   
-- [ ] Rename `PromptPipelineBuilderTest.java` → `AgentBuilderTest.java`
+- [x] Rename `PromptPipelineBuilderTest.java` → `AgentBuilderTest.java`
   - Update `PromptPipelineBuilder` → `AgentBuilder`
   - Update `WithPipelineDefinition` → `WithAgentDefinition`
   
-- [ ] Rename `PipelineRestControllerTest.java` → `AgentRestControllerTest.java`
+- [x] Rename `PipelineRestControllerTest.java` → `AgentRestControllerTest.java`
   - Update endpoint: `/api/pipelines` → `/api/agents`
   - Update `PipelineInfo` → `AgentInfo`
   - Update method names in tests
   
-- [ ] Rename `PipelineInfoListViewTest.java` → `AgentListViewTest.java`
+- [x] Rename `PipelineInfoListViewTest.java` → `AgentListViewTest.java`
   - Update view class reference
   - Update `PipelineInfo` → `AgentInfo`
   - Update route: `/pipeline-info` → `/agents`
   
-- [ ] Rename `PipelineInfoServiceIntegrationTest.java` → `AgentInfoServiceIntegrationTest.java`
+- [x] Rename `PipelineInfoServiceIntegrationTest.java` → `AgentInfoServiceIntegrationTest.java`
   - Update service class reference
   - Update endpoint URIs
   - Update `PipelineInfo` → `AgentInfo`
   
-- [ ] Rename `DynamicPipelineManagerTest.java` → `DynamicAgentManagerTest.java`
+- [x] Rename `DynamicPipelineManagerTest.java` → `DynamicAgentManagerTest.java`
   - Update manager class reference
   - Update method names: `addDynamicPipeline()` → `addDynamicAgent()`, etc.
   - Update `PipelineInfo` → `AgentInfo`
@@ -600,31 +600,31 @@ agents:
 **File:** `LLMAdapterIntegrationTest.java`
 
 **Tasks:**
-- [ ] Update variable names from `pipeline` to `agent` where appropriate
-- [ ] Update logging assertions
-- [ ] Update `PromptPipelineBuilder` → `AgentBuilder` references
-- [ ] Keep test logic unchanged (adapter behavior unchanged)
+- [x] Update variable names from `pipeline` to `agent` where appropriate
+- [x] Update logging assertions
+- [x] Update `PromptPipelineBuilder` → `AgentBuilder` references
+- [x] Keep test logic unchanged (adapter behavior unchanged)
 
 **File:** `FileSystemWorkflowIntegrationTest.java`
 
 **Tasks:**
-- [ ] Update references to `PromptPipelineConfiguration` → `AgentConfiguration`
-- [ ] Update `DynamicPipelineManager` → `DynamicAgentManager`
-- [ ] Update `PipelineInfo` → `AgentInfo` in assertions
+- [x] Update references to `PromptPipelineConfiguration` → `AgentConfiguration`
+- [x] Update `DynamicPipelineManager` → `DynamicAgentManager`
+- [x] Update `PipelineInfo` → `AgentInfo` in assertions
 
 **File:** `BuilderPatternIntegrationTest.java`
 
 **Tasks:**
-- [ ] Update `PromptPipelineBuilder` → `AgentBuilder`
-- [ ] Update interface names
-- [ ] Update variable names for clarity
+- [x] Update `PromptPipelineBuilder` → `AgentBuilder`
+- [x] Update interface names
+- [x] Update variable names for clarity
 
 **File:** `PromptConfigurationTest.java`
 
 **Tasks:**
-- [ ] Update `getPromptChains()` → `getAgentWorkflows()`
-- [ ] Update `PromptChain` → `AgentWorkflow`
-- [ ] Update `pc.chain()` → `wf.agents()` in assertions
+- [x] Update `getPromptChains()` → `getAgentWorkflows()`
+- [x] Update `PromptChain` → `AgentWorkflow`
+- [x] Update `pc.chain()` → `wf.agents()` in assertions
 
 ---
 
