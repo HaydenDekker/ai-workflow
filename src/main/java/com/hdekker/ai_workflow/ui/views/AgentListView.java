@@ -8,8 +8,8 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.notification.Notification;
 
-import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
-import com.hdekker.ai_workflow.ui.service.PipelineInfoService;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -19,18 +19,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * Main dashboard view displaying PipelineInfo in a grid layout.
+ * Main dashboard view displaying AgentInfo in a grid layout.
  */
-@Route("pipeline-info")
-@PageTitle("Pipeline Grid")
-public class PipelineInfoListView extends VerticalLayout implements AfterNavigationObserver {
-    private final Grid<PipelineInfo> grid;
-    private final PipelineInfoService pipelineInfoService;
+@Route("agents")
+@PageTitle("Agent List")
+public class AgentListView extends VerticalLayout implements AfterNavigationObserver {
+    private final Grid<AgentInfo> grid;
+    private final AgentInfoService agentInfoService;
     private final ProgressBar loadingIndicator;
 
     @Autowired
-    public PipelineInfoListView(PipelineInfoService pipelineInfoService) {
-        this.pipelineInfoService = pipelineInfoService;
+    public AgentListView(AgentInfoService agentInfoService) {
+        this.agentInfoService = agentInfoService;
         
         // Setup layout with styling
         addClassName("main-layout");
@@ -43,7 +43,7 @@ public class PipelineInfoListView extends VerticalLayout implements AfterNavigat
         loadingIndicator.setWidth("100%");
         
         // Header
-        H2 header = new H2("Pipeline Grid");
+        H2 header = new H2("Agent List");
         header.addClassName("page-title");
         
         // Grid component with container for styling
@@ -52,43 +52,43 @@ public class PipelineInfoListView extends VerticalLayout implements AfterNavigat
         gridContainer.setPadding(false);
         gridContainer.setSpacing(false);
         
-        grid = new Grid<PipelineInfo>();
+        grid = new Grid<AgentInfo>();
         grid.setWidth("100%");
         grid.setHeight("400px");
         grid.setSizeFull();
         
         // Configure columns with proper sizing and sorting
-        grid.addColumn(PipelineInfo::id)
+        grid.addColumn(AgentInfo::id)
             .setHeader("ID")
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(pipeline -> pipeline.agentDefinition() != null ? pipeline.agentDefinition().title() : "N/A")
+        grid.addColumn(agent -> agent.definition() != null ? agent.definition().title() : "N/A")
             .setHeader("Title")
             .setFlexGrow(1)
             .setSortable(true);
             
-        grid.addColumn(pipeline -> pipeline.agentDefinition() != null ? pipeline.agentDefinition().agentType() : "N/A")
+        grid.addColumn(agent -> agent.definition() != null ? agent.definition().agentType() : "N/A")
             .setHeader("Agent Type")
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(pipeline -> pipeline.agentDefinition() != null && pipeline.agentDefinition().fileInputRegex() != null 
-            ? pipeline.agentDefinition().fileInputRegex() : "N/A")
+        grid.addColumn(agent -> agent.definition() != null && agent.definition().fileInputRegex() != null 
+            ? agent.definition().fileInputRegex() : "N/A")
             .setHeader("File Regex")
             .setFlexGrow(2);
             
-        grid.addColumn(PipelineInfo::source)
+        grid.addColumn(AgentInfo::source)
             .setHeader("Source")
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(PipelineInfo::createdAt)
+        grid.addColumn(AgentInfo::createdAt)
             .setHeader("Created")
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(PipelineInfo::active)
+        grid.addColumn(AgentInfo::active)
             .setHeader("Active")
             .setAutoWidth(true)
             .setSortable(true);
@@ -106,9 +106,9 @@ public class PipelineInfoListView extends VerticalLayout implements AfterNavigat
         
         // Add navigation and refresh buttons
         Button refreshButton = new Button("Refresh", event -> reloadData());
-        Button createButton = new Button("New Pipeline", event -> {
-            // Placeholder for new pipeline creation
-            Notification.show("Create new Pipeline dialog will open here");
+        Button createButton = new Button("New Agent", event -> {
+            // Placeholder for new agent creation
+            Notification.show("Create new Agent dialog will open here");
         });
         
         HorizontalLayout buttonLayout = new HorizontalLayout(createButton, refreshButton);
@@ -119,10 +119,10 @@ public class PipelineInfoListView extends VerticalLayout implements AfterNavigat
 
     private void reloadData() {
         showLoading(true);
-        pipelineInfoService.getAllPipelineInfos()
+        agentInfoService.getAllAgentInfos()
             .doFinally(signalType -> grid.getUI().get().access(() -> showLoading(false)))
             .subscribe(
-                pipelineInfos -> grid.getUI().get().access(() -> updateGrid(pipelineInfos)),
+                agentInfos -> grid.getUI().get().access(() -> updateGrid(agentInfos)),
                 error -> grid.getUI().get().access(() -> {
                     Notification.show("Error loading data: " + error.getMessage());
                     showLoading(false);
@@ -130,12 +130,12 @@ public class PipelineInfoListView extends VerticalLayout implements AfterNavigat
             );
     }
 
-    private void updateGrid(List<PipelineInfo> pipelineInfos) {
-        grid.setItems(pipelineInfos);
-        if (pipelineInfos.isEmpty()) {
-            Notification.show("No pipelines found");
+    private void updateGrid(List<AgentInfo> agentInfos) {
+        grid.setItems(agentInfos);
+        if (agentInfos.isEmpty()) {
+            Notification.show("No agents found");
         } else {
-            Notification.show("Loaded " + pipelineInfos.size() + " pipelines");
+            Notification.show("Loaded " + agentInfos.size() + " agents");
         }
     }
     

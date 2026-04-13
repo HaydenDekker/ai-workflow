@@ -3,10 +3,10 @@ package com.hdekker.ai_workflow.rest.dto;
 import java.time.LocalDateTime;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 
-public record PipelineInfo(
+public record AgentInfo(
     String id,
-    AgentDefinition agentDefinition,
+    AgentDefinition definition,
     LocalDateTime createdAt,
     boolean active,
-    String source  // "YAML" or "DYNAMIC"
+    String source
 ) {}

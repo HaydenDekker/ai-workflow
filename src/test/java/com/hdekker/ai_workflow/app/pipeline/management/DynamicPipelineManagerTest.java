@@ -18,7 +18,7 @@ import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;
@@ -63,51 +63,51 @@ public class DynamicPipelineManagerTest {
     }
 
     @Test
-    public void givenEmptyYAMLAgents_ExpectNoPipelinesInitialized() {
+    public void givenEmptyYAMLAgents_ExpectNoAgentsInitialized() {
         manager.initializeFromYAML(List.of());
 
-        List<PipelineInfo> pipelines = manager.listPipelines();
-        assertThat(pipelines).isEmpty();
+        List<AgentInfo> agents = manager.listPipelines();
+        assertThat(agents).isEmpty();
     }
 
     @Test
-    public void givenYAMLAgents_ExpectPipelinesInitialized() {
+    public void givenYAMLAgents_ExpectAgentsInitialized() {
         AgentDefinition agent = TestData.basicPrompt();
 
         manager.initializeFromYAML(List.of(agent));
 
-        List<PipelineInfo> pipelines = manager.listPipelines();
-        assertThat(pipelines).hasSize(1);
+        List<AgentInfo> agents = manager.listPipelines();
+        assertThat(agents).hasSize(1);
 
-        PipelineInfo info = pipelines.get(0);
+        AgentInfo info = agents.get(0);
         assertThat(info.id()).isEqualTo(agent.title());
-        assertThat(info.agentDefinition().title()).isEqualTo(agent.title());
-        assertThat(info.agentDefinition().agentType()).isEqualTo(agent.agentType());
+        assertThat(info.definition().title()).isEqualTo(agent.title());
+        assertThat(info.definition().agentType()).isEqualTo(agent.agentType());
         assertThat(info.source()).isEqualTo("YAML");
         assertThat(info.active()).isTrue();
     }
 
     @Test
-    public void givenDynamicPipelineAdded_ExpectPipelineCreatedAndListed() {
+    public void givenDynamicAgentAdded_ExpectAgentCreatedAndListed() {
         AgentDefinition agent = TestData.basicPrompt();
 
-        PipelineInfo info = manager.addDynamicPipeline(agent);
+        AgentInfo info = manager.addDynamicPipeline(agent);
 
-        assertThat(info.agentDefinition().title()).isEqualTo(agent.title());
-        assertThat(info.agentDefinition().agentType()).isEqualTo(agent.agentType());
+        assertThat(info.definition().title()).isEqualTo(agent.title());
+        assertThat(info.definition().agentType()).isEqualTo(agent.agentType());
         assertThat(info.source()).isEqualTo("DYNAMIC");
         assertThat(info.active()).isTrue();
 
-        List<PipelineInfo> pipelines = manager.listPipelines();
-        assertThat(pipelines).hasSize(1);
-        assertThat(pipelines.get(0).id()).isEqualTo(info.id());
+        List<AgentInfo> agents = manager.listPipelines();
+        assertThat(agents).hasSize(1);
+        assertThat(agents.get(0).id()).isEqualTo(info.id());
     }
 
     @Test
-    public void givenPipelineRemoved_ExpectPipelineNotListed() {
+    public void givenAgentRemoved_ExpectAgentNotListed() {
         AgentDefinition agent = TestData.basicPrompt();
 
-        PipelineInfo info = manager.addDynamicPipeline(agent);
+        AgentInfo info = manager.addDynamicPipeline(agent);
         assertThat(manager.listPipelines()).hasSize(1);
 
         manager.removePipeline(info.id());
@@ -115,38 +115,38 @@ public class DynamicPipelineManagerTest {
     }
 
     @Test
-    public void givenNonExistentPipelineRemoved_ExpectNoError() {
+    public void givenNonExistentAgentRemoved_ExpectNoError() {
         manager.removePipeline("non-existent-id");
         // Should not throw exception
     }
 
     @Test
-    public void givenMultiplePipelines_ExpectAllListed() {
+    public void givenMultipleAgents_ExpectAllListed() {
         AgentDefinition agent1 = TestData.basicPrompt();
         AgentDefinition agent2 = new AgentDefinition(".*\\.txt", "TestAgent2", "Test body 2", "Map", "Test structure 2", "output-{filename}");
 
-        PipelineInfo info1 = manager.addDynamicPipeline(agent1);
-        PipelineInfo info2 = manager.addDynamicPipeline(agent2);
+        AgentInfo info1 = manager.addDynamicPipeline(agent1);
+        AgentInfo info2 = manager.addDynamicPipeline(agent2);
 
-        List<PipelineInfo> pipelines = manager.listPipelines();
-        assertThat(pipelines).hasSize(2);
+        List<AgentInfo> agents = manager.listPipelines();
+        assertThat(agents).hasSize(2);
 
-        List<String> ids = pipelines.stream().map(PipelineInfo::id).toList();
+        List<String> ids = agents.stream().map(AgentInfo::id).toList();
         assertThat(ids).contains(info1.id(), info2.id());
     }
 
     @Test
-    public void givenYAMLandDynamicPipelines_ExpectAllListed() {
+    public void givenYAMLandDynamicAgents_ExpectAllListed() {
         AgentDefinition yamlAgent = TestData.basicPrompt();
         AgentDefinition dynamicAgent = new AgentDefinition(".*\\.md", "DynamicAgent", "Dynamic body", "Map", "Dynamic structure", "dynamic-{filename}");
 
         manager.initializeFromYAML(List.of(yamlAgent));
         manager.addDynamicPipeline(dynamicAgent);
 
-        List<PipelineInfo> pipelines = manager.listPipelines();
-        assertThat(pipelines).hasSize(2);
+        List<AgentInfo> agents = manager.listPipelines();
+        assertThat(agents).hasSize(2);
 
-        List<String> sources = pipelines.stream().map(PipelineInfo::source).toList();
+        List<String> sources = agents.stream().map(AgentInfo::source).toList();
         assertThat(sources).contains("YAML", "DYNAMIC");
     }
 }

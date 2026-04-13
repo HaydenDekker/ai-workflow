@@ -13,7 +13,7 @@ import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
-import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -59,7 +59,7 @@ public class DynamicPipelineManager {
         });
     }
 
-    public PipelineInfo addDynamicPipeline(AgentDefinition def) {
+    public AgentInfo addDynamicPipeline(AgentDefinition def) {
         String id = UUID.randomUUID().toString();
         Flux<PromptResponse> flux = agentConfigurator.configure(def);
         Disposable subscription = flux.subscribe();
@@ -76,7 +76,7 @@ public class DynamicPipelineManager {
         pipelineRegistry.put(id, entry);
         log.info("Added dynamic pipeline: {}", id);
 
-        return new PipelineInfo(id, def, entry.createdAt(), true, "DYNAMIC");
+        return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC");
     }
 
     public void removePipeline(String id) {
@@ -89,9 +89,9 @@ public class DynamicPipelineManager {
         }
     }
 
-    public List<PipelineInfo> listPipelines() {
+    public List<AgentInfo> listPipelines() {
         return pipelineRegistry.values().stream()
-            .map(entry -> new PipelineInfo(
+            .map(entry -> new AgentInfo(
                 entry.id(),
                 entry.agentDefinition(),
                 entry.createdAt(),

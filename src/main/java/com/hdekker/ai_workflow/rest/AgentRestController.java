@@ -14,29 +14,29 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.rest.dto.PipelineInfo;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
 @RestController
-@RequestMapping("/api/pipelines")
-public class PipelineRestController {
+@RequestMapping("/api/agents")
+public class AgentRestController {
 
     @Autowired
     private DynamicPipelineManager dynamicPipelineManager;
 
     @PostMapping
-    public ResponseEntity<PipelineInfo> createPipeline(@RequestBody AgentDefinition agentDefinition) {
-        PipelineInfo pipelineInfo = dynamicPipelineManager.addDynamicPipeline(agentDefinition);
-        return ResponseEntity.ok(pipelineInfo);
+    public ResponseEntity<AgentInfo> createAgent(@RequestBody AgentDefinition agentDefinition) {
+        AgentInfo agentInfo = dynamicPipelineManager.addDynamicPipeline(agentDefinition);
+        return ResponseEntity.ok(agentInfo);
     }
 
     @GetMapping
-    public ResponseEntity<List<PipelineInfo>> listPipelines() {
-        List<PipelineInfo> pipelines = dynamicPipelineManager.listPipelines();
-        return ResponseEntity.ok(pipelines);
+    public ResponseEntity<List<AgentInfo>> listAgents() {
+        List<AgentInfo> agents = dynamicPipelineManager.listPipelines();
+        return ResponseEntity.ok(agents);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePipeline(@PathVariable String id) {
+    public ResponseEntity<Void> deleteAgent(@PathVariable String id) {
         dynamicPipelineManager.removePipeline(id);
         return ResponseEntity.noContent().build();
     }

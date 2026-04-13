@@ -225,10 +225,10 @@ public record AgentInfo(
 ```
 
 **Tasks:**
-- [ ] Rename record to `AgentInfo`
-- [ ] Rename file to `AgentInfo.java`
-- [ ] Rename field: `agentDefinition` → `definition` (shorter, clearer)
-- [ ] Keep: `id`, `createdAt`, `active`, `source`
+- [x] Rename record to `AgentInfo`
+- [x] Rename file to `AgentInfo.java`
+- [x] Rename field: `agentDefinition` → `definition` (shorter, clearer)
+- [x] Keep: `id`, `createdAt`, `active`, `source`
 
 **Impact Files:**
 - `PipelineRestController.java`
@@ -274,14 +274,14 @@ public class AgentRestController {
 ```
 
 **Tasks:**
-- [ ] Rename class to `AgentRestController`
-- [ ] Rename file to `AgentRestController.java`
-- [ ] Change `@RequestMapping("/api/pipelines")` → `@RequestMapping("/api/agents")`
-- [ ] Rename method: `createPipeline()` → `createAgent()`
-- [ ] Rename method: `listPipelines()` → `listAgents()`
-- [ ] Rename method: `deletePipeline()` → `deleteAgent()`
-- [ ] Update return types: `PipelineInfo` → `AgentInfo`
-- [ ] Update parameter names in methods
+- [x] Rename class to `AgentRestController`
+- [x] Rename file to `AgentRestController.java`
+- [x] Change `@RequestMapping("/api/pipelines")` → `@RequestMapping("/api/agents")`
+- [x] Rename method: `createPipeline()` → `createAgent()`
+- [x] Rename method: `listPipelines()` → `listAgents()`
+- [x] Rename method: `deletePipeline()` → `deleteAgent()`
+- [x] Update return types: `PipelineInfo` → `AgentInfo`
+- [x] Update parameter names in methods
 
 **Impact Files:**
 - Frontend/Hilla clients (auto-generated from endpoint)
