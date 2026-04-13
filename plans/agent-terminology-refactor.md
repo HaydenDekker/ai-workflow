@@ -325,18 +325,18 @@ public class DynamicAgentManager {
 ```
 
 **Tasks:**
-- [ ] Rename class to `DynamicAgentManager`
-- [ ] Rename file to `DynamicAgentManager.java`
-- [ ] Rename field: `pipelineRegistry` → `agentRegistry`
-- [ ] Rename field: `pipelineConfigurator` → `agentConfigurator`
-- [ ] Rename record: `PipelineRegistryEntry` → `AgentRegistryEntry`
-- [ ] Rename method: `addDynamicPipeline()` → `addDynamicAgent()`
-- [ ] Rename method: `removePipeline()` → `removeAgent()`
-- [ ] Rename method: `listPipelines()` → `listAgents()`
-- [ ] Keep method: `initializeFromYAML()` (name is fine)
-- [ ] Update return types: `PipelineInfo` → `AgentInfo`
-- [ ] Update all internal references
-- [ ] Update logging: "Added dynamic agent" instead of "Added dynamic pipeline"
+- [x] Rename class to `DynamicAgentManager`
+- [x] Rename file to `DynamicAgentManager.java`
+- [x] Rename field: `pipelineRegistry` → `agentRegistry`
+- [x] Rename field: `pipelineConfigurator` → `agentConfigurator`
+- [x] Rename record: `PipelineRegistryEntry` → `AgentRegistryEntry`
+- [x] Rename method: `addDynamicPipeline()` → `addDynamicAgent()`
+- [x] Rename method: `removePipeline()` → `removeAgent()`
+- [x] Rename method: `listPipelines()` → `listAgents()`
+- [x] Keep method: `initializeFromYAML()` (name is fine)
+- [x] Update return types: `PipelineInfo` → `AgentInfo`
+- [x] Update all internal references
+- [x] Update logging: "Added dynamic agent" instead of "Added dynamic pipeline"
 
 **Impact Files:**
 - `AgentConfiguration.java` (from 2.3) - creates bean
@@ -351,11 +351,11 @@ public class DynamicAgentManager {
 **File:** `src/main/java/com/hdekker/ai_workflow/pipeline/management/DynamicPipelineManagerConfiguration.java`
 
 **Tasks:**
-- [ ] Rename class to `DynamicAgentManagerConfiguration`
-- [ ] Rename file to `DynamicAgentManagerConfiguration.java`
-- [ ] Rename bean method: `dynamicPipelineManager()` → `dynamicAgentManager()`
-- [ ] Update return type: `DynamicPipelineManager` → `DynamicAgentManager`
-- [ ] Update bean creation: `new DynamicPipelineManager(...)` → `new DynamicAgentManager(...)`
+- [x] Rename class to `DynamicAgentManagerConfiguration`
+- [x] Rename file to `DynamicAgentManagerConfiguration.java`
+- [x] Rename bean method: `dynamicPipelineManager()` → `dynamicAgentManager()`
+- [x] Update return type: `DynamicPipelineManager` → `DynamicAgentManager`
+- [x] Update bean creation: `new DynamicPipelineManager(...)` → `new DynamicAgentManager(...)`
 
 **Impact Files:**
 - Spring context (bean name auto-updates)
