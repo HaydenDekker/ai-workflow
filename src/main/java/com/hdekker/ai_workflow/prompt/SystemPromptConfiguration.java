@@ -54,19 +54,22 @@ public class SystemPromptConfiguration {
 	@Autowired
 	ResourcePatternResolver resourcePatternResolver;
 	
-	class PromptChainYAMLConfigReader {
+class AgentWorkflowYAMLConfigReader {
 		
-static AgentWorkflow readYamlFile(Path chainPath) throws Exception {
+static AgentWorkflow readYamlFile(Path workflowPath) throws Exception {
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        String yamlContent = Files.readString(workflowPath);
         
-        File yamlFile = chainPath.toFile();
+        if (yamlContent.contains("chain:")) {
+            log.error("YAML file {} uses deprecated 'chain:' property. Use 'agents:' instead.", workflowPath.getFileName());
+            throw new IllegalArgumentException("Deprecated YAML format: use 'agents:' instead of 'chain:'");
+        }
         
-        AgentWorkflow doc = mapper.readValue(yamlFile, AgentWorkflow.class);
+        AgentWorkflow doc = mapper.readValue(workflowPath.toFile(), AgentWorkflow.class);
         
-        return doc;
+       return doc;
     }
-		
 		
 	}
 	
@@ -93,7 +96,7 @@ public static AgentWorkflowFiles validate(AgentWorkflowFiles agentWorkflowFiles)
 		
 	}
 	
-	class PromptChainFileExtractor {
+class AgentWorkflowFileExtractor {
 		
 public static AgentWorkflowFiles extract(List<Path> paths) {
 			
@@ -101,9 +104,9 @@ public static AgentWorkflowFiles extract(List<Path> paths) {
 				.filter(p->p.getFileName().toString().contains("chain.yml"))
 				.findAny()
 				.orElseThrow();
-		
-		try {
-			AgentWorkflow workflow = PromptChainYAMLConfigReader.readYamlFile(chainPath);
+	
+	try {
+		AgentWorkflow workflow = AgentWorkflowYAMLConfigReader.readYamlFile(chainPath);
 			
 			List<Path> chainPathFiltered = paths.stream()
 					.filter(p->!p.equals(chainPath))
@@ -183,7 +186,7 @@ public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles
 						}
 					})
 					.map(Stream::toList)
-					.map(PromptChainFileExtractor::extract)
+					.map(AgentWorkflowFileExtractor::extract)
 					.map(PromptFileValidator::validate)
 					.map(PromptConfigurationParser::extractContent);
 					
