@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
@@ -21,23 +21,23 @@ import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 public class AgentRestController {
 
     @Autowired
-    private DynamicPipelineManager dynamicPipelineManager;
+    private DynamicAgentManager dynamicAgentManager;
 
     @PostMapping
     public ResponseEntity<AgentInfo> createAgent(@RequestBody AgentDefinition agentDefinition) {
-        AgentInfo agentInfo = dynamicPipelineManager.addDynamicPipeline(agentDefinition);
+        AgentInfo agentInfo = dynamicAgentManager.addDynamicAgent(agentDefinition);
         return ResponseEntity.ok(agentInfo);
     }
 
     @GetMapping
     public ResponseEntity<List<AgentInfo>> listAgents() {
-        List<AgentInfo> agents = dynamicPipelineManager.listPipelines();
+        List<AgentInfo> agents = dynamicAgentManager.listAgents();
         return ResponseEntity.ok(agents);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAgent(@PathVariable String id) {
-        dynamicPipelineManager.removePipeline(id);
+        dynamicAgentManager.removeAgent(id);
         return ResponseEntity.noContent().build();
     }
 }

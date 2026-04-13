@@ -12,7 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
@@ -24,7 +24,7 @@ public class AgentRestControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private DynamicPipelineManager dynamicPipelineManager;
+    private DynamicAgentManager dynamicAgentManager;
 
     @Test
     public void givenValidAgentDefinition_whenPostAgent_thenAgentCreated() throws Exception {
@@ -32,7 +32,7 @@ public class AgentRestControllerTest {
         AgentDefinition agentDef = TestData.basicPrompt();
         AgentInfo expectedInfo = new AgentInfo("test-id", agentDef, java.time.LocalDateTime.now(), true, "DYNAMIC");
 
-        when(dynamicPipelineManager.addDynamicPipeline(any(AgentDefinition.class))).thenReturn(expectedInfo);
+        when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class))).thenReturn(expectedInfo);
 
         // When & Then - POST to create agent
         String responseContent = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/agents")
@@ -56,7 +56,7 @@ public class AgentRestControllerTest {
             new AgentInfo("id1", agent1, java.time.LocalDateTime.now(), true, "DYNAMIC"),
             new AgentInfo("id2", agent2, java.time.LocalDateTime.now(), true, "YAML")
         );
-        when(dynamicPipelineManager.listPipelines()).thenReturn(agents);
+        when(dynamicAgentManager.listAgents()).thenReturn(agents);
 
         // When & Then - GET agents
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/agents"))

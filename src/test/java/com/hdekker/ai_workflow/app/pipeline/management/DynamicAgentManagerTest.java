@@ -23,9 +23,9 @@ import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;
 
-public class DynamicPipelineManagerTest {
+public class DynamicAgentManagerTest {
 
-    DynamicPipelineManager manager;
+    DynamicAgentManager manager;
 
     String expectedMockResult = "This is the expected result";
 
@@ -55,7 +55,7 @@ public class DynamicPipelineManagerTest {
 
         Path outputDirectory = Path.of("/test/output");
 
-        manager = new DynamicPipelineManager(
+        manager = new DynamicAgentManager(
                 fileScanner,
                 fileWriter,
                 outputDirectory,
@@ -66,7 +66,7 @@ public class DynamicPipelineManagerTest {
     public void givenEmptyYAMLAgents_ExpectNoAgentsInitialized() {
         manager.initializeFromYAML(List.of());
 
-        List<AgentInfo> agents = manager.listPipelines();
+        List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).isEmpty();
     }
 
@@ -76,7 +76,7 @@ public class DynamicPipelineManagerTest {
 
         manager.initializeFromYAML(List.of(agent));
 
-        List<AgentInfo> agents = manager.listPipelines();
+        List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(1);
 
         AgentInfo info = agents.get(0);
@@ -91,14 +91,14 @@ public class DynamicPipelineManagerTest {
     public void givenDynamicAgentAdded_ExpectAgentCreatedAndListed() {
         AgentDefinition agent = TestData.basicPrompt();
 
-        AgentInfo info = manager.addDynamicPipeline(agent);
+        AgentInfo info = manager.addDynamicAgent(agent);
 
         assertThat(info.definition().title()).isEqualTo(agent.title());
         assertThat(info.definition().agentType()).isEqualTo(agent.agentType());
         assertThat(info.source()).isEqualTo("DYNAMIC");
         assertThat(info.active()).isTrue();
 
-        List<AgentInfo> agents = manager.listPipelines();
+        List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(1);
         assertThat(agents.get(0).id()).isEqualTo(info.id());
     }
@@ -107,16 +107,16 @@ public class DynamicPipelineManagerTest {
     public void givenAgentRemoved_ExpectAgentNotListed() {
         AgentDefinition agent = TestData.basicPrompt();
 
-        AgentInfo info = manager.addDynamicPipeline(agent);
-        assertThat(manager.listPipelines()).hasSize(1);
+        AgentInfo info = manager.addDynamicAgent(agent);
+        assertThat(manager.listAgents()).hasSize(1);
 
-        manager.removePipeline(info.id());
-        assertThat(manager.listPipelines()).isEmpty();
+        manager.removeAgent(info.id());
+        assertThat(manager.listAgents()).isEmpty();
     }
 
     @Test
     public void givenNonExistentAgentRemoved_ExpectNoError() {
-        manager.removePipeline("non-existent-id");
+        manager.removeAgent("non-existent-id");
         // Should not throw exception
     }
 
@@ -125,10 +125,10 @@ public class DynamicPipelineManagerTest {
         AgentDefinition agent1 = TestData.basicPrompt();
         AgentDefinition agent2 = new AgentDefinition(".*\\.txt", "TestAgent2", "Test body 2", "Map", "Test structure 2", "output-{filename}");
 
-        AgentInfo info1 = manager.addDynamicPipeline(agent1);
-        AgentInfo info2 = manager.addDynamicPipeline(agent2);
+        AgentInfo info1 = manager.addDynamicAgent(agent1);
+        AgentInfo info2 = manager.addDynamicAgent(agent2);
 
-        List<AgentInfo> agents = manager.listPipelines();
+        List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(2);
 
         List<String> ids = agents.stream().map(AgentInfo::id).toList();
@@ -141,9 +141,9 @@ public class DynamicPipelineManagerTest {
         AgentDefinition dynamicAgent = new AgentDefinition(".*\\.md", "DynamicAgent", "Dynamic body", "Map", "Dynamic structure", "dynamic-{filename}");
 
         manager.initializeFromYAML(List.of(yamlAgent));
-        manager.addDynamicPipeline(dynamicAgent);
+        manager.addDynamicAgent(dynamicAgent);
 
-        List<AgentInfo> agents = manager.listPipelines();
+        List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(2);
 
         List<String> sources = agents.stream().map(AgentInfo::source).toList();

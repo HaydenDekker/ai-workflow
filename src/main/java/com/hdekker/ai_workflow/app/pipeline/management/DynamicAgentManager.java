@@ -19,16 +19,16 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import java.nio.file.Path;
 
-public class DynamicPipelineManager {
+public class DynamicAgentManager {
 
-    Logger log = LoggerFactory.getLogger(DynamicPipelineManager.class);
+    Logger log = LoggerFactory.getLogger(DynamicAgentManager.class);
 
-    private final Map<String, PipelineRegistryEntry> pipelineRegistry = new ConcurrentHashMap<>();
+    private final Map<String, AgentRegistryEntry> agentRegistry = new ConcurrentHashMap<>();
 
     private final AgentConfigurator agentConfigurator;
 
     // Constructor with abstractions
-    public DynamicPipelineManager(
+    public DynamicAgentManager(
             FileScanner fileScanner,
             FileWriter fileWriter,
             Path outputDirectory,
@@ -39,32 +39,32 @@ public class DynamicPipelineManager {
                 fileWriter.createPersister(outputDirectory));
     }
 
-    public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
+   public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
         yamlAgents.forEach(agent -> {
            
-        	Flux<PromptResponse> flux = agentConfigurator.configure(agent);
-            
+            Flux<PromptResponse> flux = agentConfigurator.configure(agent);
+             
             Disposable subscription = flux.subscribe();
-            PipelineRegistryEntry entry = new PipelineRegistryEntry(
-                agent.title(), // Use title as ID for YAML pipelines
+            AgentRegistryEntry entry = new AgentRegistryEntry(
+                agent.title(), // Use title as ID for YAML agents
                 agent,
                 flux,
                 LocalDateTime.now(),
                 "YAML",
                 subscription
             );
-            pipelineRegistry.put(agent.title(), entry);
-            log.info("Initialized YAML pipeline: {}", agent.title());
+            agentRegistry.put(agent.title(), entry);
+            log.info("Initialized YAML agent: {}", agent.title());
             
         });
     }
 
-    public AgentInfo addDynamicPipeline(AgentDefinition def) {
+    public AgentInfo addDynamicAgent(AgentDefinition def) {
         String id = UUID.randomUUID().toString();
         Flux<PromptResponse> flux = agentConfigurator.configure(def);
         Disposable subscription = flux.subscribe();
 
-        PipelineRegistryEntry entry = new PipelineRegistryEntry(
+        AgentRegistryEntry entry = new AgentRegistryEntry(
             id,
             def,
             flux,
@@ -73,24 +73,24 @@ public class DynamicPipelineManager {
             subscription
         );
 
-        pipelineRegistry.put(id, entry);
-        log.info("Added dynamic pipeline: {}", id);
+        agentRegistry.put(id, entry);
+        log.info("Added dynamic agent: {}", id);
 
         return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC");
     }
 
-    public void removePipeline(String id) {
-        PipelineRegistryEntry entry = pipelineRegistry.remove(id);
+    public void removeAgent(String id) {
+        AgentRegistryEntry entry = agentRegistry.remove(id);
         if (entry != null) {
             entry.subscription().dispose();
-            log.info("Removed pipeline: {}", id);
+            log.info("Removed agent: {}", id);
         } else {
-            log.warn("Pipeline not found for removal: {}", id);
+            log.warn("Agent not found for removal: {}", id);
         }
     }
 
-    public List<AgentInfo> listPipelines() {
-        return pipelineRegistry.values().stream()
+    public List<AgentInfo> listAgents() {
+        return agentRegistry.values().stream()
             .map(entry -> new AgentInfo(
                 entry.id(),
                 entry.agentDefinition(),
@@ -101,7 +101,7 @@ public class DynamicPipelineManager {
             .toList();
     }
 
-    private record PipelineRegistryEntry(
+    private record AgentRegistryEntry(
         String id,
         AgentDefinition agentDefinition,
         Flux<PromptResponse> flux,

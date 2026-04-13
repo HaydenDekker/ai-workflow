@@ -7,22 +7,22 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
 import com.hdekker.ai_workflow.files.FileSystemFileWriter;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 
 @Configuration
-public class DynamicPipelineManagerConfiguration {
+public class DynamicAgentManagerConfiguration {
 
 	@Bean
-	public DynamicPipelineManager dynamicPipelineManager(
+	public DynamicAgentManager dynamicAgentManager(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
 			FileSystemFileWriter fileWriter) throws IOException {
 		Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
-		return new DynamicPipelineManager(fileScanner, fileWriter, outputFolderPath, chatClient);
+		return new DynamicAgentManager(fileScanner, fileWriter, outputFolderPath, chatClient);
 	}
 
 

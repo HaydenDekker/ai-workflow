@@ -28,7 +28,7 @@ import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicPipelineManager;
+import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
   
 import reactor.core.publisher.Flux;
 
@@ -253,7 +253,7 @@ public class LLMAdapterIntegrationTest {
 	ChatClient chatClient;
 	
 	@Autowired
-	DynamicPipelineManager dynamicPipelineManager;
+	DynamicAgentManager dynamicAgentManager;
 	
 	// TODO move this to builder test or lower as a LLMAdapter test. The adapter has to get
 	// the latest file before proceeding, potentially a factory method.
