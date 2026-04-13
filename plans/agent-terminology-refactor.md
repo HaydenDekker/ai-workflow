@@ -41,10 +41,10 @@ public record AgentWorkflow(List<AgentDefinition> agents) {}
 ```
 
 **Tasks:**
-- [ ] Rename class from `PromptChain` to `AgentWorkflow`
-- [ ] Rename field from `chain` to `agents`
-- [ ] Update Javadoc: "Logical grouping of related agents in a workflow"
-- [ ] Rename file to `AgentWorkflow.java`
+- [x] Rename class from `PromptChain` to `AgentWorkflow`
+- [x] Rename field from `chain` to `agents`
+- [x] Update Javadoc: "Logical grouping of related agents in a workflow"
+- [x] Rename file to `AgentWorkflow.java`
 
 **Impact Files:**
 - `SystemPromptConfiguration.java` - reads YAML, parses workflows
