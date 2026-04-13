@@ -167,12 +167,12 @@ public class AgentConfiguration {
 **File:** `src/main/java/com/hdekker/ai_workflow/prompt/SystemPromptConfiguration.java`
 
 **Tasks:**
-- [ ] Rename inner class: `PromptChainYAMLConfigReader` → `AgentWorkflowYAMLConfigReader`
-- [ ] Rename record: `PromptChainFiles` → `AgentWorkflowFiles`
-- [ ] Rename inner class: `PromptChainFileExtractor` → `AgentWorkflowFileExtractor`
-- [ ] Update method: `getPromptChains()` → `getAgentWorkflows()`
-- [ ] Update field: `List<PromptChain> promptChains` → `List<AgentWorkflow> agentWorkflows`
-- [ ] Update all internal references throughout file
+- [x] Rename inner class: `PromptChainYAMLConfigReader` → `AgentWorkflowYAMLConfigReader`
+- [x] Rename record: `PromptChainFiles` → `AgentWorkflowFiles`
+- [x] Rename inner class: `PromptChainFileExtractor` → `AgentWorkflowFileExtractor`
+- [x] Update method: `getPromptChains()` → `getAgentWorkflows()`
+- [x] Update field: `List<PromptChain> promptChains` → `List<AgentWorkflow> agentWorkflows`
+- [x] Update all internal references throughout file
 
 **YAML Property Change Detection:**
 ```java
@@ -187,9 +187,9 @@ if (yamlContent.contains("chain:")) {
 ```
 
 **Tasks:**
-- [ ] Add validation to detect `chain:` property in YAML
-- [ ] Log clear error with migration instruction
-- [ ] Fail fast (no migration utility)
+- [x] Add validation to detect `chain:` property in YAML
+- [x] Log clear error with migration instruction
+- [x] Fail fast (no migration utility)
 
 **Impact Files:**
 - Test: `PromptConfigurationTest.java` - update assertions
