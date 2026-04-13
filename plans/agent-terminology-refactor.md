@@ -409,13 +409,13 @@ public class AgentInfoService {
 ```
 
 **Tasks:**
-- [ ] Rename class to `AgentInfoService`
-- [ ] Rename file to `AgentInfoService.java`
-- [ ] Rename method: `getAllPipelineInfos()` → `getAllAgentInfos()`
-- [ ] Rename method: `deletePipeline()` → `deleteAgent()`
-- [ ] Update URI: `/api/pipelines` → `/api/agents`
-- [ ] Update return types: `PipelineInfo` → `AgentInfo`
-- [ ] Update logging messages
+- [x] Rename class to `AgentInfoService`
+- [x] Rename file to `AgentInfoService.java`
+- [x] Rename method: `getAllPipelineInfos()` → `getAllAgentInfos()`
+- [x] Rename method: `deletePipeline()` → `deleteAgent()`
+- [x] Update URI: `/api/pipelines` → `/api/agents`
+- [x] Update return types: `PipelineInfo` → `AgentInfo`
+- [x] Update logging messages
 
 **Impact Files:**
 - `PipelineInfoListView.java` → `AgentListView.java`
@@ -457,21 +457,21 @@ public class AgentListView extends VerticalLayout {
 ```
 
 **Tasks:**
-- [ ] Rename class to `AgentListView`
-- [ ] Rename file to `AgentListView.java`
-- [ ] Change `@Route("pipeline-info")` → `@Route("agents")`
-- [ ] Change `@PageTitle("Pipeline Grid")` → `@PageTitle("Agent List")`
-- [ ] Rename field: `pipelineInfoService` → `agentInfoService`
-- [ ] Update grid type: `Grid<PipelineInfo>` → `Grid<AgentInfo>`
-- [ ] Update header text: "Pipeline Grid" → "Agent List"
-- [ ] Update button text: "New Pipeline" → "New Agent"
-- [ ] Update column accessor: `pipeline.agentDefinition()` → `agent.definition()`
-- [ ] Update notification messages:
-  - "No pipelines found" → "No agents found"
-  - "Loaded {n} pipelines" → "Loaded {n} agents"
-  - "Create new Pipeline dialog" → "Create new Agent dialog"
-- [ ] Update constructor parameter type
-- [ ] Update `reloadData()`, `updateGrid()` parameter types
+- [x] Rename class to `AgentListView`
+- [x] Rename file to `AgentListView.java`
+- [x] Change `@Route("pipeline-info")` → `@Route("agents")`
+- [x] Change `@PageTitle("Pipeline Grid")` → `@PageTitle("Agent List")`
+- [x] Rename field: `pipelineInfoService` → `agentInfoService`
+- [x] Update grid type: `Grid<PipelineInfo>` → `Grid<AgentInfo>`
+- [x] Update header text: "Pipeline Grid" → "Agent List"
+- [x] Update button text: "New Pipeline" → "New Agent"
+- [x] Update column accessor: `pipeline.agentDefinition()` → `agent.definition()`
+- [x] Update notification messages:
+   - "No pipelines found" → "No agents found"
+   - "Loaded {n} pipelines" → "Loaded {n} agents"
+   - "Create new Pipeline dialog" → "Create new Agent dialog"
+- [x] Update constructor parameter type
+- [x] Update `reloadData()`, `updateGrid()` parameter types
 
 **Impact Files:**
 - Frontend routing (Hilla auto-generates from Java routes)
