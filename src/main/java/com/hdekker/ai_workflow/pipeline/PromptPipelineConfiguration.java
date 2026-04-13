@@ -87,11 +87,11 @@ public class PromptPipelineConfiguration {
 			e.printStackTrace();
 		}
 
-		// Initialize YAML pipelines through manager
-		List<AgentDefinition> yamlAgents = systemPromptConfiguration.getPromptChains()
+// Initialize YAML pipelines through manager
+		List<AgentDefinition> yamlAgents = systemPromptConfiguration.getAgentWorkflows()
 			.stream()
-			.peek(pc-> log.info("Configuring " + pc.chain().get(0).title()))
-			.flatMap(pc-> pc.chain().stream())
+			.peek(wf-> log.info("Configuring " + wf.agents().get(0).title()))
+			.flatMap(wf-> wf.agents().stream())
 			.toList();
 		
 		log.info("" + yamlAgents.size() + " pre-configured.");

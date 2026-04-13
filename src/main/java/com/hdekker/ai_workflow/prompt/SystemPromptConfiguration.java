@@ -23,7 +23,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.domain.PromptChain;
+import com.hdekker.ai_workflow.pipeline.domain.AgentWorkflow;
 
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -39,7 +39,7 @@ public class SystemPromptConfiguration {
 	@Autowired
 	PromptConfiguration promptConfiguration;
 	
-	List<PromptChain> promptChains;
+	List<AgentWorkflow> agentWorkflows;
 	
 	final Boolean copiedLocally;
 	
@@ -56,109 +56,109 @@ public class SystemPromptConfiguration {
 	
 	class PromptChainYAMLConfigReader {
 		
-		static PromptChain readYamlFile(Path chainPath) throws Exception {
+static AgentWorkflow readYamlFile(Path chainPath) throws Exception {
 
-	        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-	        
-	        File yamlFile = chainPath.toFile();
-	        
-	        PromptChain doc = mapper.readValue(yamlFile, PromptChain.class);
-	        
-	        return doc;
-	    }
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        
+        File yamlFile = chainPath.toFile();
+        
+        AgentWorkflow doc = mapper.readValue(yamlFile, AgentWorkflow.class);
+        
+        return doc;
+    }
 		
 		
 	}
 	
-	record PromptChainFiles(PromptChain chain, Map<String,Path> supportingFile) {}
+	record AgentWorkflowFiles(AgentWorkflow workflow, Map<String,Path> supportingFile) {}
 	
 	public class PromptFileValidator {
 		
-		public static PromptChainFiles validate(PromptChainFiles promptChainFiles) {
+public static AgentWorkflowFiles validate(AgentWorkflowFiles agentWorkflowFiles) {
 			
-			 Optional<Tuple2<AgentDefinition, Path>> bodyFilesIsMissing = promptChainFiles.chain().chain().stream().map(pp->{
-				return Tuples.of(pp, promptChainFiles.supportingFile().get(pp.body()));
-			}).filter(tup->(tup.getT2()==null))
-			.findAny();
-			 
-			 if(bodyFilesIsMissing.isPresent()) {
-				 SystemPromptConfiguration.log.error("Missing body file " + bodyFilesIsMissing.get().getT1().title());
-				 return null;
-			 }
-			
-			 // TODO add validation for output file template
+			Optional<Tuple2<AgentDefinition, Path>> bodyFilesIsMissing = agentWorkflowFiles.workflow().agents().stream().map(pp->{
+			return Tuples.of(pp, agentWorkflowFiles.supportingFile().get(pp.body()));
+		}).filter(tup->(tup.getT2()==null))
+		.findAny();
+		 
+		 if(bodyFilesIsMissing.isPresent()) {
+			 SystemPromptConfiguration.log.error("Missing body file " + bodyFilesIsMissing.get().getT1().title());
+			 return null;
+		 }
+		
+		 // TODO add validation for output file template
 
-			return promptChainFiles;
-		}
+		return agentWorkflowFiles;
+	}
 		
 	}
 	
 	class PromptChainFileExtractor {
 		
-		public static PromptChainFiles extract(List<Path> paths) {
+public static AgentWorkflowFiles extract(List<Path> paths) {
 			
-			Path chainPath = paths.stream()
-					.filter(p->p.getFileName().toString().contains("chain.yml"))
-					.findAny()
-					.orElseThrow();
+		Path chainPath = paths.stream()
+				.filter(p->p.getFileName().toString().contains("chain.yml"))
+				.findAny()
+				.orElseThrow();
+		
+		try {
+			AgentWorkflow workflow = PromptChainYAMLConfigReader.readYamlFile(chainPath);
 			
-			try {
-				PromptChain chain = PromptChainYAMLConfigReader.readYamlFile(chainPath);
-				
-				List<Path> chainPathFiltered = paths.stream()
-						.filter(p->!p.equals(chainPath))
-						.toList();
-				
-				Map<String, Path> chainPathNames = chainPathFiltered.stream()
-					.collect(Collectors.toMap(p -> p.getFileName().toString(), p->p));
-				
-				
-				return new PromptChainFiles(chain, chainPathNames);
-				
-			} catch (Exception e) {
-				
-				e.printStackTrace();
-				return null;
-			}
+			List<Path> chainPathFiltered = paths.stream()
+					.filter(p->!p.equals(chainPath))
+					.toList();
 			
+			Map<String, Path> chainPathNames = chainPathFiltered.stream()
+				.collect(Collectors.toMap(p -> p.getFileName().toString(), p->p));
+			
+			
+			return new AgentWorkflowFiles(workflow, chainPathNames);
+			
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			return null;
 		}
+		
+	}
 		
 	}
 	
 	public class PromptConfigurationParser {
 		
-		public static PromptChain extractContent(PromptChainFiles promptChainFiles) {
-			return new PromptChain(promptChainFiles.chain()
-				.chain()
-				.stream()
-				.map(pp->{
-					
-					Path bodyFile = promptChainFiles.supportingFile().get(pp.body());
-					String bodyFileAsString = null;
-					try {
-						bodyFileAsString = Files.readString(bodyFile);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					
-					Path outputFile = promptChainFiles.supportingFile().get(pp.outputStructure());
-					String outputFileAsString = null;
-					try {
-						outputFileAsString = Files.readString(outputFile);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					
-					return new AgentDefinition(
-							pp.fileInputRegex(),
-							pp.title(),
-							pp.agentType(),
-							bodyFileAsString, 
-							outputFileAsString,
-							pp.outputFilenameTemplate());
-					
-				}).toList());
-		}
+public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles) {
+		return new AgentWorkflow(agentWorkflowFiles.workflow()
+			.agents()
+			.stream()
+			.map(pp->{
+				
+				Path bodyFile = agentWorkflowFiles.supportingFile().get(pp.body());
+				String bodyFileAsString = null;
+				try {
+					bodyFileAsString = Files.readString(bodyFile);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+				Path outputFile = agentWorkflowFiles.supportingFile().get(pp.outputStructure());
+				String outputFileAsString = null;
+				try {
+					outputFileAsString = Files.readString(outputFile);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+				return new AgentDefinition(
+						pp.fileInputRegex(),
+						pp.title(),
+						pp.agentType(),
+						bodyFileAsString, 
+						outputFileAsString,
+						pp.outputFilenameTemplate());
+				
+			}).toList());
+	}
 		
 
 	}
@@ -173,7 +173,7 @@ public class SystemPromptConfiguration {
 		copyConfigurationInto(pathToCopyTo);
 		
 		try {
-			Stream<PromptChain> promptFiles = Files.list(pathToCopyTo)
+			Stream<AgentWorkflow> promptFiles = Files.list(pathToCopyTo)
 					.<Stream<Path>> map(p-> {
 						try {
 							return Files.list(p);
@@ -187,7 +187,7 @@ public class SystemPromptConfiguration {
 					.map(PromptFileValidator::validate)
 					.map(PromptConfigurationParser::extractContent);
 					
-			promptChains = promptFiles.toList();
+			agentWorkflows = promptFiles.toList();
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -225,8 +225,8 @@ public class SystemPromptConfiguration {
 		}
 	}
 
-	public List<PromptChain> getPromptChains() {
-		return promptChains;
+	public List<AgentWorkflow> getAgentWorkflows() {
+		return agentWorkflows;
 	}
 
 	public Boolean getCopiedLocally() {

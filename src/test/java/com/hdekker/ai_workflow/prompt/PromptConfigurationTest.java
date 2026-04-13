@@ -51,7 +51,7 @@ public class PromptConfigurationTest {
 	@Test
 	public void onStart_expectTestPromptConfigurationsReadIntoMemory() {
 		
-		assertThat(systemPromptConfiguration.getPromptChains())
+		assertThat(systemPromptConfiguration.getAgentWorkflows())
 			.hasSizeGreaterThan(1);
 		
 	}

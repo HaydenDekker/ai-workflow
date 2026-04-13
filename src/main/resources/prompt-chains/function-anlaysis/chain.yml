@@ -1,4 +1,4 @@
-chain:
+agents:
   - 
     fileInputRegex: (?:.*/)?(?<name>.*)\.(?<ext>java)
     title: FUNCTION_ANALYSIS
