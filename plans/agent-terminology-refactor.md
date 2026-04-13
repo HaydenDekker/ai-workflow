@@ -73,11 +73,11 @@ public class AgentConfigurator {
 ```
 
 **Tasks:**
-- [ ] Rename class to `AgentConfigurator`
-- [ ] Rename file to `AgentConfigurator.java`
-- [ ] Fix typo: `agentDefintion` → `agentDefinition` (parameter name)
-- [ ] Update logging: "Configuring agent: {title}" instead of "Configuring pipeline"
-- [ ] Update Javadoc
+- [x] Rename class to `AgentConfigurator`
+- [x] Rename file to `AgentConfigurator.java`
+- [x] Fix typo: `agentDefintion` → `agentDefinition` (parameter name)
+- [x] Update logging: "Configuring agent: {title}" instead of "Configuring pipeline"
+- [x] Update Javadoc
 
 **Impact Files:**
 - `DynamicPipelineManager.java` - uses configurator
@@ -105,13 +105,13 @@ public class AgentBuilder {
 ```
 
 **Tasks:**
-- [ ] Rename class to `AgentBuilder`
-- [ ] Rename file to `AgentBuilder.java`
-- [ ] Rename interface: `WithPipelineDefinition` → `WithAgentDefinition`
-- [ ] Keep interfaces unchanged: `Triggered`, `PromptMapped`, `Persistable`, `Splittable`, `Enrichable`
-- [ ] Update method: `withDefinition()` Javadoc
-- [ ] Update logging references
-- [ ] Update static factory: `instance()` Javadoc
+- [x] Rename class to `AgentBuilder`
+- [x] Rename file to `AgentBuilder.java`
+- [x] Rename interface: `WithPipelineDefinition` → `WithAgentDefinition`
+- [x] Keep interfaces unchanged: `Triggered`, `PromptMapped`, `Persistable`, `Splittable`, `Enrichable`
+- [x] Update method: `withDefinition()` Javadoc
+- [x] Update logging references
+- [x] Update static factory: `instance()` Javadoc
 
 **Impact Files:**
 - `AgentConfigurator.java` (from 2.1)
@@ -146,12 +146,12 @@ public class AgentConfiguration {
 ```
 
 **Tasks:**
-- [ ] Rename class to `AgentConfiguration`
-- [ ] Rename file to `AgentConfiguration.java`
-- [ ] Update: `getPromptChains()` → `getAgentWorkflows()`
-- [ ] Update: `pc.chain()` → `wf.agents()`
-- [ ] Update logging: "Configuring agent workflows" instead of "Configuring pipeline"
-- [ ] Update variable names: `yamlAgents` (keep), update loop variables
+- [x] Rename class to `AgentConfiguration`
+- [x] Rename file to `AgentConfiguration.java`
+- [x] Update: `getPromptChains()` → `getAgentWorkflows()`
+- [x] Update: `pc.chain()` → `wf.agents()`
+- [x] Update logging: "Configuring agent workflows" instead of "Configuring pipeline"
+- [x] Update variable names: `yamlAgents` (keep), update loop variables
 
 **Impact Files:**
 - Spring configuration (bean name auto-updates)
