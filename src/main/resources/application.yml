@@ -25,6 +25,7 @@ spring:
         enabled: false
 app:
   ai:
+    # Model validation occurs at runtime, not during startup
     #endpoint: http://127.0.0.1:11434
     #model: qwen3-16k:latest 
     #gemma3:4b

@@ -12,9 +12,9 @@ import reactor.netty.http.client.HttpClient;
 @Configuration
 public class WebClientConfig {
 	
-	// This bean will customize the WebClient.Builder used by the OllamaChatModel
+	// This bean will customize the WebClient.Builder used by the OpenAiChatModel
     @Bean
-    public WebClient.Builder ollamaWebClientBuilderCustomizer() {
+    public WebClient.Builder openAiWebClientBuilderCustomizer() {
         // 1. Create a Reactor Netty HttpClient instance
         HttpClient httpClient = HttpClient.create()
                 // 2. Configure the response timeout (for the entire transaction)

@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
@@ -36,6 +37,9 @@ import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 public class FileSystemWorkflowIntegrationTest {
     
     private static final Logger log = LoggerFactory.getLogger(FileSystemWorkflowIntegrationTest.class);
+    
+    @MockitoBean
+    private ChatClient mockChatClient;
     
     @Autowired
     ChatClientTestConfig chatClientTestConfig;

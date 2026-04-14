@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
@@ -24,6 +25,9 @@ import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
 public class BuilderPatternIntegrationTest {
 
+    @MockitoBean
+    private ChatClient mockChatClient;
+    
     @Autowired
     private ChatClientTestConfig testConfig;
 

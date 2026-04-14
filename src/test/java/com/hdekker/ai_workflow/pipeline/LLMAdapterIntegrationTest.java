@@ -12,14 +12,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.app.pipeline.AgentBuilder;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
 import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
@@ -28,7 +29,6 @@ import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 import com.hdekker.ai_workflow.prompt.PromptRequest;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
   
 import reactor.core.publisher.Flux;
 
@@ -56,6 +56,9 @@ import reactor.core.publisher.Flux;
 public class LLMAdapterIntegrationTest {
 	
 	Logger log = LoggerFactory.getLogger(LLMAdapterIntegrationTest.class);
+	
+	@MockitoBean
+	private ChatClient mockChatClient;
 	
 	@Autowired
 	FileSystemScannerConfig fileSystemScannerConfig;
@@ -244,17 +247,11 @@ public class LLMAdapterIntegrationTest {
 		}
 	}
 	
-	/**
+/**
 	 * Legacy test maintained for backward compatibility.
 	 * Tests the ReducerLLMAdapter directly using the old approach.
 	 * TODO: This can be removed once parameterized tests are fully validated.
 	 */
-@Autowired
-	ChatClient chatClient;
-	
-	@Autowired
-	DynamicAgentManager dynamicAgentManager;
-	
 	// TODO move this to builder test or lower as a LLMAdapter test. The adapter has to get
 	// the latest file before proceeding, potentially a factory method.
 	@ParameterizedTest

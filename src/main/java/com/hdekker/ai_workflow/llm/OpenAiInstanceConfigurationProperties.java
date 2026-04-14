@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ollama;
+package com.hdekker.ai_workflow.llm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,9 +9,9 @@ import jakarta.annotation.PostConstruct;
 
 @Configuration
 @ConfigurationProperties(value = "app.ai")
-public class OllamaInstanceConfigurationProperties {
+public class OpenAiInstanceConfigurationProperties {
 	
-	Logger log = LoggerFactory.getLogger(OllamaInstanceConfigurationProperties.class);
+	private static final Logger log = LoggerFactory.getLogger(OpenAiInstanceConfigurationProperties.class);
 	
 	String endpoint;
 	String model;

@@ -4,5 +4,6 @@ public class TestProfiles {
 	
 	public static final String RESOURCES_TEST_FOLDER = "RESOURCES_TEST_FOLDER";
 	public static final String FIXED_LLM_TEST_RESPONSE = "FIXED_LLM_TEST_RESPONSE";
+	public static final String INTEGRATION = "INTEGRATION";
 
 }

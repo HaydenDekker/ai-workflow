@@ -74,6 +74,39 @@ All agents can utilise tools to attend to their query.
 
 - images and audio files, secondary filter to ensure file type can be provided to LLMAdpater.
 
+## Running Tests
+
+### Unit Tests
+
+Run unit tests only (no external services required):
+
+```bash
+./mvnw test
+```
+
+### Integration Tests
+
+Integration tests require a running Ollama server with the `gemma3:4b` model:
+
+```bash
+# Start Ollama server
+ollama serve
+
+# Pull required model
+ollama pull gemma3:4b
+
+# Run integration tests
+./mvnw verify -DskipTests
+```
+
+### All Tests
+
+Run both unit and integration tests:
+
+```bash
+./mvnw verify
+```
+
 ## Agent Configuration
 
 The configuration can be imagined as a flattened graph where each node n1 and n2 are files in and out. The edge or path is the agent/prompt runner.
