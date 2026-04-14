@@ -4,10 +4,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaApi.Model;
-import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 
 public class OpenAiInstanceAdapterUtils {
 
@@ -19,30 +16,20 @@ public class OpenAiInstanceAdapterUtils {
 		}
 	}
 
-	public static OllamaApi createApi(String baseUrl) {
+	public static OpenAiApi createApi(String baseUrl) {
 		
-		return OllamaApi.builder()
+		return OpenAiApi.builder()
 					.baseUrl(baseUrl)
+					.apiKey("not-required")
 					.build();
 	}
 	
-	public static List<OllamaChatModel> getModels(OllamaApi api) {
-		List<Model> models = api.listModels().models();
-		
-		if (log.isInfoEnabled()) {
-			log.info("Found {} models from OpenAI-compatible endpoint", models.size());
+	// TODO: OpenAiApi doesn't have listModels() - needs custom HTTP implementation
+	public static List<?> getModels(OpenAiApi api) {
+		if (log.isWarnEnabled()) {
+			log.warn("Model listing not implemented for OpenAI API. Returning empty list.");
 		}
-		
-		return models.stream()
-				.map(mod->{
-					OllamaOptions options = OllamaOptions.builder().model(mod.model())
-							.build();
-					return OllamaChatModel.builder()
-								.ollamaApi(api)
-								.defaultOptions(options)
-								.build();
-				})
-				.toList();
+		return List.of();
 	}
 	
 	

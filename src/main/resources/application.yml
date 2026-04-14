@@ -23,6 +23,8 @@ spring:
     chat:
       client:
         enabled: false
+    openai:
+      api-key: no_key_required
 app:
   ai:
     # Model validation occurs at runtime, not during startup
