@@ -15,23 +15,26 @@ Add single SQLite database configuration for `FileMetadataEntity` with foundatio
 
 ## Phase 2: Disable JPA Auto-Configuration
 
-- [ ] Update `application.yml`:
-  - Add `HibernateJpaAutoConfiguration` to `spring.autoconfigure.exclude`
-- [ ] Run any existing test to confirm no regression from disabling auto-config
+- [x] Update `AiWorkflowApplication.java`:
+  - Add `HibernateJpaAutoConfiguration` to `@SpringBootApplication(exclude)`
+  - Note: Using `org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration`
+- [x] Run tests to confirm no regression from disabling auto-config
 
 ## Phase 3: Create Database Configuration
 
-- [ ] Create `DataSourceProperties.java` in `com.hdekker.ai_workflow.config`:
+- [x] Create `DataSourceProperties.java` in `com.hdekker.ai_workflow.config`:
   - Bind `app.database.*` properties
   - Single nested `Database` class with `url` property (for now, single DB)
-- [ ] Create `DatabaseConfig.java` in `com.hdekker.ai_workflow.config`:
+- [x] Create `DatabaseConfig.java` in `com.hdekker.ai_workflow.config`:
   - `@Primary` DataSource bean (HikariCP, SQLite JDBC)
   - `@Primary` EntityManagerFactory bean (scan `com.hdekker.ai_workflow.database`)
   - `@Primary` TransactionManager bean
   - JPA properties (SQLite dialect, connection release mode, etc.)
-- [ ] Update `application.yml`:
+- [x] Update `application.yml`:
   - Add `app.database.url=jdbc:sqlite:/tmp/ai-workflow.db`
-- [ ] Run tests to verify configuration doesn't break existing functionality
+- [x] Run tests to verify configuration doesn't break existing functionality
+  - 82 tests run, 1 error (unrelated file scanner timeout)
+  - Database configuration working - tables created successfully
 
 ## Phase 4: Create Entity Test
 

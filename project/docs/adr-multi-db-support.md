@@ -197,6 +197,8 @@ private Properties jpaProperties() {
     props.put("hibernate.connection.release_mode", "after_transaction");
     props.put("jakarta.persistence.sharedCache.mode", "NONE");
     props.put("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect");
+    props.put("hibernate.hbm2ddl.auto", "update");
+    props.put("spring.jpa.hibernate.naming.physical-strategy", PhysicalNamingStrategyStandardImpl.class.getName());
     return props;
 }
 ```
@@ -206,6 +208,8 @@ Key settings:
 - `hibernate.connection.release_mode=after_transaction`: Optimize connection handling for SQLite
 - `sharedCache.mode=NONE`: Disable shared cache (each DB is independent)
 - `hibernate.dialect`: Use SQLite-specific Hibernate dialect
+- `hibernate.hbm2ddl.auto=update`: Automatically create/update database schema at startup (required for SQLite to create tables)
+- `spring.jpa.hibernate.naming.physical-strategy`: Use standard physical naming strategy for consistent table naming
 
 ### Entity Package Separation
 

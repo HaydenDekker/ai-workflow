@@ -26,13 +26,15 @@ spring:
     openai:
       api-key: no_key_required
 app:
-  ai:
-    # Model validation occurs at runtime, not during startup
-    #endpoint: http://127.0.0.1:11434
-    #model: qwen3-16k:latest 
-    #gemma3:4b
-    endpoint: http://192.168.2.108:11434
-    model: gemma3:27b
+   database:
+     url: jdbc:sqlite:/tmp/ai-workflow.db
+   ai:
+     # Model validation occurs at runtime, not during startup
+     #endpoint: http://127.0.0.1:11434
+     #model: qwen3-16k:latest 
+     #gemma3:4b
+     endpoint: http://192.168.2.108:11434
+     model: gemma3:27b
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   
