@@ -7,11 +7,11 @@ Add single SQLite database configuration for `FileMetadataEntity` with foundatio
 
 ## Phase 1: Setup & Verification
 
-- [ ] Add Maven dependencies to `pom.xml`:
+- [x] Add Maven dependencies to `pom.xml`:
   - `sqlite-jdbc` (3.51.3.0)
   - `hibernate-community-dialects`
-- [ ] Run existing tests to establish baseline: `./mvnw test -q`
-- [ ] Verify all tests pass before making changes
+- [x] Run existing tests to establish baseline: `./mvnw test -q`
+- [x] Verify all tests pass before making changes
 
 ## Phase 2: Disable JPA Auto-Configuration
 
