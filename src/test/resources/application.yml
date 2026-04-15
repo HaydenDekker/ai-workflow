@@ -10,3 +10,6 @@ spring:
 app:
   database:
     url: jdbc:sqlite:/tmp/ai-workflow-test.db
+
+prompt-config:
+  predefinedPromptFilePath: /test/prompts
