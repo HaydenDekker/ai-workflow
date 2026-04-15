@@ -300,6 +300,60 @@ public class SomeService {
    - Connection release mode should be set to `after_transaction` for optimal performance
    - The SQLite dialect from `hibernate-community-dialects` is required
 
+## Testing Strategy
+
+### Test Classification
+
+| Test Type | Annotation | Scope | Database | Use Case |
+|-----------|-----------|-------|----------|----------|
+| Unit Test | `@ExtendWith(MockitoExtension.class)` | Isolated | None | Business logic, mocked repositories |
+| Data JPA Test | `@DataJpaTest` | Repository layer | H2 in-memory | Entity mapping, repository queries |
+| Integration Test | `@SpringBootTest` | Full context | SQLite (production) | End-to-end workflows |
+
+### Database Choice for Tests
+
+- **H2 for Repository Tests**: `@DataJpaTest` uses H2 in-memory by default
+  - Fast execution (no file I/O)
+  - Automatic cleanup between tests
+  - Compatible with standard JPA operations
+  - Does not load custom multi-DB configuration
+
+- **SQLite for Integration Tests**: Full application context tests
+  - Production-parity database
+  - Tests multi-DB configuration
+  - Tests actual file-based persistence
+  - Tag with `@Tag("integration")` for selective execution
+
+### Configuration Strategy
+
+- Production: Custom multi-DB config excludes `HibernateJpaAutoConfiguration`
+- Tests (`@DataJpaTest`): Does not load main application context, uses auto-configured H2
+- Integration Tests (`@SpringBootTest`): Use production SQLite configuration
+
+### Test Tagging Convention
+
+```java
+// Unit test (mocked)
+@ExtendWith(MockitoExtension.class)
+public class ServiceTest { ... }
+
+// Repository test (H2, fast)
+@DataJpaTest
+public class RepositoryTest { ... }
+
+// Integration test (SQLite, full context)
+@Tag("integration")
+@SpringBootTest
+public class WorkflowIntegrationTest { ... }
+```
+
+Run integration tests separately:
+```bash
+./mvnw verify                          # All tests
+./mvnw test                            # Unit + Data JPA tests only
+./mvnw verify -Dit.test=*IntegrationTest  # Integration tests only
+```
+
 ## How to Add a Third Database
 
 1. Create a new configuration class (e.g., `ThirdDbConfig.java`)
