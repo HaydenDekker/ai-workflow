@@ -36,8 +36,8 @@ We will implement a **dynamic multi-scanner architecture** where:
 │ │ DELETE /api/agents/{id} (triggers scanner cleanup if empty)          │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 └──────────────────────────┬──────────────────────────────────────────────────┘
-                           │
-                           ▼
+                            │
+                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ScannerRegistry (NEW)                                                      │
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
@@ -47,27 +47,28 @@ We will implement a **dynamic multi-scanner architecture** where:
 │ │   - FileScanner instance                                                │ │
 │ │   - Set<String> subscribedAgentIds                                      │ │
 │ │   - Disposable (for Spring Integration flow disposal)                   │ │
-│ │   - Flux<FileHistory> (shared per scanner)                              │ │
+│ │   - Flux<FileHistory> (shared per scanner, rate-limited)               │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 └──────────────────────────┬──────────────────────────────────────────────────┘
-                           │
-                           ▼
+                            │
+                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ScannerFactory (NEW)                                                       │
 │ - Creates FileSystemRecursiveFileScannerAdapter instances                  │
 │ - Manages Spring Integration flow registration with unique IDs             │
+│ - Applies rate limiting (delayElements) to control file read rate          │
 │ - Handles flow disposal on scanner removal                                 │
 └──────────────────────────┬──────────────────────────────────────────────────┘
-                           │
-                           ▼
+                            │
+                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Multiple FileSystemRecursiveFileScannerAdapter instances                   │
-│ - Scanner-1: /projectA/src → Flux-1                                        │
-│ - Scanner-2: /projectB/src → Flux-2                                        │
-│ - Scanner-3: /projectC/src → Flux-3                                        │
+│ - Scanner-1: /projectA/src → Flux-1 (rate-limited)                         │
+│ - Scanner-2: /projectB/src → Flux-2 (rate-limited)                         │
+│ - Scanner-3: /projectC/src → Flux-3 (rate-limited)                         │
 └──────────────────────────┬──────────────────────────────────────────────────┘
-                           │
-                           ▼
+                            │
+                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ DynamicAgentManager (MODIFIED)                                          │
 │ - Parses folderPattern from agent's fileInputRegex                         │
@@ -75,8 +76,8 @@ We will implement a **dynamic multi-scanner architecture** where:
 │ - Tracks agent → scanner mappings in AgentRegistryEntry                 │
 │ - On agent removal: unsubscribes agent, destroys empty scanners         │
 └──────────────────────────┬──────────────────────────────────────────────────┘
-                           │
-                           ▼
+                            │
+                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Agents (Multiple per scanner)                                              │
 │ - Agent-1: subscribes to Scanner-1, filters by full fileInputRegex         │
@@ -84,7 +85,6 @@ We will implement a **dynamic multi-scanner architecture** where:
 │ - Agent-3: subscribes to Scanner-1 & Scanner-2 (multi-scanner agent)       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
-
 ### Data Flow
 
 1. **Agent Creation**:
@@ -157,6 +157,37 @@ File metadata continues to use **absolute paths** as unique keys in `FileMetadat
 - No collisions between scanners watching different folders with same relative paths
 - Existing database schema requires no changes
 - Hash comparison works correctly across scanner boundaries
+
+### File Read Rate Control
+
+To prevent memory exhaustion when watching folders with many files (e.g., 1000+ files), each scanner applies **rate limiting** using Reactor's `delayElements()` operator.
+
+**Architecture**:
+- **WatchService** detects file changes immediately (event-driven)
+- **Reactor Flux** controls the consumption rate with `delayElements()`
+- **Default delay**: 5 seconds between file reads
+- **No batching**: Files are processed one-at-a-time with controlled spacing
+
+**Implementation**:
+```java
+Flux<FileHistory> sourceFlux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel)
+    .map(m -> { /* convert to FileMetadata */ })
+    .map(fileComparator::matches)
+    .filter(fh -> !fh.hashMatches())
+    .delayElements(Duration.ofSeconds(5))  // Rate limit: 5s between reads
+    .share();
+```
+
+**Benefits**:
+- ✅ WatchService provides immediate notification of file changes
+- ✅ No memory explosion with large folders (files read at controlled rate)
+- ✅ Backpressure naturally propagates to downstream agents
+- ✅ Simple configuration (single delay parameter, no complex batching logic)
+
+**Trade-offs**:
+- ⚠️ Files are not read instantly when discovered (5s delay is intentional)
+- ⚠️ High-frequency file changes may queue up (acceptable for most use cases)
+- ⚠️ Cannot process 1000 files in parallel (by design to prevent overload)
 
 ## Consequences
 
@@ -278,9 +309,21 @@ public interface ScannerRegistry {
 
 ```java
 public interface ScannerFactory {
+    Duration DEFAULT_DELAY_BETWEEN_READS = Duration.ofSeconds(5);
+    
     FileScanner createScanner(String folderPath, String scannerId);
+    FileScanner createScanner(String folderPath, String scannerId, Duration delayBetweenReads);
     void destroyScanner(String scannerId);
 }
+```
+
+**Usage**:
+```java
+// Use default 5-second delay
+FileScanner scanner = factory.createScanner("/project/src", "scanner-1");
+
+// Custom delay (optional)
+FileScanner scanner = factory.createScanner("/project/src", "scanner-2", Duration.ofSeconds(10));
 ```
 
 ### RegexParser API
@@ -337,10 +380,11 @@ public class DynamicAgentManager {
 - Current implementation: `FileSystemRecursiveFileScannerAdapter.java`
 - Spring Integration File Inbound Adapter documentation
 - Reactor Flux sharing and backpressure handling
+- Reactor `delayElements()` operator: Controls rate of element emission
 - AGENTS.md: Build and testing conventions
 
 ---
 
 **Author**: AI Workflow Team  
 **Date**: 2025-01-10  
-**Last Updated**: 2025-01-10
+**Last Updated**: 2026-04-16

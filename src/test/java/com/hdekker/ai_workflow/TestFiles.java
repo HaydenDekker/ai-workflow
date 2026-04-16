@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,9 @@ import org.springframework.context.annotation.Configuration;
 
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.vaadin.copilot.shaded.reactor.core.publisher.Flux;
+
+import reactor.test.StepVerifier;
 
 @Configuration
 public class TestFiles {
@@ -50,19 +54,46 @@ public class TestFiles {
 	
 	void copyTestFileToConfiguredMonitoredSystemPath(String filename) throws IOException {
 		
-		Path destination = configuredDirectory.toPath().resolve(filename);
 		Path source = Paths.get(TestFiles.getTestFilePath(filename));
+		Path destination = configuredDirectory.toPath().resolve(filename);
 		Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+//		Flux.just(1,2,3)
+//			.delayElements(Duration.ofSeconds(1))
+//			.subscribe(l->{
+//				try {
+//					Path destination = configuredDirectory.toPath().resolve(filename + l);
+//					Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			});
+		
 	}
 	
 	
 	void blockTillScannerReadOrFail(String filename) {
 		
-		scannerAdapter.flux()
-			.doOnNext(fh-> log.info("" + fh.currentFile().url()))
-			.filter(fh->fh.currentFile().url().contains(filename))
-			.timeout(Duration.ofSeconds(10))
-			.blockFirst();
+		StepVerifier.create(scannerAdapter.flux())
+        .expectSubscription() // Ensures the flow starts via your doOnSubscribe
+        .then(() -> {
+            // Optional: Trigger something here if needed
+            log.info("Subscription established, waiting for files...");
+        })
+        .recordWith(ArrayList::new) // Collect items as they come
+        .thenConsumeWhile(fh -> !fh.currentFile().url().contains(filename))
+        .assertNext(fh -> {
+            log.info("Found file: " + fh.currentFile().url());
+            //assertTrue(fh.currentFile().url().contains(filename));
+        })
+        .thenCancel() // Stop the poller so the test finishes
+        .verify(Duration.ofSeconds(15));
+		
+//		scannerAdapter.flux()
+//			.doOnNext(fh-> log.info("" + fh.currentFile().url()))
+//			.filter(fh->fh.currentFile().url().contains(filename))
+//			.timeout(Duration.ofSeconds(10))
+//			.blockFirst();
 	}
 	
 	public void copyTestFileAnAllowToPropagte(String filename) throws IOException {

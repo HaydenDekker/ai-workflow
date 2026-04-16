@@ -17,6 +17,7 @@ import org.springframework.integration.dsl.IntegrationFlowBuilder;
 import org.springframework.integration.dsl.Pollers;
 import org.springframework.integration.dsl.StandardIntegrationFlow;
 import org.springframework.integration.dsl.context.IntegrationFlowContext;
+import org.springframework.integration.dsl.context.IntegrationFlowContext.IntegrationFlowRegistration;
 import org.springframework.integration.file.FileReadingMessageSource;
 import org.springframework.integration.file.dsl.Files;
 import org.springframework.integration.util.IntegrationReactiveUtils;
@@ -26,6 +27,7 @@ import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Component
 public class FileSystemRecursiveFileScannerAdapter implements FileScanner {
@@ -79,16 +81,17 @@ public class FileSystemRecursiveFileScannerAdapter implements FileScanner {
 							FileReadingMessageSource.WatchEventType.MODIFY, 
 							FileReadingMessageSource.WatchEventType.DELETE),
 				e-> e.poller(
-						Pollers.fixedRate(Duration.ofSeconds(2),Duration.ofSeconds(2)))
+						Pollers.fixedRate(Duration.ofSeconds(2),Duration.ofSeconds(5)))
 			)
-			.log()
 			.transform(Files.toStringTransformer())
+			.log()
 			.channel(c-> c.flux("fileInboundFluxChannel"));
 		
 		flow = flowBuilder.get();
 		
-		context.registration(flow)
+		IntegrationFlowRegistration registration = context.registration(flow)
 				.id("reactiveFileInputFlow")
+				.autoStartup(false)
 				.register();
 
 		FluxMessageChannel filesChannel = this.applicationContext
@@ -96,18 +99,38 @@ public class FileSystemRecursiveFileScannerAdapter implements FileScanner {
 		
 		FileComparator fileComparator = new FileComparator(fileMetadataDatabase);
 		
-		
-		flux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel)
+		Flux<FileHistory> sourceFlux = IntegrationReactiveUtils.messageChannelToFlux(filesChannel)
+					
+					.doOnSubscribe(s -> {
+				        log.info("Starting integration flow on subscription");
+				        Mono.delay(Duration.ofSeconds(1))
+				        	.subscribe(l->registration.start());
+				        
+				    })
+					.replay(1)
+					.doOnNext(m->log.debug("Received message: " + m.getPayload()))
 					.map(m->{
 						String s = (String) m.getPayload();
 						String hash = FileHash.hash(s);
 						String file = (String) m.getHeaders().get("file_relativePath");
+						log.debug("Processing file: " + file + " with hash: " + hash);
 						return new FileMetadata(file, s, hash);	
 					})
+					.doOnNext(fm->log.debug("FileMetadata created: " + fm.url()))
 					.map(fileComparator::matches)
-					.filter(fh->!fh.hashMatches())
-					.doOnNext(fh->fileMetadataDatabase.save(fh.currentFile()))
+					.doOnNext(fh->log.debug("FileHistory created, hashMatches: " + fh.hashMatches()))
+					.filter(fh->{
+						boolean passes = !fh.hashMatches();
+						log.debug("Filter result for " + fh.currentFile().url() + ": " + passes);
+						return passes;
+					})
+					.doOnNext(fh->{
+						log.debug("Saving to database: " + fh.currentFile().url());
+						fileMetadataDatabase.save(fh.currentFile());
+					})
 					.share();
+		
+	flux = sourceFlux;
 		
 	}
 	

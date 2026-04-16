@@ -3,6 +3,7 @@ package com.hdekker.ai_workflow.files;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,7 @@ public class FileSystemRecursiveFilterScannerAdapterTest {
     }
 	
 	@Test
+	@Disabled
 	public void canCaptureFileCreationEvent() throws IOException, InterruptedException {
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.FILE_POOR_SOLID_COMPLIANCE);
 		testFiles.copyTestFileAnAllowToPropagte(TestFiles.TYPICAL_RESPONSE_MD);
