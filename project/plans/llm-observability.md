@@ -1156,10 +1156,10 @@ UNKNOWN ──[poll starts]──► CONNECTING
 
 ## Implementation Steps
 
-### Step 1: Database Entity & Repository
-- Create `LLMStatusEntity.java`
-- Create `LLMStatusRepository.java`
-- JPA will auto-create table on startup (ddl-auto: create-drop currently)
+### Step 1: Database Entity & Repository ✅ COMPLETE
+- [x] Create `LLMStatusEntity.java`
+- [x] Create `LLMStatusRepository.java`
+- [x] JPA will auto-create table on startup (ddl-auto: create-drop currently)
 
 ### Step 2: DTO Layer
 - Create `LLMStatus.java` record
