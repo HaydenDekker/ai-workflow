@@ -40,9 +40,14 @@ Create a standalone `/observability` route with an **Adapter Status Component** 
                     └─────────┬──────────┘
                               │
                     ┌─────────┴──────────┐
-                    │ OllamaHealthAdapter│
-                    │ (listModels API)   │
-                    └─────────┬──────────┘
+                     │  OpenAiHealthAdapter│
+                     │  (Business Logic)  │
+                     └─────────┬──────────┘
+                               │
+                     ┌─────────┴──────────┐
+                     │  OpenAiHealthClient │
+                     │  (HTTP: /v1/models) │
+                     └─────────┬──────────┘
                               │
                     ┌─────────┴──────────┐
                     │ LLMStatusEntity    │
@@ -1165,10 +1170,159 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - Create `LLMStatus.java` record
 - Create `AdapterStatus.java` enum
 
-### Step 3: Health Adapter
-- Create `OllamaHealthAdapter.java`
-- Use existing `OllamaInstanceAdapterUtils.createAPI()`
-- Implement `listModels()` health check
+### Step 3: Health Adapter Layer (OpenAI)
+
+#### 3.1 Add Test Dependency & Verify Build
+- Add `spring-boot-restclient-test` dependency to `pom.xml`
+- Create `OpenAiHealthClientTest.java` skeleton with `@RestClientTest` annotation
+- Run `./mvnw compile test-compile` to verify dependency resolves correctly
+- If build fails, check Spring Boot version compatibility (requires 3.2+)
+
+#### 3.2 OpenAI Models API - VERIFIED ✅
+- **Endpoint Tested**: `GET http://192.168.2.108:8080/v1/models`
+- **Actual Response Structure**:
+  ```json
+  {
+    "models": [
+      {
+        "name": "qwen3-coder6",
+        "model": "qwen3-coder6",
+        "modified_at": "",
+        "size": "",
+        "digest": "",
+        "type": "model",
+        "description": "",
+        "tags": [],
+        "capabilities": ["completion", "multimodal"],
+        "parameters": "",
+        "details": {}
+      }
+    ],
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen3-coder6",
+        "aliases": ["qwen3-coder6"],
+        "tags": [],
+        "object": "model",
+        "created": 1776343040,
+        "owned_by": "llamacpp",
+        "meta": {
+          "vocab_type": 2,
+          "n_vocab": 248320,
+          "n_ctx_train": 262144,
+          "n_embd": 5120,
+          "n_params": 26895998464,
+          "size": 19589154816
+        }
+      }
+    ]
+  }
+  ```
+- **Key Fields for DTO**:
+  - Use `data[]` array (OpenAI-compatible format)
+  - Extract `id` field for model names
+  - Ignore `models[]` array (Ollama-specific format)
+
+#### 3.3 Create OpenAI Models DTO
+**File:** `src/main/java/com/hdekker/ai_workflow/rest/dto/OpenAiModelsResponse.java`
+- Create DTO to parse OpenAI `/models` API response
+- Main class fields:
+  - `object` (String) - should be "list"
+  - `data` (List<OpenAiModel>) - array of models
+- Nested `OpenAiModel` class:
+  - `id` (String) - **PRIMARY FIELD** - model name (e.g., "qwen3-coder6")
+  - `aliases` (List<String>)
+  - `tags` (List<String>)
+  - `object` (String) - should be "model"
+  - `created` (Long) - timestamp
+  - `owned_by` (String)
+  - `meta` (Object) - can ignore or make optional
+- Use `@JsonProperty` for Jackson deserialization
+- **Note**: Ignore `models[]` array (Ollama-specific, not needed)
+
+#### 3.4 Create OpenAiHealthClient (Dedicated REST Client)
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthClient.java`
+- Use `RestClient` (preferred) or `WebClient` for HTTP calls
+- Constructor: inject `RestClient.Builder` and configure base URL
+- Method: `listModels()` → `Mono<List<String>>` or `List<String>`
+- Call: `GET /v1/models` (root URI configured separately)
+- Parse response using `OpenAiModelsResponse` DTO
+- Extract model IDs from response
+- Handle errors (connection refused, timeout, HTTP errors)
+- Configure timeout from `ObservabilityProperties`
+
+#### 3.5 Create OpenAiHealthAdapter
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthAdapter.java`
+- Uses `OpenAiHealthClient` internally
+- Constructor: inject `OpenAiHealthClient` and timeout config
+- Method: `checkHealth(String endpoint, String configuredModel)` → `Mono<LLMStatus>`
+- Create client with endpoint, call `listModels()`
+- Return `LLMStatus` with:
+  - `AdapterStatus.UP` if models retrieved successfully
+  - `AdapterStatus.DOWN` on error/timeout
+  - Model count and model names
+- Error handling with logging
+- Timeout handling with configurable duration
+
+#### 3.6 Create OpenAiHealthClientTest
+**File:** `src/test/java/com/hdekker/ai_workflow/llm/OpenAiHealthClientTest.java`
+- Use `@RestClientTest(OpenAiHealthClient.class)`
+- Autowire `MockRestServiceServer`
+- Test cases:
+  - **Success**: Mock `/v1/models` returning actual response format, verify model IDs extracted
+    ```json
+    {"object":"list","data":[{"id":"qwen3-coder6","object":"model","created":1776343040,"owned_by":"llamacpp"}]}
+    ```
+  - **Multiple Models**: Mock with 2-3 models, verify all IDs returned
+  - **Empty**: Mock returning `{"object":"list","data":[]}`, verify empty list
+  - **HTTP Error**: Mock 500 error, verify exception handling
+  - **Connection Error**: Mock connection refused scenario
+- Use full URI in expectations: `requestTo("http://localhost:8080/v1/models")` (if not using `rootUri()`)
+
+#### 3.7 Create OpenAiHealthAdapterTest
+**File:** `src/test/java/com/hdekker/ai_workflow/llm/OpenAiHealthAdapterTest.java`
+- Use `@ExtendWith(MockitoExtension.class)`
+- Mock `OpenAiHealthClient` with Mockito
+- Test health check logic:
+  - Success path: models returned → `AdapterStatus.UP`
+  - Error path: exception thrown → `AdapterStatus.DOWN`
+  - Timeout path: timeout exception → `AdapterStatus.DOWN`
+- Verify `LLMStatus` fields populated correctly
+
+#### 3.8 Create Configuration
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthConfiguration.java`
+- Bean: `OpenAiHealthClient` 
+  - Inject `RestClient.Builder`
+  - Configure timeout from `ObservabilityProperties`
+  - Optionally set root URI if using single endpoint
+- Bean: `OpenAiHealthAdapter`
+  - Inject `OpenAiHealthClient`
+  - Inject timeout config
+- Use `ObservabilityProperties` for timeout values
+
+---
+
+### Key Architecture Decisions
+
+**Why Dedicated REST Client?**
+- OpenAiApi (from spring-ai-openai) does NOT have `listModels()` method
+- Requires custom HTTP implementation
+- Separation of concerns: client handles HTTP, adapter handles business logic
+- Easier to test with `@RestClientTest` and `MockRestServiceServer`
+
+**RestClient vs WebClient**
+- `RestClient`: Simpler, recommended for straightforward REST calls (Spring Boot 3.1+)
+- `WebClient`: More powerful, reactive, more verbose
+- **Decision**: Use `RestClient` for simplicity
+
+**Testing Approach**
+- `@RestClientTest` auto-configures:
+  - `RestClient.Builder`
+  - `MockRestServiceServer`
+  - Jackson/GSON/Jsonb support
+- Does NOT scan `@Component` beans (use `@EnableConfigurationProperties` if needed)
+- Use `requestTo("/v1/models")` if root URI set, else full URL
 
 ### Step 4: Configuration
 - Create `ObservabilityProperties.java`
