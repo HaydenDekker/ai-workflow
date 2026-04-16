@@ -1,0 +1,21 @@
+package com.hdekker.ai_workflow.llm;
+
+import com.hdekker.ai_workflow.observability.ObservabilityProperties;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Configuration for OpenAI health checking components.
+ */
+@Configuration
+public class OpenAiHealthConfiguration {
+    
+    @Autowired
+    private ObservabilityProperties observabilityProperties;
+    
+    @Bean
+    public OpenAiHealthAdapter openAiHealthAdapter() {
+        return new OpenAiHealthAdapter(observabilityProperties.getHealthTimeout());
+    }
+}
