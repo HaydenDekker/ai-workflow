@@ -32,6 +32,16 @@ public class OpenAiHealthClient {
     }
     
     /**
+     * Create OpenAiHealthClient with pre-configured RestClient.
+     * Used for testing with MockRestServiceServer.
+     * 
+     * @param restClient Pre-configured RestClient instance
+     */
+    public OpenAiHealthClient(RestClient restClient) {
+        this.restClient = restClient;
+    }
+    
+    /**
      * List available models at the endpoint.
      * Returns model IDs as a list of strings.
      * 
