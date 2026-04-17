@@ -42,6 +42,16 @@ public class OpenAiHealthClient {
     }
     
     /**
+     * Create OpenAiHealthClient from a RestClient.Builder.
+     * Used by @RestClientTest which binds MockRestServiceServer to the builder.
+     * 
+     * @param builder RestClient.Builder to build the client from
+     */
+    public OpenAiHealthClient(RestClient.Builder builder) {
+        this.restClient = builder.build();
+    }
+    
+    /**
      * List available models at the endpoint.
      * Returns model IDs as a list of strings.
      * 
