@@ -185,26 +185,127 @@ public enum AdapterStatus {
 
 ---
 
-### 3. Health Adapter Layer
+### 3. Health Adapter Layer (OpenAI-Compatible)
 
-**File:** `src/main/java/com/hdekker/ai_workflow/ollama/OllamaHealthAdapter.java`
+#### 3.1 OpenAiModelsResponse DTO
+
+**File:** `src/main/java/com/hdekker/ai_workflow/rest/dto/OpenAiModelsResponse.java`
 
 ```java
-package com.hdekker.ai_workflow.ollama;
+package com.hdekker.ai_workflow.rest.dto;
 
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaApi.Model;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+
+/**
+ * DTO for parsing OpenAI /models API response.
+ * Supports both OpenAI and OpenAI-compatible servers (llamacpp, Ollama in OpenAI mode).
+ */
+public record OpenAiModelsResponse(
+    String object,
+    List<OpenAiModel> data
+) {
+    /**
+     * Represents a single model in the response.
+     */
+    public record OpenAiModel(
+        String id,
+        List<String> aliases,
+        List<String> tags,
+        @JsonProperty("object") String objectType,
+        Long created,
+        String owned_by,
+        Object meta
+    ) {}
+}
+```
+
+#### 3.2 OpenAiHealthClient (REST Client)
+
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthClient.java`
+
+```java
+package com.hdekker.ai_workflow.llm;
+
+import com.hdekker.ai_workflow.rest.dto.OpenAiModelsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Adapter for checking Ollama endpoint health.
+ * REST client for OpenAI-compatible health checking.
+ * Calls /v1/models endpoint to verify endpoint availability.
+ */
+public class OpenAiHealthClient {
+    
+    private static final Logger log = LoggerFactory.getLogger(OpenAiHealthClient.class);
+    private final RestClient restClient;
+    
+    public OpenAiHealthClient(String endpoint, int timeoutMs) {
+        this.restClient = RestClient.builder()
+            .baseUrl(endpoint)
+            .build();
+    }
+    
+    public OpenAiHealthClient(RestClient restClient) {
+        this.restClient = restClient;
+    }
+    
+    public OpenAiHealthClient(RestClient.Builder builder) {
+        this.restClient = builder.build();
+    }
+    
+    /**
+     * List available models at the endpoint.
+     * Returns model IDs as a list of strings.
+     * 
+     * @return Mono emitting list of model names
+     */
+    public Mono<List<String>> listModels() {
+        return Mono.fromCallable(() -> {
+            OpenAiModelsResponse response = restClient.get()
+                .uri("/v1/models")
+                .retrieve()
+                .body(OpenAiModelsResponse.class);
+            
+            if (response == null || response.data() == null) {
+                log.warn("Unexpected empty response from /v1/models");
+                return List.of();
+            }
+            
+            List<String> modelNames = response.data().stream()
+                .map(OpenAiModelsResponse.OpenAiModel::id)
+                .filter(id -> id != null && !id.isEmpty())
+                .collect(Collectors.toList());
+            
+            log.debug("Retrieved {} models from endpoint", modelNames.size());
+            return modelNames;
+        });
+    }
+}
+```
+
+#### 3.3 OpenAiHealthAdapter
+
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthAdapter.java`
+
+```java
+package com.hdekker.ai_workflow.llm;
+
+import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * Adapter for checking OpenAI-compatible endpoint health.
  * Uses listModels() API which does NOT consume tokens or affect context.
  * 
  * Health check strategy:
@@ -212,76 +313,93 @@ import java.util.stream.Collectors;
  * - No prompts are sent, so no tokens consumed
  * - No conversation context is affected
  */
-public class OllamaHealthAdapter {
+public class OpenAiHealthAdapter {
     
-    private static final Logger log = LoggerFactory.getLogger(OllamaHealthAdapter.class);
+    private static final Logger log = LoggerFactory.getLogger(OpenAiHealthAdapter.class);
     private final int timeoutMs;
     
-    public OllamaHealthAdapter(int timeoutMs) {
+    public OpenAiHealthAdapter(int timeoutMs) {
         this.timeoutMs = timeoutMs;
     }
     
     /**
      * Health check using listModels - does NOT consume tokens or affect context.
-     * Returns status with model information.
      * 
-     * @param endpoint Ollama endpoint URL (e.g., http://localhost:11434)
+     * @param endpoint OpenAI-compatible endpoint URL (e.g., http://localhost:8080)
      * @param configuredModel Expected model name
      * @return Mono emitting LLMStatus with current health state
      */
     public Mono<LLMStatus> checkHealth(String endpoint, String configuredModel) {
-        return Mono.fromCallable(() -> {
-            OllamaApi api = OllamaInstanceAdapterUtils.createAPI(endpoint);
-            
-            // listModels() is safe - no token consumption
-            // This verifies:
-            // 1. Endpoint is reachable (HTTP connection)
-            // 2. Service is available (response received)
-            // 3. Models are configured (non-empty list)
-            var response = api.listModels();
-            List<Model> models = response.models();
-            
-            List<String> modelNames = models.stream()
-                .map(Model::model)
-                .collect(Collectors.toList());
-            
-            log.debug("Health check OK for {}: {} models available", endpoint, models.size());
-            
-            return new LLMStatus(
-                endpoint,
-                configuredModel,
-                AdapterStatus.UP,
-                LocalDateTime.now(),
-                models.size(),
-                modelNames,
-                null
-            );
-        })
-        .onErrorResume(e -> {
-            log.warn("Health check FAILED for {}: {}", endpoint, e.getMessage());
-            return Mono.just(new LLMStatus(
-                endpoint,
-                configuredModel,
-                AdapterStatus.DOWN,
-                LocalDateTime.now(),
-                0,
-                List.of(),
-                e.getMessage()
-            ));
-        })
-        .timeout(java.time.Duration.ofMillis(timeoutMs))
-        .onErrorResume(timeoutEx -> {
-            log.warn("Health check TIMEOUT for {} after {}ms", endpoint, timeoutMs);
-            return Mono.just(new LLMStatus(
-                endpoint,
-                configuredModel,
-                AdapterStatus.DOWN,
-                LocalDateTime.now(),
-                0,
-                List.of(),
-                "Timeout after " + timeoutMs + "ms"
-            ));
-        });
+        log.debug("Starting health check for endpoint: {}", endpoint);
+        
+        OpenAiHealthClient client = new OpenAiHealthClient(endpoint, timeoutMs);
+        
+        return client.listModels()
+            .map(modelNames -> {
+                log.debug("Health check OK for {}: {} models available", endpoint, modelNames.size());
+                return new LLMStatus(
+                    endpoint,
+                    configuredModel,
+                    AdapterStatus.UP,
+                    LocalDateTime.now(),
+                    modelNames.size(),
+                    modelNames,
+                    null
+                );
+            })
+            .onErrorResume(e -> {
+                log.warn("Health check FAILED for {}: {}", endpoint, e.getMessage());
+                return Mono.just(new LLMStatus(
+                    endpoint,
+                    configuredModel,
+                    AdapterStatus.DOWN,
+                    LocalDateTime.now(),
+                    0,
+                    List.of(),
+                    e.getMessage()
+                ));
+            })
+            .timeout(Duration.ofMillis(timeoutMs))
+            .onErrorResume(timeoutEx -> {
+                log.warn("Health check TIMEOUT for {} after {}ms", endpoint, timeoutMs);
+                return Mono.just(new LLMStatus(
+                    endpoint,
+                    configuredModel,
+                    AdapterStatus.DOWN,
+                    LocalDateTime.now(),
+                    0,
+                    List.of(),
+                    "Timeout after " + timeoutMs + "ms"
+                ));
+            });
+    }
+}
+```
+
+#### 3.4 OpenAiHealthConfiguration
+
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthConfiguration.java`
+
+```java
+package com.hdekker.ai_workflow.llm;
+
+import com.hdekker.ai_workflow.observability.ObservabilityProperties;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Configuration for OpenAI health checking components.
+ */
+@Configuration
+public class OpenAiHealthConfiguration {
+    
+    @Autowired
+    private ObservabilityProperties observabilityProperties;
+    
+    @Bean
+    public OpenAiHealthAdapter openAiHealthAdapter() {
+        return new OpenAiHealthAdapter(observabilityProperties.getHealthTimeout());
     }
 }
 ```
@@ -297,8 +415,7 @@ package com.hdekker.ai_workflow.service;
 
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
-import com.hdekker.ai_workflow.ollama.OllamaHealthAdapter;
-import com.hdekker.ai_workflow.ollama.OllamaInstanceConfigurationProperties;
+import com.hdekker.ai_workflow.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
 import org.slf4j.Logger;
@@ -332,14 +449,14 @@ public class LLMStatusService {
     private LLMStatusRepository repository;
     
     @Autowired
-    private OllamaInstanceConfigurationProperties properties;
+    private ObservabilityProperties observabilityProperties;
     
-    private final OllamaHealthAdapter healthAdapter;
+    private final OpenAiHealthAdapter healthAdapter;
     
     @Value("${app.observability.warn-after-hours:1}")
     private long warnAfterHours;
     
-    public LLMStatusService(OllamaHealthAdapter healthAdapter) {
+    public LLMStatusService(OpenAiHealthAdapter healthAdapter) {
         this.healthAdapter = healthAdapter;
     }
     
@@ -357,8 +474,8 @@ public class LLMStatusService {
         // Currently single endpoint from config
         // Future: Support multiple endpoints from configuration
         Mono<LLMStatus> statusMono = healthAdapter.checkHealth(
-            properties.getEndpoint(), 
-            properties.getModel()
+            observabilityProperties.getEndpoint(), 
+            observabilityProperties.getModel()
         );
         
         statusMono.subscribe(
@@ -571,10 +688,24 @@ import org.springframework.context.annotation.Configuration;
  *     polling-interval: 60000
  *     warn-after-hours: 1
  *     health-timeout: 5000
+ *     endpoint: http://192.168.2.108:11434
+ *     model: gemma3:27b
  */
 @Configuration
 @ConfigurationProperties(value = "app.observability")
 public class ObservabilityProperties {
+    
+    /**
+     * OpenAI-compatible endpoint URL to health check.
+     * Default: http://localhost:8080
+     */
+    private String endpoint = "http://localhost:8080";
+    
+    /**
+     * Expected model name at the endpoint.
+     * Default: null
+     */
+    private String model;
     
     /**
      * Polling interval in milliseconds.
@@ -595,6 +726,12 @@ public class ObservabilityProperties {
     private int healthTimeout = 5000;
     
     // Getters and Setters
+    public String getEndpoint() { return endpoint; }
+    public void setEndpoint(String endpoint) { this.endpoint = endpoint; }
+    
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+    
     public long getPollingInterval() { return pollingInterval; }
     public void setPollingInterval(long pollingInterval) { this.pollingInterval = pollingInterval; }
     
@@ -606,44 +743,26 @@ public class ObservabilityProperties {
 }
 ```
 
-**File:** `src/main/java/com/hdekker/ai_workflow/ollama/OllamaHealthConfiguration.java`
+**File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthConfiguration.java` (Already created in Step 3.4)
 
-```java
-package com.hdekker.ai_workflow.ollama;
+> **Note:** The OpenAI health configuration was already created as part of Step 3. No additional configuration file needed.
 
-import com.hdekker.ai_workflow.observability.ObservabilityProperties;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+**File:** `src/main/java/com/hdekker/ai_workflow/AiWorkflowApplication.java` (Update needed)
 
-/**
- * Configuration for LLM health checking components.
- */
-@Configuration
-public class OllamaHealthConfiguration {
-    
-    @Autowired
-    private ObservabilityProperties observabilityProperties;
-    
-    @Bean
-    public OllamaHealthAdapter ollamaHealthAdapter() {
-        return new OllamaHealthAdapter(observabilityProperties.getHealthTimeout());
-    }
-}
-```
-
-**File:** `src/main/java/com/hdekker/ai_workflow/AiWorkflowApplication.java` (Update)
-
-Add `@EnableScheduling` to enable scheduled polling:
+Add `@EnableScheduling` and register `ObservabilityProperties`:
 
 ```java
 package com.hdekker.ai_workflow;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableScheduling;  // <-- ADD THIS
 
+import com.hdekker.ai_workflow.observability.ObservabilityProperties;  // <-- ADD THIS
+
 @SpringBootApplication
+@EnableConfigurationProperties({DataSourceProperties.class, ObservabilityProperties.class})  // <-- UPDATE
 @EnableScheduling  // <-- ADD THIS
 public class AiWorkflowApplication {
     public static void main(String[] args) {
@@ -660,9 +779,11 @@ Add to existing file:
 # Observability settings
 app:
   observability:
-    polling-interval: 60000    # 1 minute between health checks
-    warn-after-hours: 1        # Mark WARN after 1 hour without response
-    health-timeout: 5000       # 5 second timeout for health checks
+    endpoint: http://192.168.2.108:11434   # OpenAI-compatible endpoint to monitor
+    model: gemma3:27b                       # Expected model name
+    polling-interval: 60000                 # 1 minute between health checks
+    warn-after-hours: 1                     # Mark WARN after 1 hour without response
+    health-timeout: 5000                    # 5 second timeout for health checks
 ```
 
 ---
@@ -1170,12 +1291,13 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - Create `LLMStatus.java` record
 - Create `AdapterStatus.java` enum
 
-### Step 3: Health Adapter Layer (OpenAI) ✅ COMPLETE
+### Step 3: Health Adapter Layer (OpenAI-Compatible) ✅ COMPLETE
 
 #### 3.1 Add Test Dependency & Verify Build ✅
 - [x] No additional dependency needed - `spring-boot-starter-webflux` already provides `RestClient`
-- [x] Created `OpenAiHealthClientTest.java` with tests (simplified, no `@RestClientTest` annotation)
-- [x] Created `OpenAiHealthAdapterTest.java` with tests (tests against real unavailable endpoints)
+- [x] Created `OpenAiHealthClientTest.java` with tests
+- [x] Created `OpenAiHealthAdapterTest.java` with tests
+- [x] Created `OpenAiHealthClientRestClientTest.java` with `@RestClientTest` tests
 - [x] Verified build with `./mvnw compile test-compile`
 - [x] Spring Boot 4.0.3 compatible
 
@@ -1186,7 +1308,8 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - [x] `OpenAiHealthConfiguration.java` - Spring config for adapter bean
 - [x] `ObservabilityProperties.java` - Config properties for timeout/polling
 - [x] `OpenAiHealthClientTest.java` - Unit tests for client
-- [x] `OpenAiHealthAdapterTest.java` - Unit tests for adapter (all tests passing)
+- [x] `OpenAiHealthAdapterTest.java` - Unit tests for adapter
+- [x] `OpenAiHealthClientRestClientTest.java` - RestClient-specific tests
 
 #### 3.2 OpenAI Models API - VERIFIED ✅
 - **Endpoint Tested**: `GET http://192.168.2.108:8080/v1/models`
@@ -1232,7 +1355,6 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - **Key Fields for DTO**:
   - Use `data[]` array (OpenAI-compatible format)
   - Extract `id` field for model names
-  - Ignore `models[]` array (Ollama-specific format)
 
 #### 3.3 Create OpenAI Models DTO ✅
 **File:** `src/main/java/com/hdekker/ai_workflow/rest/dto/OpenAiModelsResponse.java`
@@ -1249,7 +1371,7 @@ UNKNOWN ──[poll starts]──► CONNECTING
   - `owned_by` (String)
   - `meta` (Object) - can ignore or make optional
 - [x] Use `@JsonProperty` for Jackson deserialization
-- [x] **Note**: Ignore `models[]` array (Ollama-specific, not needed)
+- [x] Use `data[]` array for model extraction (OpenAI-compatible format)
 
 #### 3.4 Create OpenAiHealthClient (Dedicated REST Client) ✅
 **File:** `src/main/java/com/hdekker/ai_workflow/llm/OpenAiHealthClient.java`
@@ -1334,17 +1456,77 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - Does NOT scan `@Component` beans (use `@EnableConfigurationProperties` if needed)
 - Use `requestTo("/v1/models")` if root URI set, else full URL
 
-### Step 4: Configuration
-- Create `ObservabilityProperties.java`
-- Create `OllamaHealthConfiguration.java`
-- Add `@EnableScheduling` to main application
-- Add properties to `application.yml`
+### Step 4: Configuration ✅ COMPLETE
 
-### Step 5: Service Layer
-- Create `LLMStatusService.java`
-- Implement scheduled polling
-- Implement caching and WARN logic
-- Implement logging
+#### 4.1 Add `endpoint` and `model` fields to `ObservabilityProperties.java` ✅
+**File:** `src/main/java/com/hdekker/ai_workflow/observability/ObservabilityProperties.java`
+- [x] Added `endpoint` field (default: `http://localhost:8080`)
+- [x] Added `model` field (default: `null`)
+- [x] Added getters/setters for both fields
+- [x] Updated Javadoc with example `application.yml`
+
+#### 4.2 Add `@EnableScheduling` to `AiWorkflowApplication.java` ✅
+**File:** `src/main/java/com/hdekker/ai_workflow/AiWorkflowApplication.java`
+- [x] Added `@EnableScheduling` annotation
+- [x] Added `ObservabilityProperties.class` to `@EnableConfigurationProperties`
+- [x] Added `import org.springframework.scheduling.annotation.EnableScheduling`
+
+#### 4.3 Add `app.observability.*` properties to `application.yml` ✅
+**File:** `src/main/resources/application.yml`
+- [x] Added `app.observability.endpoint` = `http://192.168.2.108:11434`
+- [x] Added `app.observability.model` = `gemma3:27b`
+- [x] Added `app.observability.polling-interval` = `60000` (1 minute)
+- [x] Added `app.observability.warn-after-hours` = `1`
+- [x] Added `app.observability.health-timeout` = `5000` (5 seconds)
+
+#### Files Created/Modified:
+- [x] `ObservabilityProperties.java` (modified - added endpoint/model fields)
+- [x] `AiWorkflowApplication.java` (modified - added @EnableScheduling + ObservabilityProperties)
+- [x] `application.yml` (modified - added app.observability.* section)
+
+### Step 5: Service Layer ✅ COMPLETE
+
+#### 5.1 Create `LLMStatusService.java` ✅
+**File:** `src/main/java/com/hdekker/ai_workflow/service/LLMStatusService.java`
+- [x] Inject `LLMStatusRepository`, `OpenAiHealthAdapter`, `ObservabilityProperties`
+- [x] `@Scheduled(fixedRateString)` method for periodic polling
+- [x] `schedulePolling()` - calls health adapter, checks WARN condition, persists to DB, logs warnings
+- [x] `checkWarnCondition()` - transitions UP → WARN when last check > warnAfterHours
+- [x] `persistStatus()` - saves `LLMStatusEntity` to database
+- [x] `getCurrentStatus()` - reads cached status from DB, converts entity to DTO
+- [x] `triggerPoll()` - manual immediate refresh, returns list of statuses
+- [x] `entityToDto()` - converts `LLMStatusEntity` to `LLMStatus` DTO
+- [x] Null/empty endpoint guard - skips health check and logs warning
+- [x] Null health status guard - logs error, skips persistence
+
+#### 5.2 Create `LLMStatusServiceTest.java` ✅
+**File:** `src/test/java/com/hdekker/ai_workflow/service/LLMStatusServiceTest.java`
+- [x] Use `@ExtendWith(MockitoExtension.class)` with Mockito mocks
+- [x] Mock `LLMStatusRepository`, `OpenAiHealthAdapter`, `ObservabilityProperties`
+- [x] Reflection helper for invoking private `checkWarnCondition()` method
+- [x] Reflection helper for setting `@Value` fields (e.g., `warnAfterHours`)
+- [x] Test: `schedulePolling_success_persistsStatus` - UP status saved with correct fields
+- [x] Test: `schedulePolling_failure_persistsDownStatus` - DOWN status with error message
+- [x] Test: `schedulePolling_nullEndpoint_skipsHealthCheck` - no adapter/repo calls
+- [x] Test: `schedulePolling_emptyEndpoint_skipsHealthCheck` - no adapter/repo calls
+- [x] Test: `schedulePolling_healthAdapterError_returnsDown` - adapter error → DOWN persisted
+- [x] Test: `checkWarnCondition_freshData_unchanged` - UP with no history stays UP
+- [x] Test: `checkWarnCondition_staleData_returnsWarn` - UP older than 1hr → WARN
+- [x] Test: `checkWarnCondition_recentData_noWarn` - UP within threshold stays UP
+- [x] Test: `checkWarnCondition_alreadyDown_unchanged` - DOWN stays DOWN
+- [x] Test: `checkWarnCondition_noPreviousData_unchanged` - no repo entry → stays UP
+- [x] Test: `triggerPoll_success_returnsStatusList` - manual trigger returns 1 status
+- [x] Test: `triggerPoll_nullEndpoint_returnsEmptyList` - null endpoint → empty list
+- [x] Test: `getCurrentStatus_empty_returnsEmptyList` - empty repo → empty list
+- [x] Test: `getCurrentStatus_withData_returnsDtoList` - entity → DTO conversion correct
+- [x] Test: `getCurrentStatus_entityWithEmptyModelNames_returnsEmptyList` - empty string → empty list
+- [x] All 15 tests pass, no impact on existing tests
+
+#### Files Created/Modified:
+- [x] `LLMStatusService.java` (created - 200 lines)
+- [x] `LLMStatusServiceTest.java` (created - 290 lines)
+- [x] Build verified: `./mvnw compile test-compile`
+- [x] Tests verified: `./mvnw test -Dtest=LLMStatusServiceTest -q` (15/15 pass)
 
 ### Step 6: REST Endpoint
 - Create `ObservabilityRestController.java`
@@ -1358,8 +1540,8 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - Add styles to Vaadin theme
 
 ### Step 8: Testing
-- Test health check with running Ollama
-- Test health check with stopped Ollama
+- Test health check with running OpenAI-compatible endpoint
+- Test health check with stopped OpenAI-compatible endpoint
 - Test WARN condition (modify timestamp)
 - Test REST endpoint
 - Test UI rendering
@@ -1398,7 +1580,7 @@ CREATE TABLE llm_status (
 ## Future Enhancements
 
 ### Phase 2: Multiple Endpoints Support
-- Add configuration for multiple Ollama endpoints
+- Add configuration for multiple OpenAI-compatible endpoints
 - Each endpoint stored as separate row in `llm_status` table
 - UI shows all endpoints in separate cards
 
@@ -1421,17 +1603,19 @@ CREATE TABLE llm_status (
 
 ## Testing Checklist
 
-- [ ] Health check succeeds when Ollama is running
-- [ ] Health check fails when Ollama is stopped
-- [ ] Health check times out after configured duration
-- [ ] Status persists to database correctly
-- [ ] WARN state triggers after 1 hour without data
+- [x] Health check succeeds when OpenAI-compatible endpoint is running
+- [x] Health check fails when OpenAI-compatible endpoint is stopped
+- [x] Health check times out after configured duration
+- [x] Status persists to database correctly
+- [x] WARN state triggers after 1 hour without data
+- [ ] Health check with running OpenAI-compatible endpoint (integration)
+- [ ] Health check with stopped OpenAI-compatible endpoint (integration)
 - [ ] REST endpoint returns current status
 - [ ] REST endpoint triggers immediate poll
 - [ ] UI renders status cards correctly
 - [ ] Status colors match: UP=green, WARN=yellow, DOWN=red
 - [ ] Warnings logged to console for DOWN/WARN states
-- [ ] Scheduled polling runs at configured interval
+- [x] Scheduled polling runs at configured interval (unit: method executes correctly)
 - [ ] Multiple endpoints supported (future)
 
 ---
@@ -1439,7 +1623,7 @@ CREATE TABLE llm_status (
 ## Notes
 
 ### Health Check Method
-- Uses `OllamaApi.listModels()` - verified to NOT consume tokens
+- Uses `GET /v1/models` (OpenAI-compatible API) - verified to NOT consume tokens
 - Does NOT affect conversation context
 - Verifies: endpoint reachable, service available, models loaded
 
