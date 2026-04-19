@@ -45,8 +45,8 @@ export default defineConfig({
   ],
 
   // Global setup: start the Spring Boot dev server
-  globalSetup: require.resolve('./global-setup.ts'),
+  globalSetup: './tests/global-setup.ts',
 
   // Global teardown: stop the dev server
-  globalTeardown: require.resolve('./global-teardown.ts'),
+  globalTeardown: './tests/global-teardown.ts',
 });

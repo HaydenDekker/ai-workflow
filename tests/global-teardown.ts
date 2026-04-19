@@ -3,7 +3,7 @@
  */
 export default async function globalTeardown() {
   const serverProcess = (globalThis as Record<string, unknown>)
-    .SERVER_PROCESS as import('child_process').ChildProcess | undefined;
+    .SERVER_PROCESS as import('node:child_process').ChildProcess | undefined;
 
   if (serverProcess) {
     console.log('Stopping Spring Boot dev server...');

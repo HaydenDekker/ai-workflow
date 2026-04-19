@@ -1,7 +1,11 @@
 import { chromium } from '@playwright/test';
-import { spawn, ChildProcess } from 'child_process';
-import { join } from 'path';
-import { promisify } from 'util';
+import { spawn } from 'node:child_process';
+import { join, dirname } from 'node:path';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const sleep = promisify(setTimeout);
 
@@ -11,12 +15,14 @@ const sleep = promisify(setTimeout);
  * Waits for the server to be ready on localhost:8080 before returning.
  */
 export default async function globalSetup() {
+  const projectRoot = join(__dirname, '..');
   const serverProcess = spawn(
-    './mvnw.cmd',
-    ['spring-boot:run', '-Dspring-boot.run.fallback=false'],
+    'cmd',
+    ['/c', 'mvnw.cmd', 'spring-boot:run', '-Dspring-boot.run.fallback=false'],
     {
-      cwd: join(__dirname, '..'),
+      cwd: projectRoot,
       stdio: 'pipe',
+      shell: true,
       env: { ...process.env, PORT: '8080' },
     }
   );
