@@ -46,3 +46,8 @@ build/
 node_modules/
 src/main/frontend/generated/
 vite.generated.ts
+
+# Playwright E2E tests
+playwright-report/
+test-results/
+
