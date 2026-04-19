@@ -1533,18 +1533,14 @@ UNKNOWN ──[poll starts]──► CONNECTING
 - Implement GET `/api/observability/llm-status`
 - Implement POST `/api/observability/llm-status/poll`
 
-### Step 7: UI Components
-- Create `AdapterStatusComponent.java`
-- Create `ObservabilityView.java`
-- Create `observability.css`
-- Add styles to Vaadin theme
+### Step 7: UI Components ✅ COMPLETE
 
 ### Step 8: Testing
 - Test health check with running OpenAI-compatible endpoint
 - Test health check with stopped OpenAI-compatible endpoint
 - Test WARN condition (modify timestamp)
 - Test REST endpoint
-- Test UI rendering
+- Test UI rendering (manual verification required - requires browser)
 
 ---
 
