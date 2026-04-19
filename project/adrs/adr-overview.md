@@ -223,8 +223,9 @@ If the ADR introduces a breaking change or new pattern:
 > **Links to related ADRs.**
 
 ```markdown
-- [ADR-002: Qdrant Vector Store Integration](adr-qdrant-vector-store.md)
-- [ADR-003: Chat Model Setup for llama.cpp](adr-chat-model-setup-for-llama-cpp.md)
+- [ADR-001: REST Adapters](adr-rest-adapters.md)
+- [ADR-002: Vaadin/Hilla UI Components](adr-ui-components.md)
+- [ADR: Application Observability](adr-application-observability.md)
 ```
 
 Cross-reference related decisions so readers can navigate the decision graph.

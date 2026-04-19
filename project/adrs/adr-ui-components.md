@@ -1,0 +1,385 @@
+# ADR-002: Vaadin/Hilla UI Components
+
+## Date
+
+2026-04-19
+
+## Context
+
+The application needs a visual interface for two distinct purposes:
+
+1. **Agent Management Dashboard** — View and manage the configured AI agents, their status, and metadata.
+2. **LLM Observability Dashboard** — Monitor the health status of configured LLM endpoints in real-time.
+
+Existing options for building the frontend:
+- **React + Vite** (standalone SPA) — Requires separate build pipeline, CORS configuration, deployment separation
+- **Plain HTML/JS + Thymeleaf** — Server-rendered pages, limited interactivity, manual state management
+- **Vaadin + Hilla** — Full-stack Java framework, server-rendered with WebSocket push, zero CORS, single deployment artifact
+
+Requirements:
+1. **Single deployment artifact** (fat JAR) — no separate frontend build/deploy step
+2. **Real-time updates** — Agent status changes and LLM health polling should reflect in the UI without manual refresh
+3. **Type safety** — Java backend and frontend share the same DTOs, no serialization mismatches
+4. **Rapid development** — Pre-built UI components (grids, cards, layouts, dialogs)
+5. **Minimal JavaScript** — Developers should be able to build the entire UI in Java
+
+## Decision
+
+We will use **Vaadin 25 with Hilla** for all UI components. The UI lives inside the Spring Boot application as part of the same JAR. Views are Java classes annotated with `@Route`, components are reusable Java classes, and styling uses CSS in the Vaadin theme folder.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Spring Boot Application (Fat JAR)                    │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                    Vaadin / Hilla Layer                         │   │
+│  │                                                                 │   │
+│  │  ┌──────────────────┐    ┌──────────────────────────────┐      │   │
+│  │  │  Views           │    │  UI Components               │      │   │
+│  │  │                  │    │                              │      │   │
+│  │  │  AgentListView   │    │  (Reusable widgets)          │      │   │
+│  │  │  Route: /agents  │    │                              │      │   │
+│  │  │                  │    │  AdapterStatusComponent      │      │   │
+│  │  │  ObservabilityView│   │  (Status cards)              │      │   │
+│  │  │  Route: /observ- │    │                              │      │   │
+│  │  │  ability         │    │  (Card, Layout, Icon,        │      │   │
+│  │  │                  │    │   TextField, Button)         │      │   │
+│  │  └────────┬─────────┘    └──────────────┬───────────────┘      │   │
+│  │           │                             │                       │   │
+│  │           │  Injected via @Autowired    │  Injected via         │   │
+│  │           ▼                             │  constructor          │   │
+│  └─────────────────────────────────────────┼───────────────────────┘   │
+│                                           │                            │
+└──────────────────────────┬────────────────┼────────────────────────────┘
+                           │                │
+                           │                │
+                           ▼                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Application Layer (Services)                         │
+│                                                                         │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
+│  │  AgentInfoService            │    │  LLMStatusService            │  │
+│  │  - getAllAgentInfos()        │    │  - getCurrentStatus()        │  │
+│  │  - Reactive Flux<>           │    │  - triggerPoll()             │  │
+│  │  - Reads from registry       │    │  - Scheduled polling         │  │
+│  └──────────────────────────────┘    └──────────────────────────────┘  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Component Structure
+
+```
+src/main/java/com/hdekker/ai_workflow/
+├── ui/
+│   ├── components/
+│   │   └── AdapterStatusComponent.java   # Reusable status card
+│   ├── service/
+│   │   └── AgentInfoService.java         # UI service layer
+│   └── views/
+│       ├── AgentListView.java            # Agent management dashboard
+│       └── ObservabilityView.java        # LLM health dashboard
+├── rest/
+│   └── dto/
+│       ├── AgentInfo.java                # Shared DTO (also used by REST)
+│       └── LLMStatus.java                # Shared DTO (also used by REST)
+└── service/
+    ├── AgentInfoService.java             # Backend service
+    └── LLMStatusService.java             # Backend service
+
+src/main/frontend/themes/default/
+└── styles.css                            # Vaadin theme CSS
+```
+
+### Code Examples
+
+**View — AgentListView**
+
+```java
+@Route("agents")
+@PageTitle("Agent List")
+public class AgentListView extends VerticalLayout
+        implements AfterNavigationObserver {
+
+    private final Grid<AgentInfo> grid;
+    private final AgentInfoService agentInfoService;
+    private final ProgressBar loadingIndicator;
+
+    @Autowired
+    public AgentListView(AgentInfoService agentInfoService) {
+        this.agentInfoService = agentInfoService;
+        initLayout();
+    }
+
+    @Override
+    public void afterNavigation(AfterNavigationEvent event) {
+        reloadData();  // Auto-load on view navigation
+    }
+
+    private void reloadData() {
+        showLoading(true);
+        agentInfoService.getAllAgentInfos()
+            .doFinally(signal -> grid.getUI().get().access(() -> showLoading(false)))
+            .subscribe(
+                agentInfos -> grid.getUI().get().access(() -> updateGrid(agentInfos)),
+                error -> grid.getUI().get().access(() -> {
+                    Notification.show("Error: " + error.getMessage());
+                    showLoading(false);
+                })
+            );
+    }
+}
+```
+
+**View — ObservabilityView**
+
+```java
+@Route("observability")
+@PageTitle("Observability")
+public class ObservabilityView extends VerticalLayout
+        implements AfterNavigationObserver {
+
+    private final LLMStatusService llmStatusService;
+    private final VerticalLayout cardsContainer;
+    private ScheduledExecutorService viewRefreshScheduler;
+
+    @Override
+    public void afterNavigation(AfterNavigationEvent event) {
+        startViewAutoRefresh();  // 30-second refresh cycle
+        loadStatusCards();
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        stopViewAutoRefresh();  // Prevent memory leaks
+        super.onDetach(detachEvent);
+    }
+}
+```
+
+**Reusable Component — AdapterStatusComponent**
+
+```java
+public class AdapterStatusComponent extends HorizontalLayout {
+
+    private final LLMStatus status;
+    private final LLMStatusService service;
+    private Icon statusIcon;
+    private Div statusBadge;
+
+    public AdapterStatusComponent(LLMStatus status, LLMStatusService service) {
+        this.status = status;
+        this.service = service;
+        initLayout();
+        updateDisplay();
+        startAutoRefresh();
+    }
+
+    private void applyStatusStyles(AdapterStatus adapterStatus) {
+        switch (adapterStatus) {
+            case UP:
+                statusIcon.setIcon(VaadinIcon.CHECK_CIRCLE_O);
+                statusIcon.setColor("var(--lumo-success-color)");
+                break;
+            case DOWN:
+                statusIcon.setIcon(VaadinIcon.CLOSE_CIRCLE_O);
+                statusIcon.setColor("var(--lumo-error-color)");
+                break;
+            // ... other states
+        }
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        stopAutoRefresh();  // Lifecycle-aware cleanup
+        super.onDetach(detachEvent);
+    }
+}
+```
+
+### Configuration
+
+**application.yml**
+
+```yaml
+vaadin:
+  launch-browser: true
+  allowed-packages: com.vaadin,org.vaadin,com.hdekker
+```
+
+**pom.xml** (already present, no changes needed)
+
+```xml
+<dependency>
+    <groupId>com.vaadin</groupId>
+    <artifactId>vaadin-spring-boot-starter</artifactId>
+</dependency>
+<dependency>
+    <groupId>com.vaadin</groupId>
+    <artifactId>hilla-spring-boot-starter</artifactId>
+</dependency>
+```
+
+### Styling
+
+CSS lives in the Vaadin theme folder and is automatically bundled with the JAR:
+
+```css
+/* src/main/frontend/themes/default/styles.css */
+
+.adapter-status-card {
+    background-color: var(--lumo-base-color);
+    border: 1px solid var(--lumo-contrast-10pct);
+    border-radius: var(--lumo-border-radius-m);
+    padding: var(--lumo-space-m);
+    box-shadow: var(--lumo-box-shadow-s);
+    transition: box-shadow 0.2s ease;
+}
+
+.adapter-status-card:hover {
+    box-shadow: var(--lumo-box-shadow-m);
+}
+
+.status-badge-up {
+    background-color: var(--lumo-success-color-10pct);
+    color: var(--lumo-success-color);
+}
+
+.status-badge-down {
+    background-color: var(--lumo-error-color-10pct);
+    color: var(--lumo-error-color);
+}
+
+@media (max-width: 768px) {
+    .adapter-status-card {
+        flex-direction: column;
+        gap: var(--lumo-space-s);
+    }
+}
+```
+
+### Testing Strategy
+
+| Test Type | Approach | Example |
+|-----------|----------|---------|
+| **Unit** | Mockito mocks for services | `AgentListViewTest` verifies service injection |
+| **View Init** | Verify layout, grid columns, button wiring | `AgentListViewTest` checks column headers |
+| **No Browser Required** | Vaadin components are Java objects; tests run headless | All UI tests use `@SpringBootTest` |
+| **Integration** | Full app start + navigation verification | Manual browser test for visual validation |
+
+```java
+@SpringBootTest
+class AgentListViewTest {
+
+    @Autowired
+    private AgentInfoService agentInfoService;
+
+    @Test
+    void viewInjectsService() {
+        AgentListView view = new AgentListView(agentInfoService);
+        assertNotNull(view);
+    }
+}
+```
+
+## Consequences
+
+### Benefits
+
+1. **Single Deployment** — One JAR contains backend + frontend. No separate frontend build, no CORS, no deployment orchestration.
+2. **Type Safety** — DTOs are shared between REST API and UI. No serialization surprises.
+3. **Pre-built Components** — Grid, Card, Layout, Icon, Button, TextField, Badge, Notification all work out of the box with Lumo theming.
+4. **Auto-Refresh** — `ScheduledExecutorService` with `UI.getCurrent().access()` enables real-time updates without polling the REST API.
+5. **Lifecycle Management** — `onDetach()` cleanup prevents memory leaks from background schedulers.
+6. **Responsive Layout** — CSS `@media` queries handle mobile vs desktop without framework changes.
+7. **Rapid Prototyping** — Views are Java classes; no build step, no hot-reload config needed.
+
+### Trade-offs
+
+1. **Vaadin Runtime Size** — Vaadin adds ~20-30MB to the JAR. Acceptable for internal tools, may be heavy for consumer-facing apps.
+2. **Java-Centric** — Front-end developers who prefer JavaScript/React will need to learn Vaadin's component model.
+3. **Limited CSS Control** — Styling uses CSS variables and Vaadin's Lumo theme system. Deep customization requires understanding Vaadin's shadow DOM.
+4. **Synchronous by Default** — Vaadin components are synchronous Java objects. For truly real-time updates, manual scheduler management is required (as implemented).
+
+### Tight Coupling Points
+
+- **Lumo Theme** — All styling assumes the default Lumo theme. Switching to a custom Lumo-based theme requires adjusting CSS variable names.
+- **Vaadin Component API** — Direct use of `VaadinIcon`, `Badge`, `Grid` classes. Upgrading Vaadin versions may require API updates.
+- **Service Injection** — Views use `@Autowired` constructor injection. Services must be Spring-managed beans.
+
+### Important Notes
+
+- **No REST API Needed for UI** — Views inject services directly. The REST API (`/api/observability/llm-status`) exists for external consumers, not for the UI.
+- **Scheduler Cleanup Required** — Every `ScheduledExecutorService` must be shut down in `onDetach()` to prevent memory leaks.
+- **UI Thread Safety** — Background scheduler updates must use `UI.getCurrent().access()` to modify Vaadin components.
+
+## Alternatives Considered
+
+### 1. React + Vite (Standalone SPA)
+
+**Why considered:** Standard frontend approach, large ecosystem, popular with front-end developers.
+
+**Why rejected:**
+- Requires separate build pipeline (`npm run build`)
+- Needs CORS configuration between frontend and backend
+- Two deployment artifacts (frontend JAR + backend JAR, or frontend served separately)
+- No type sharing between Java and TypeScript (manual DTO sync)
+- More infrastructure complexity (Docker compose, Nginx, etc.)
+
+### 2. Plain HTML/JS + Thymeleaf
+
+**Why considered:** Simple, no framework overhead, server-rendered.
+
+**Why rejected:**
+- Manual state management (no reactive updates)
+- No pre-built interactive components (grids, cards, badges)
+- JavaScript/Java type mismatch — DTOs must be manually serialized/deserialized
+- Poor developer experience for complex dashboards
+- Harder to maintain as UI grows
+
+### 3. Vaadin Flow Only (No Hilla)
+
+**Why considered:** Hilla adds complexity with its TypeScript layer.
+
+**Why used:** Hilla is included in the dependency but not actively used for API endpoints. The current UI uses pure Vaadin Flow (Java-only). Hilla is available for future full-stack features but not required for the current dashboard approach.
+
+### 4. Server-Sent Events / WebSocket
+
+**Why considered:** Real-time push without polling.
+
+**Why rejected:** More complex than needed for current requirements. The 30-second polling interval via `ScheduledExecutorService` is sufficient for health monitoring. SSE/WebSocket would add infrastructure complexity without proportional benefit at this scale.
+
+## How-To Guides
+
+### Adding a New View
+
+1. Create a new class in `src/main/java/com/hdekker/ai_workflow/ui/views/`
+2. Annotate with `@Route("your-path")` and `@PageTitle("Title")`
+3. Extend `VerticalLayout` (or another layout component)
+4. Implement `AfterNavigationObserver` if auto-loading is desired
+5. Inject services via constructor (`@Autowired`)
+6. Build the UI with Vaadin components
+7. CSS styles go in `src/main/frontend/themes/default/styles.css`
+
+### Adding a Reusable Component
+
+1. Create a class in `src/main/java/com/hdekker/ai_workflow/ui/components/`
+2. Extend an appropriate layout (`HorizontalLayout`, `VerticalLayout`, `Card`)
+3. Use `@Override protected void onDetach(DetachEvent)` for cleanup
+4. Use `UI.getCurrent().access()` for background thread updates
+5. Style with CSS classes in the theme folder
+
+### Updating Styling
+
+1. Edit `src/main/frontend/themes/default/styles.css`
+2. Use Lumo CSS variables: `--lumo-success-color`, `--lumo-error-color`, `--lumo-space-m`, etc.
+3. Apply classes with `element.addClassName("my-class")`
+4. No build step required — changes are picked up on dev server restart
+
+## See Also
+
+- [ADR-001: REST Adapters](adr-rest-adapters.md) — REST API layer that the UI does not depend on (services are injected directly)
+- [ADR: Application Observability with LLM Health Monitoring](adr-application-observability.md) — Backend observability service that the ObservabilityView displays
+- [ADR: Hilla Setup Guide](adr-hilla-setup-guide.md) — Hilla configuration (available but not actively used for current UI)
