@@ -145,13 +145,30 @@ public class LLMStatusService {
     }
 
     /**
-     * Get current status from database (for UI).
-     * Returns list of all configured endpoints with their current status.
+     * Get current status for the configured endpoint from database.
+     * Only returns the endpoint currently set in app.observability.endpoint.
+     * Stale entries for other endpoints are removed.
      */
     public List<LLMStatus> getCurrentStatus() {
-        return repository.findAll().stream()
+        String configuredEndpoint = observabilityProperties.getEndpoint();
+        if (configuredEndpoint == null || configuredEndpoint.isEmpty()) {
+            return List.of();
+        }
+
+        // Remove any stale entries not matching the configured endpoint
+        List<LLMStatusEntity> allEntities = repository.findAll();
+        List<LLMStatusEntity> stale = allEntities.stream()
+                .filter(e -> !e.getEndpoint().equals(configuredEndpoint))
+                .toList();
+        stale.forEach(repository::delete);
+
+        // Return only the configured endpoint
+        return repository.findByEndpoint(configuredEndpoint)
+                .map(List::of)
+                .orElse(List.of())
+                .stream()
                 .map(this::entityToDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

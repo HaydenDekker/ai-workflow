@@ -305,7 +305,20 @@ class LLMStatusServiceTest {
     @Test
     void getCurrentStatus_empty_returnsEmptyList() {
         // Arrange
+        when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(repository.findAll()).thenReturn(List.of());
+
+        // Act
+        List<LLMStatus> result = service.getCurrentStatus();
+
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getCurrentStatus_nullEndpoint_returnsEmptyList() {
+        // Arrange
+        when(observabilityProperties.getEndpoint()).thenReturn(null);
 
         // Act
         List<LLMStatus> result = service.getCurrentStatus();
@@ -317,11 +330,12 @@ class LLMStatusServiceTest {
     @Test
     void getCurrentStatus_withData_returnsDtoList() {
         // Arrange
+        when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         LocalDateTime now = LocalDateTime.now();
         LLMStatusEntity entity = new LLMStatusEntity(
             "http://localhost:8080", "test-model", "UP", now, 3, "model1,model2", null
         );
-        when(repository.findAll()).thenReturn(List.of(entity));
+        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(entity));
 
         // Act
         List<LLMStatus> result = service.getCurrentStatus();
@@ -340,11 +354,12 @@ class LLMStatusServiceTest {
     @Test
     void getCurrentStatus_entityWithEmptyModelNames_returnsEmptyList() {
         // Arrange
+        when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         LocalDateTime now = LocalDateTime.now();
         LLMStatusEntity entity = new LLMStatusEntity(
             "http://localhost:8080", "test-model", "DOWN", now, 0, "", "Error"
         );
-        when(repository.findAll()).thenReturn(List.of(entity));
+        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(entity));
 
         // Act
         List<LLMStatus> result = service.getCurrentStatus();
@@ -352,6 +367,33 @@ class LLMStatusServiceTest {
         // Assert
         assertEquals(1, result.size());
         assertTrue(result.get(0).modelNames().isEmpty());
+    }
+
+    @Test
+    void getCurrentStatus_removesStaleEndpoints() {
+        // Arrange
+        when(observabilityProperties.getEndpoint()).thenReturn("http://configured:8080");
+        LocalDateTime now = LocalDateTime.now();
+
+        LLMStatusEntity configuredEntity = new LLMStatusEntity(
+            "http://configured:8080", "test-model", "UP", now, 1, "model1", null
+        );
+        LLMStatusEntity staleEntity = new LLMStatusEntity(
+            "http://old:8080", "old-model", "DOWN", now.minusHours(2), 0, "", "Error"
+        );
+        LLMStatusEntity anotherStaleEntity = new LLMStatusEntity(
+            "http://deprecated:8080", "dep-model", "WARN", now.minusDays(1), 0, "", "Timeout"
+        );
+        when(repository.findAll()).thenReturn(List.of(configuredEntity, staleEntity, anotherStaleEntity));
+        when(repository.findByEndpoint("http://configured:8080")).thenReturn(Optional.of(configuredEntity));
+
+        // Act
+        List<LLMStatus> result = service.getCurrentStatus();
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals("http://configured:8080", result.get(0).endpoint());
+        verify(repository, times(2)).delete(any()); // stale entities removed
     }
 
     // ==================== Helper: invoke private checkWarnCondition ====================
