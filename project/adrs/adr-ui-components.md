@@ -262,12 +262,13 @@ CSS lives in the Vaadin theme folder and is automatically bundled with the JAR:
 
 ### Testing Strategy
 
+Three tiers of testing:
+
 | Test Type | Approach | Example |
 |-----------|----------|---------|
 | **Unit** | Mockito mocks for services | `AgentListViewTest` verifies service injection |
 | **View Init** | Verify layout, grid columns, button wiring | `AgentListViewTest` checks column headers |
-| **No Browser Required** | Vaadin components are Java objects; tests run headless | All UI tests use `@SpringBootTest` |
-| **Integration** | Full app start + navigation verification | Manual browser test for visual validation |
+| **E2E** | Playwright with real Chromium browser | `agents.spec.ts`, `observability.spec.ts` |
 
 ```java
 @SpringBootTest
@@ -283,6 +284,23 @@ class AgentListViewTest {
     }
 }
 ```
+
+```typescript
+// tests/e2e/observability.spec.ts
+test('page loads with correct title', async ({ page }) => {
+  await page.goto('/observability');
+  await expect(page).toHaveTitle(/Observability/i);
+});
+
+test('status cards are rendered', async ({ page }) => {
+  await page.goto('/observability');
+  await page.waitForTimeout(5000); // health check
+  const card = page.locator('.adapter-status-card');
+  await expect(card).toHaveCount(1);
+});
+```
+
+E2E tests are in `tests/e2e/`, configured via `playwright.config.ts`. Global setup starts the Spring Boot dev server; global teardown stops it. Run with `npm run test:e2e`.
 
 ## See Also
 
