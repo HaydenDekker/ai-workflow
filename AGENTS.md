@@ -28,6 +28,18 @@ Run unit or integration tests via the wrapper:
 - `./mvnw verify` – run all tests (unit + integration).
 - `./mvnw verify -q` – run all tests with minimal output.
 
+### E2E Tests (Playwright)
+End-to-end tests for the Vaadin/Hilla UI using real Chromium:
+
+- `npm run test:e2e` – run all E2E tests headless (auto-starts Spring Boot server).
+- `npm run test:e2e:headed` – run with visible browser (for debugging).
+- `npm run test:e2e:ui` – interactive Playwright UI mode.
+- `npx playwright test tests/e2e/observability.spec.ts` – run a specific test file.
+
+> **How it works:** Global setup starts `./mvnw spring-boot:run`, waits for the server, runs tests in Chromium, then stops the server. Takes screenshots, video, and traces on failure.
+
+> **Prerequisites:** Node.js installed, `@playwright/test` added to `package.json`, Chromium browser installed via `npx playwright install chromium`.
+
 ## Tooling & Environment
 
 - **Maven Wrapper** – check existence of `mvnw`/`mvnw.cmd`. It guarantees the correct Maven version for the project.
