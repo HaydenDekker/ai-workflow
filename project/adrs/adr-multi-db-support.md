@@ -1,9 +1,5 @@
 # ADR: Multiple SQLite Database Configuration with Spring Boot
 
-## Status
-
-Accepted
-
 ## Context
 
 This application requires separate SQLite databases for different concerns:

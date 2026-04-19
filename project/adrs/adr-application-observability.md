@@ -1,9 +1,5 @@
 # ADR: Application Observability with LLM Health Monitoring
 
-## Status
-
-**Proposed** - Ready for implementation
-
 ## Context
 
 Modern AI applications rely on external LLM services that can be:

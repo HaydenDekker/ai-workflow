@@ -1,9 +1,5 @@
 # ADR: Application Layer Memory Extraction Architecture
 
-## Status
-
-Accepted
-
 ## Context
 
 This application implements an automated memory extraction system that processes conversation data from the agent database and stores structured memories in a vector store (Qdrant). The system uses Large Language Models (LLMs) to extract meaningful memories from raw conversation data at multiple levels of granularity.

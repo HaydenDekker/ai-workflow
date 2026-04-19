@@ -1,9 +1,5 @@
 # ADR: Chat Model Setup for llama.cpp via OpenAI-Compatible API
 
-## Status
-
-Accepted
-
 ## Context
 
 This application needs to connect to local LLM models hosted via llama.cpp. Rather than using a cloud API, the goal is to run models locally for privacy, cost, and offline capabilities. llama.cpp exposes an OpenAI-compatible REST API, which allows Spring AI's OpenAI abstraction to work without any llama.cpp-specific dependencies.

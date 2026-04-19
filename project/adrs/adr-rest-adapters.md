@@ -1,9 +1,5 @@
 # ADR-001: REST Adapters
 
-## Status
-
-Accepted
-
 ## Date
 
 2026-04-17

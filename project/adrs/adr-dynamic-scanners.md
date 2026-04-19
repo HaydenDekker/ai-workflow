@@ -1,9 +1,5 @@
 # ADR: Dynamic Multi-Scanner Architecture with Agent Subscriptions
 
-## Status
-
-**Proposed** - Ready for implementation
-
 ## Context
 
 The current architecture uses a single root URL configured in `application.yml` to start one file system scanner. All agents subscribe to this shared `Flux<FileHistory>` and filter events using their `fileInputRegex`. This approach has limitations:

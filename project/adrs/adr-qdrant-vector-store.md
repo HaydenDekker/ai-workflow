@@ -1,9 +1,5 @@
 # ADR: Qdrant Vector Store Integration with Spring AI
 
-## Status
-
-Accepted
-
 ## Context
 
 This application integrates a Qdrant vector store for semantic memory storage and retrieval. The integration uses Spring AI's vector store abstraction to enable similarity search and semantic memory operations. The system supports both OpenAI-compatible embedding models (including local models via llama.cpp) and Qdrant as the vector database backend.
