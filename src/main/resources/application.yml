@@ -33,10 +33,10 @@ app:
       #endpoint: http://127.0.0.1:11434
       #model: qwen3-16k:latest 
       #gemma3:4b
-      endpoint: http://192.168.2.108:11434
+      endpoint: http://192.168.2.108:8080
       model: gemma3:27b
     observability:
-      endpoint: http://192.168.2.108:11434
+      endpoint: http://192.168.2.108:8080
       model: gemma3:27b
       polling-interval: 60000
       warn-after-hours: 1
