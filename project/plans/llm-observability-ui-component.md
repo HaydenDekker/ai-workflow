@@ -801,6 +801,9 @@ src/main/java/com/hdekker/ai_workflow/ui/
 
 ## Notes
 
+### Stale Endpoint Cleanup
+`LLMStatusService.getCurrentStatus()` only returns the endpoint configured in `app.observability.endpoint`. Any stale entries in the `llm_status` table from previous endpoint configurations are automatically deleted on each call to `getCurrentStatus()`. This prevents the UI from showing ghost endpoints that are no longer configured.
+
 ### Vaadin Badge Component
 Vaadin 25 includes a `Badge` component for status indicators. It provides:
 - Built-in theming support
