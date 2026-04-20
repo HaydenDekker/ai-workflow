@@ -40,6 +40,33 @@ End-to-end tests for the Vaadin/Hilla UI using real Chromium:
 
 > **Prerequisites:** Node.js installed, `@playwright/test` added to `package.json`, Chromium browser installed via `npx playwright install chromium`.
 
+### Screenshot Utility
+Capture view screenshots automatically via a CLI utility that starts the dev server, navigates, renders, and saves:
+
+```bash
+# Basic usage – saves to project/screenshots/<slug>.png
+npx tsx scripts/capture-snapshot.ts /agents
+npx tsx scripts/capture-snapshot.ts /observability
+
+# Custom wait time and output filename
+npx tsx scripts/capture-snapshot.ts /agents --wait 5000 --output agents-custom.png
+
+# Custom viewport (e.g. mobile)
+npx tsx scripts/capture-snapshot.ts /observability --viewport 800x600
+```
+
+**Options:**
+| Flag | Default | Description |
+|------|---------|-------------|
+| `<url-path>` | *(required)* | Route to capture (e.g. `/observability`) |
+| `--output <name>` | `<slug>.png` | Custom output filename |
+| `--wait <ms>` | `8000` | Wait time for view to render before capture |
+| `--viewport <WxH>` | browser default | Custom viewport size (e.g. `1280x720`) |
+
+**How it works:** Auto-starts Spring Boot, waits for readiness, navigates, captures to `project/screenshots/`, then stops the server.
+
+> **Note:** `project/screenshots/` is gitignored – screenshots are local-only.
+
 ## Tooling & Environment
 
 - **Maven Wrapper** – check existence of `mvnw`/`mvnw.cmd`. It guarantees the correct Maven version for the project.

@@ -1,0 +1,6 @@
+# Do not commit screenshots
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
