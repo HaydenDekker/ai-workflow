@@ -260,6 +260,82 @@ CSS lives in the Vaadin theme folder and is automatically bundled with the JAR:
 }
 ```
 
+### Component Building Principles
+
+#### 1. Lifecycle-Aware Scheduling
+
+Every component that uses a `ScheduledExecutorService` must stop the scheduler in `onDetach()` to prevent memory leaks and stale callbacks after navigation:
+
+```java
+@Override
+protected void onDetach(DetachEvent detachEvent) {
+    stopAutoRefresh();  // Always called in onDetach
+    super.onDetach(detachEvent);
+}
+
+private void stopAutoRefresh() {
+    if (scheduler != null) {
+        scheduler.shutdownNow();
+        scheduler = null;
+    }
+}
+```
+
+#### 2. UI Thread Safety
+
+All Vaadin component updates must happen on the UI thread via `UI.getCurrent().access()` or `.getUI().get().access()`. Scheduled executors run on background threads:
+
+```java
+scheduler.scheduleAtFixedRate(() -> {
+    com.vaadin.flow.component.UI.getCurrent().access(() -> {
+        // Safe to update components here
+        updateDisplay();
+    });
+}, interval, interval, TimeUnit.SECONDS);
+```
+
+#### 3. Reactive Data Loading
+
+For async service calls (e.g., `Flux<AgentInfo>`), use reactive operators with UI thread switching:
+
+```java
+agentInfoService.getAllAgentInfos()
+    .doFinally(signal -> grid.getUI().get().access(() -> showLoading(false)))
+    .subscribe(
+        items -> grid.getUI().get().access(() -> updateGrid(items)),
+        error -> grid.getUI().get().access(() -> showError(error))
+    );
+```
+
+#### 4. CSS Theme Organization
+
+All component styles live in the Vaadin theme CSS file (`src/main/frontend/themes/default/styles.css`). Use CSS custom properties from the Lumo theme for consistency:
+
+| Lumo Variable | Usage |
+|---------------|-------|
+| `var(--lumo-success-color)` | Status UP indicators |
+| `var(--lumo-error-color)` | Status DOWN indicators |
+| `var(--lumo-warning-color)` | Status WARN indicators |
+| `var(--lumo-contrast-10pct)` | Borders, separators |
+| `var(--lumo-space-s/m/l)` | Spacing |
+| `var(--lumo-border-radius-m)` | Card corners |
+
+#### 5. Status Badge Pattern
+
+Use CSS class switching for status indicators rather than conditional rendering:
+
+```java
+private void applyStatusStyles(AdapterStatus adapterStatus) {
+    statusBadge.getElement().getClassList().clear();
+    switch (adapterStatus) {
+        case UP:     statusBadge.addClassName("status-badge-up");     break;
+        case DOWN:   statusBadge.addClassName("status-badge-down");   break;
+        case WARN:   statusBadge.addClassName("status-badge-warn");   break;
+        default:     statusBadge.addClassName("status-badge-unknown");
+    }
+}
+```
+
 ### Testing Strategy
 
 Three tiers of testing:
@@ -305,5 +381,6 @@ E2E tests are in `tests/e2e/`, configured via `playwright.config.ts`. Global set
 ## See Also
 
 - [ADR-001: REST Adapters](adr-rest-adapters.md) — REST API layer that the UI does not depend on (services are injected directly)
+- [ADR-003: UI Views and Routing](adr-ui-views.md) — View routing, Hilla/Flow coexistence, navigation layout
 - [ADR: Application Observability with LLM Health Monitoring](adr-application-observability.md) — Backend observability service that the ObservabilityView displays
 - [ADR: Hilla Setup Guide](adr-hilla-setup-guide.md) — Hilla configuration (available but not actively used for current UI)

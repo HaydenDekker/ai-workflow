@@ -8,6 +8,12 @@ import { Suspense, useEffect } from "react";
 import { NavLink, Outlet } from "react-router";
 import "@vaadin/vaadin-lumo-styles/utility.css";
 
+// Flow routes (server-side Vaadin views) — not auto-discovered by Hilla file router
+const flowRoutes = [
+  { to: "agents", title: "Agent List", icon: "line-awesome/svg/list-solid.svg" },
+  { to: "observability", title: "Observability", icon: "line-awesome/svg/chart-bar-solid.svg" },
+];
+
 const documentTitleSignal = signal("");
 effect(() => {
   document.title = documentTitleSignal.value;
@@ -32,6 +38,20 @@ export default function MainLayout() {
           <ul className="flex gap-s list-none m-0 p-0">
             {createMenuItems().map(({ to, title, icon }) => (
               <li key={"li" + to}>
+                <NavLink
+                  className="flex gap-xs h-m items-center px-s text-body"
+                  to={to}
+                  key={to}
+                >
+                  {icon ? <Icon src={icon}></Icon> : <></>}
+                  <span className="font-medium text-m whitespace-nowrap">
+                    {title}
+                  </span>
+                </NavLink>
+              </li>
+            ))}
+            {flowRoutes.map(({ to, title, icon }) => (
+              <li key={"flow-li" + to}>
                 <NavLink
                   className="flex gap-xs h-m items-center px-s text-body"
                   to={to}

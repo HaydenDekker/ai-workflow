@@ -37,7 +37,7 @@ export default async function globalSetup() {
   const page = await browser.newPage();
 
   let ready = false;
-  const maxAttempts = 60; // 5 minutes max
+  const maxAttempts = 24; // 2 minutes max
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const response = await page.goto('http://localhost:8080', {
@@ -58,7 +58,7 @@ export default async function globalSetup() {
 
   if (!ready) {
     serverProcess.kill('SIGTERM');
-    throw new Error('Spring Boot dev server failed to start within 5 minutes');
+    throw new Error('Spring Boot dev server failed to start within 2 minutes');
   }
 
   console.log('Spring Boot dev server is ready on port 8080');
