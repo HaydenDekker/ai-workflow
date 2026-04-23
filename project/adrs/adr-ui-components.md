@@ -338,28 +338,74 @@ private void applyStatusStyles(AdapterStatus adapterStatus) {
 
 ### Testing Strategy
 
-Three tiers of testing:
+Four tiers of testing (fastest → slowest):
 
-| Test Type | Approach | Example |
-|-----------|----------|---------|
-| **Unit** | Mockito mocks for services | `AgentListViewTest` verifies service injection |
-| **View Init** | Verify layout, grid columns, button wiring | `AgentListViewTest` checks column headers |
-| **E2E** | Playwright with real Chromium browser | `agents.spec.ts`, `observability.spec.ts` |
+| Test Type | Approach | Speed | Example |
+|-----------|----------|-------|---------|
+| **Unit** | Mockito mocks for services, pure logic | <1 ms | `AgentListViewTest` verifies service injection |
+| **Browserless** | `BrowserlessTest` — server-side component queries, no browser | 5–60 ms | `AgentCreationDialogTest` verifies dialog fields, buttons, validation |
+| **E2E** | Playwright with real Chromium browser | 1–30 s | `agents.spec.ts`, `observability.spec.ts` |
+
+#### Browserless Testing (Recommended for UI)
+
+Browserless testing (free since Vaadin 25.1) runs entirely on the server side — no browser, no servlet container, no client-server bridge. Tests are typically **100× faster** than E2E and **fail immediately** if a component is misconfigured (unlike Playwright, which waits for timeouts).
+
+Add the dependency (requires Vaadin 25.1+):
+
+```xml
+<dependency>
+    <groupId>com.vaadin</groupId>
+    <artifactId>browserless-test-junit6</artifactId>
+    <scope>test</scope>
+</dependency>
+```
 
 ```java
-@SpringBootTest
-class AgentListViewTest {
+@ViewPackages  // Restricts classpath scanning to test's package only
+class AgentCreationDialogTest extends BrowserlessTest {
 
-    @Autowired
-    private AgentInfoService agentInfoService;
+    private AgentCreationDialog dialog;
+
+    @BeforeEach
+    void setup() {
+        AgentInfoService mockService = Mockito.mock(AgentInfoService.class);
+        dialog = new AgentCreationDialog(mockService);
+        UI.getCurrent().add(dialog);
+        dialog.open();  // Children aren't queryable until dialog is opened
+    }
 
     @Test
-    void viewInjectsService() {
-        AgentListView view = new AgentListView(agentInfoService);
-        assertNotNull(view);
+    void dialogContainsExpectedFieldCount() {
+        assertThat($(TextField.class).all()).hasSize(3);   // Title, Regex, Template
+        assertThat($(TextArea.class).all()).hasSize(2);    // Body, Output Structure
+        assertThat($(ComboBox.class).all()).hasSize(1);    // Agent Type
+    }
+
+    @Test
+    void dialogContainsCancelAndCreateButtons() {
+        Button cancelButton = $(Button.class).withText("Cancel").single();
+        Button createButton = $(Button.class).withText("Create Agent").single();
+        assertThat(createButton.getElement().getThemeList().contains("primary")).isTrue();
+    }
+
+    @Test
+    void allFormFieldsAreRequired() {
+        $(TextField.class).all().forEach(f -> assertThat(f.isRequired()).isTrue());
+        $(TextArea.class).all().forEach(a -> assertThat(a.isRequired()).isTrue());
     }
 }
 ```
+
+Key browserless testing patterns:
+- **`@ViewPackages`** without arguments restricts scanning to the test's own package — fastest bootstrap
+- **`$(ComponentType.class).single()`** queries the component tree — no Page Objects needed
+- **Mock services** with Mockito — no Spring context or real services required
+- **`dialog.open()`** before queries — overlay components (Dialog, ContextMenu) must be opened for children to be visible
+- **Component testers** (`test(component)`) simulate user interactions with built-in usability checks
+
+#### E2E Testing (Playwright)
+
+E2E tests remain for critical flows (navigation, login) and cross-browser verification. They run in `tests/e2e/`, configured via `playwright.config.ts`. Global setup starts the Spring Boot dev server; global teardown stops it. Run with `npm run test:e2e`.
 
 ```typescript
 // tests/e2e/observability.spec.ts
@@ -367,16 +413,30 @@ test('page loads with correct title', async ({ page }) => {
   await page.goto('/observability');
   await expect(page).toHaveTitle(/Observability/i);
 });
-
-test('status cards are rendered', async ({ page }) => {
-  await page.goto('/observability');
-  await page.waitForTimeout(5000); // health check
-  const card = page.locator('.adapter-status-card');
-  await expect(card).toHaveCount(1);
-});
 ```
 
-E2E tests are in `tests/e2e/`, configured via `playwright.config.ts`. Global setup starts the Spring Boot dev server; global teardown stops it. Run with `npm run test:e2e`.
+**Avoid** `page.waitForTimeout()` in E2E tests. Use Playwright's implicit waits instead:
+
+```typescript
+// ❌ Bad — fixed sleep, never fails fast
+await page.waitForTimeout(5000);
+
+// ✅ Good — waits only as long as needed, fails immediately if element never appears
+await expect(page.locator('[data-testid="status-card"]')).toBeVisible();
+```
+
+**Use `data-testid` attributes** for stable locators:
+
+```java
+// Java side
+Button submitButton = new Button("Submit");
+submitButton.setTestId("submit-button");
+```
+
+```typescript
+// Playwright side
+await page.locator('[data-testid="submit-button"]').click();
+```
 
 ## See Also
 

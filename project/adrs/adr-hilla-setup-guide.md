@@ -26,7 +26,9 @@ This guide documents the process of integrating Vaadin Hilla into an existing Sp
 ```xml
 <properties>
     <java.version>21</java.version>
-    <vaadin.version>25.0.7</vaadin.version>
+    <vaadin.version>25.1.0</vaadin.version>
+
+> **Note:** Vaadin 25.1+ is required for the free browserless testing module (`browserless-test-junit6`).
 </properties>
 ```
 

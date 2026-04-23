@@ -351,7 +351,10 @@ The testing module provides:
 | **Component visual** | Storybook dev server | Interactive preview + Controls |
 | **Component interaction** | `play` function in stories | `storybook/test` (`expect`, `userEvent`) |
 | **Component unit** | `frontend/tests/*.test.tsx` | Vitest + React Testing Library |
+| **Flow component** | `src/test/java/**/components` | `BrowserlessTest` (`BrowserlessTest` + Mockito) |
 | **View E2E** | `tests/e2e/*.spec.ts` | Playwright + Spring Boot server |
+
+> **Note:** Browserless testing (`BrowserlessTest`) is the preferred approach for testing Java-side Flow components and views. It runs 100× faster than Playwright and provides direct Java API access. See [ADR-002](adr-ui-components.md) for details.
 
 ### Component Conventions
 

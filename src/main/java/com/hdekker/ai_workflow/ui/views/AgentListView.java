@@ -10,6 +10,7 @@ import com.vaadin.flow.component.notification.Notification;
 
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
 import com.hdekker.ai_workflow.ui.components.LlmStatusBadge;
 import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.service.LLMStatusService;
@@ -126,8 +127,13 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         // Add navigation and refresh buttons
         Button refreshButton = new Button("Refresh", event -> reloadData());
         Button createButton = new Button("New Agent", event -> {
-            // Placeholder for new agent creation
-            Notification.show("Create new Agent dialog will open here");
+            AgentCreationDialog dialog = new AgentCreationDialog(agentInfoService);
+            dialog.addOpenedChangeListener(e -> {
+                if (!e.isOpened()) {
+                    reloadData();
+                }
+            });
+            dialog.open();
         });
         
         HorizontalLayout buttonLayout = new HorizontalLayout(createButton, refreshButton);

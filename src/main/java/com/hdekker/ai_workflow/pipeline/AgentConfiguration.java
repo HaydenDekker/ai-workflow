@@ -26,7 +26,6 @@ import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
  * 
  */
 @Configuration
-@org.springframework.context.annotation.Lazy
 public class AgentConfiguration {
 	
 	Logger log = LoggerFactory.getLogger(AgentConfiguration.class);

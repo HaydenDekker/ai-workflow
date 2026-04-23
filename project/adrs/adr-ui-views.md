@@ -198,7 +198,13 @@ CSS custom properties for component styles remain in `src/main/frontend/themes/d
 | Test Type | Approach | Example |
 |-----------|----------|---------|
 | **Unit** | Verify `@Route` annotation presence | `AgentListViewTest` checks class can be loaded |
+| **Browserless** | `BrowserlessTest` navigates to view and queries components | `AgentCreationDialogTest` verifies dialog fields via `$()` queries |
 | **E2E** | Playwright navigates via URL and verifies content | `navigation.spec.ts` checks links render and navigation works |
+
+Browserless tests (see [ADR-002](adr-ui-components.md) for details) are preferred for view-level testing because they:
+- Run in milliseconds with no browser or servlet container
+- Provide direct Java API access to view components
+- Fail immediately on misconfiguration (no timeout waits)
 
 E2E tests validate:
 - Navigation bar links are present and clickable
@@ -223,6 +229,9 @@ test('Agents navigation link is visible and clickable', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/agents/i);
 });
+```
+
+> **Note:** E2E tests should be kept to critical flows only (navigation, login). All other UI testing should use browserless tests for speed and reliability. Avoid `waitForTimeout()` — use Playwright's implicit waits (`expect(locator).toBeVisible()`) instead.
 ```
 
 ## Consequences

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,16 @@ public class AgentInfoService {
         } catch (Exception ex) {
             log.error("Error deleting agent with id: {}", id, ex);
             return Mono.empty();
+        }
+    }
+
+    public Mono<AgentInfo> createAgent(AgentDefinition agentDefinition) {
+        try {
+            AgentInfo info = dynamicAgentManager.addDynamicAgent(agentDefinition);
+            return Mono.just(info);
+        } catch (Exception ex) {
+            log.error("Error creating agent: {}", agentDefinition.title(), ex);
+            return Mono.error(ex);
         }
     }
 }
