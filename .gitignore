@@ -51,3 +51,30 @@ vite.generated.ts
 playwright-report/
 test-results/
 
+# Storybook build output
+storybook-static/
+
+# Storybook template directory (created by `storybook init`, not used)
+src/stories/
+
+# Debug and build logs
+*.log
+debug-*.log
+build.log
+
+# Windows artifacts
+nul
+
+# Generated frontend files (not tracked)
+file-routes.json
+
+# Vitest cache
+.vitest/
+coverage/
+
+# Storybook cache (if any)
+.storybook/cache/
+
+# Screenshot artifacts
+project/screenshots/
+
