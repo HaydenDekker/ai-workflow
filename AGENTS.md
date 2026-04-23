@@ -107,6 +107,18 @@ Run the IDE formatter with 4‑space indentation and no tabs. No dedicated Maven
 
 No Cursor/Copilot rules configured; use IDE default formatting.
 
+## Source References
+
+When debugging framework-level issues, consult the local source repositories:
+
+| Framework | Local Source Path | When to Consult |
+|-----------|-------------------|------------------|
+| **Storybook** | `C:\Users\hayde\workspace_26\libraries\storybook` | Storybook config errors, addon issues, v10 migration, `storybook/test` API, preview/manager internals |
+| **Spring Boot** | `C:\Users\hayde\workspace_26\libraries\spring-boot` | Auto-configuration, `@SpringBootTest` behavior, web server lifecycle, property binding, bean resolution |
+| **Vaadin / Hilla** | `C:\Users\hayde\workspace_26\libraries\vaadin\docs` | Vaadin components, UI rendering, routing, Hilla integration, browserless testing |
+
+If you encounter errors or unexpected behavior in any of these frameworks, **search the local source** — the implementation details, migration guides, and test examples will be there.
+
 ## LLM Adapters
 
 | Adapter | Type | Description |
