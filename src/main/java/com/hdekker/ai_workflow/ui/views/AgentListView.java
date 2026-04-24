@@ -43,10 +43,13 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         this.agentInfoService = agentInfoService;
         this.llmStatusService = llmStatusService;
         
-        // Setup layout with styling
+        // Setup layout to fill viewport with padding
         addClassName("main-layout");
-        setPadding(true);
-        setSpacing(true);
+        setSizeFull();
+        setPadding(false);
+        setSpacing(false);
+        getElement().getStyle().setPadding("16px 32px");
+        getElement().getStyle().setBackgroundColor("#f5f5f5");
         
         // Initialize loading indicator
         loadingIndicator = new ProgressBar();
@@ -71,11 +74,15 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         gridContainer.addClassName("grid-container");
         gridContainer.setPadding(false);
         gridContainer.setSpacing(false);
+        gridContainer.setMargin(false);
+        gridContainer.getElement().getStyle().setBackgroundColor("white");
+        gridContainer.getElement().getStyle().setBorderRadius("8px");
+        gridContainer.getElement().getStyle().setPadding("16px 24px");
         
         grid = new Grid<AgentInfo>();
-        grid.setWidth("100%");
-        grid.setHeight("400px");
-        grid.setSizeFull();
+        grid.setWidthFull();
+        grid.setHeightFull();
+        grid.setMinHeight("500px");
         
         // Configure columns with proper sizing and sorting
         grid.addColumn(AgentInfo::id)
@@ -118,6 +125,10 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         
         // Add loading indicator
         add(loadingIndicator);
+        
+        // Make grid container expand to fill remaining space
+        gridContainer.setSizeFull();
+        gridContainer.setFlexGrow(1, gridContainer);
         
         // Add components to layout
         add(headerLayout);
