@@ -23,7 +23,7 @@ public class AiWorkflowApplication implements AppShellConfigurator {
 
 	public static void main(String[] args) {
 		
-		SpringApplication.run(AiWorkflowApplication.class, args);
+		SpringApplication.run(AiWorkflowApplication.class, args); 
 	}
 
 }

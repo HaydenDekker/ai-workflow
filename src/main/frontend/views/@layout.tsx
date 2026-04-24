@@ -5,7 +5,7 @@ import {
 import { effect, signal } from "@vaadin/hilla-react-signals";
 import { AppLayout, Icon } from "@vaadin/react-components";
 import { Suspense, useEffect } from "react";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useLocation } from "react-router";
 import "@vaadin/vaadin-lumo-styles/utility.css";
 
 // Flow routes (server-side Vaadin views) — not auto-discovered by Hilla file router
@@ -21,6 +21,14 @@ effect(() => {
 
 export default function MainLayout() {
   const currentTitle = useViewConfig()?.title;
+  const location = useLocation();
+
+  // Redirect root ("") to the Flow-based Agent List
+  useEffect(() => {
+    if (location.pathname === "" || location.pathname === "/") {
+      window.location.replace("/agents");
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (currentTitle) {
@@ -52,16 +60,16 @@ export default function MainLayout() {
             ))}
             {flowRoutes.map(({ to, title, icon }) => (
               <li key={"flow-li" + to}>
-                <NavLink
+                <a
                   className="flex gap-xs h-m items-center px-s text-body"
-                  to={to}
+                  href={to}
                   key={to}
                 >
                   {icon ? <Icon src={icon}></Icon> : <></>}
                   <span className="font-medium text-m whitespace-nowrap">
                     {title}
                   </span>
-                </NavLink>
+                </a>
               </li>
             ))}
           </ul>
