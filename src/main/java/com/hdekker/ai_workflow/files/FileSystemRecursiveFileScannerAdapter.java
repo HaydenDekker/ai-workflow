@@ -45,6 +45,7 @@ public class FileSystemRecursiveFileScannerAdapter implements FileScanner {
 	BufferedWriter bw = null;
 	
 	Flux<FileHistory> flux = Flux.empty();
+	boolean fluxInitialized = false;
 	
 	@Autowired
 	ApplicationContext applicationContext;
@@ -131,10 +132,12 @@ public class FileSystemRecursiveFileScannerAdapter implements FileScanner {
 					.share();
 		
 	flux = sourceFlux;
-		
+		fluxInitialized = true;
+		log.info("flux instance field initialized with sourceFlux");
 	}
 	
 	public Flux<FileHistory> flux() {
+		log.info("flux() called, fluxInitialized: {}", fluxInitialized);
 		return flux.onBackpressureBuffer();
 	}
 

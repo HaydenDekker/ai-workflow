@@ -70,10 +70,17 @@ public class FileIntegrationFlowTest {
     @TempDir
     Path tempDir;
 
+    @DynamicPropertySource
+    static void registerTempDirProperty(DynamicPropertyRegistry registry) {
+        registry.add("scanner.url", () -> "file:/test/project-root");
+    }
+
     @BeforeEach
     void setUp() throws Exception {
-        // Create output directory
-        Files.createDirectories(tempDir.resolve("output"));
+        // Ensure scanner watch directory exists (scanner watches /test/project-root)
+        Path projectRoot = Path.of("/test/project-root");
+        Files.createDirectories(projectRoot);
+        Files.createDirectories(projectRoot.resolve("output"));
 
         // Configure the ChatClient mock to capture prompts
         configureChatClientMock();
@@ -149,10 +156,10 @@ public class FileIntegrationFlowTest {
         Thread.sleep(3000);
         log.info("Subscription chain should be established");
 
-        // Place a test file in the watched directory (tempDir is the scanner root)
+        // Place a test file in the watched directory (scanner root is /test/project-root)
         String testFileName = "test-document.md";
         String testContent = "# Test Document\n\nThis is test content for the integration test.";
-        Path testFile = tempDir.resolve(testFileName);
+        Path testFile = Path.of("/test/project-root", testFileName);
         Files.writeString(testFile, testContent);
 
         log.info("Placed test file: {}", testFile);
@@ -174,7 +181,7 @@ public class FileIntegrationFlowTest {
 
             // Check if output file was created
             if (!outputFound) {
-                Path outputPath = tempDir.resolve("output").resolve("analysis-test-document.md");
+                Path outputPath = Path.of("/test/project-root/output/analysis-test-document.md");
                 if (Files.exists(outputPath) && Files.size(outputPath) > 0) {
                     outputFound = true;
                     log.info("Output file found: {}", outputPath);
@@ -244,7 +251,7 @@ public class FileIntegrationFlowTest {
         // Place a file in the watched directory
         String testFileName = "subscriber-test.md";
         String testContent = "# Subscriber Test\n\nTesting channel subscriber registration.";
-        Path testFile = tempDir.resolve(testFileName);
+        Path testFile = Path.of("/test/project-root", testFileName);
         Files.writeString(testFile, testContent);
 
         log.info("Placed test file for subscriber test: {}", testFile);
