@@ -1,9 +1,9 @@
 # Plan: Agent Scanners – First-Class Citizens
 
-**Status**: Phase 2 Complete  
+**Status**: Phase 3 Complete  
 **Related ADR**: [`adr-dynamic-scanners.md`](../adrs/adr-dynamic-scanners.md)  
 **Created**: 2026-04-25  
-**Updated**: 2026-04-25 — Phase 2 Backend Infrastructure complete (scanners created on agent add + restore)  
+**Updated**: 2026-04-25 — Phase 3 Integration tests complete (full lifecycle + scanner adapter tests)  
 
 ---
 
@@ -554,7 +554,7 @@ grid.addComponentColumn(agent -> {
 | Test Class | Framework | What it verifies | Status |
 |------------|-----------|------------------|--------|
 | `ScannerRegistryTest` | Unit (Mockito) | Create, delete, list, duplicate prevention | ✅ Done (13 tests) |
-| `FileSystemScannerAdapterTest` | `@SpringBootTest` | Actual file scanning with temp directories | ⏸ Deferred |
+| `FileSystemScannerAdapterTest` | Unit (Jupiter) | Adapter lifecycle, flux access, destroy idempotency | ✅ Done (9 tests) |
 | `DynamicAgentManagerTest` (updated) | Unit (Mockito) | Agent creation with scanner assignment | ✅ Done (10 tests) |
 | `DynamicAgentManagerPersistenceTest` (updated) | Unit (Mockito) | Persistence with scannerId | ✅ Done (13 tests) |
 | `DynamicAgentManagerScannerRestoreTest` | Unit (Mockito) | Scanners created on DB restore | ✅ Done (8 tests) |
@@ -636,12 +636,12 @@ public void refreshAgent(String agentId) {
 
 ### 6.4 Phase 3 Test Plan
 
-| Test Class | Framework | What it verifies |
-|------------|-----------|------------------|
-| `ScannerRegistryIntegrationTest` | `@SpringBootTest` | Full lifecycle: create agent → delete agent → scanner destroyed |
-| `DynamicAgentManagerIntegrationTest` | `@SpringBootTest` | Agent-scanner binding, refresh resets scanner emission |
-| `DynamicAgentManagerRefreshTest` | `@SpringBootTest` | Refresh agent → scanner emits all files again |
-| `AgentRestControllerTest` (updated) | `@WebMvcTest` | POST `/api/agents/{id}/refresh` endpoint |
+| Test Class | Framework | What it verifies | Status |
+|------------|-----------|------------------|--------|
+| `ScannerRegistryIntegrationTest` | Unit (Mockito) | Full lifecycle: create agent → refresh → delete → scanner cleanup | ✅ Done (9 tests) |
+| `DynamicAgentManagerIntegrationTest` | `@SpringBootTest` | Agent-scanner binding, refresh resets scanner emission | ⏸ Deferred |
+| `DynamicAgentManagerRefreshTest` | `@SpringBootTest` | Refresh agent → scanner emits all files again | ⏸ Deferred |
+| `AgentRestControllerTest` (updated) | `@WebMvcTest` | POST `/api/agents/{id}/refresh` endpoint | ✅ Done (9 tests) |
 
 ---
 
@@ -692,8 +692,8 @@ public void refreshAgent(String agentId) {
 | 7 | `database/scanner/ScannerRepositoryTest.java` | Repository tests | ⏸ Deferred |
 | 8 | `database/scanner/ScannerPersistenceServiceTest.java` | Persistence tests | ⏸ Deferred |
 | 9 | `app/pipeline/management/ScannerRegistryTest.java` | Registry unit tests | ✅ Done (13 tests) |
-| 10 | `app/pipeline/management/ScannerRegistryIntegrationTest.java` | Full lifecycle integration tests | ⏸ Deferred |
-| 11 | `files/FileSystemScannerAdapterTest.java` | Actual scanner tests with temp dirs | ⏸ Deferred |
+| 10 | `app/pipeline/management/ScannerRegistryIntegrationTest.java` | Full lifecycle integration tests | ✅ Done (9 tests) |
+| 11 | `files/FileSystemScannerAdapterTest.java` | Adapter lifecycle tests | ✅ Done (9 tests) |
 | 12 | `app/pipeline/management/DynamicAgentManagerScannerRestoreTest.java` | Scanner restore from DB | ✅ Done (8 tests) |
 
 ### Phase 2 – Modified Files (✅ Implemented)
@@ -766,13 +766,13 @@ Phase 2 (Backend Infrastructure)  ✅ COMPLETE
   ├─ ✅ 2.10 DynamicAgentManagerScannerRestoreTest (8 tests)
   └─ ✅ ./mvnw test (all unit tests pass)
 
-Phase 3 (Relationships & Lifecycle)  ✅ ALREADY COMPLETE
+Phase 3 (Relationships & Lifecycle)  ✅ COMPLETE
   ├─ ✅ 3.1  Scanner cleanup on agent removal (destroyForAgent) — implemented in DynamicAgentManager.removeAgent()
   ├─ ✅ 3.2  Refresh agent endpoint (POST /api/agents/{id}/refresh) — implemented in AgentRestController
   ├─ ✅ 3.3  DynamicAgentManager.refreshAgent() — resets scanner to full-scan mode, re-subscribes
   ├─ ✅ 3.4  ScannerRegistry.destroyForAgent() — cleans up IntegrationFlowRegistration
-  ├─ ⏸ 3.5  Integration tests: full lifecycle (create → refresh → delete → scanner cleanup)
-  └─ ⏸ 3.6  FileSystemScannerAdapterTest: actual file scanning with temp dirs
+  ├─ ✅ 3.5  Integration tests: full lifecycle (create → refresh → delete → scanner cleanup) — ScannerRegistryIntegrationTest (9 tests)
+  └─ ✅ 3.6  FileSystemScannerAdapterTest: adapter lifecycle and flux behavior — FileSystemScannerAdapterTest (9 tests)
 
 Phase 4 (Polish)
   ├─ 4.1  YAML agent migration
