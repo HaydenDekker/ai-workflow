@@ -37,9 +37,9 @@ class AgentCreationDialogTest extends BrowserlessTest {
     private AgentCreationDialog dialog;
     private AgentInfoService mockService;
     private static final AgentDefinition STUB_DEF = new AgentDefinition(
-            ".*", "stub", "stub", "Map", "stub", "output/${name}.md");
+            ".*", "stub", "stub", "Map", "stub", "output/${name}.md", "/tmp/stub");
     private static final AgentInfo STUB_INFO = new AgentInfo(
-            "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST");
+            "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST", "scanner-stub");
 
     @BeforeEach
     void setup() {
@@ -72,8 +72,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
 
     @Test
     void dialogHasExpectedDimensions() {
-        assertThat(dialog.getWidth()).isEqualTo("600px");
-        assertThat(dialog.getHeight()).isEqualTo("700px");
+        assertThat(dialog.getWidth()).isEqualTo("650px");
+        assertThat(dialog.getHeight()).isEqualTo("750px");
     }
 
     @Test
@@ -92,8 +92,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
 
     @Test
     void dialogContainsExpectedFieldCount() {
-        // 3 TextFields: Title, File Input Regex, Output Filename Template
-        assertThat($(TextField.class).all()).hasSize(3);
+        // 4 TextFields: Title, Target Directory, File Input Regex, Output Filename Template
+        assertThat($(TextField.class).all()).hasSize(4);
 
         // 2 TextAreas: Body, Output Structure
         assertThat($(TextArea.class).all()).hasSize(2);
@@ -134,7 +134,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
                 "Test body content",
                 "Map",
                 "Test output structure",
-                "output/${name}-custom.md"
+                "output/${name}-custom.md",
+                "/tmp/test-dir"
         );
 
         dialog.open(existing);
@@ -153,7 +154,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
                 "Existing body",
                 "Reduction",
                 "Existing structure",
-                "output/${name}-existing.md"
+                "output/${name}-existing.md",
+                "/tmp/existing-dir"
         );
 
         dialog.open(existing);

@@ -47,10 +47,34 @@ public class AgentInfoService {
 
     public Mono<AgentInfo> createAgent(AgentDefinition agentDefinition) {
         try {
-            AgentInfo info = dynamicAgentManager.addDynamicAgent(agentDefinition);
+            // Extract targetDirectory from the definition, default to /tmp if not set
+            String targetDir = agentDefinition.targetDirectory() != null 
+                    ? agentDefinition.targetDirectory() 
+                    : "/tmp";
+            AgentInfo info = dynamicAgentManager.addDynamicAgent(agentDefinition, targetDir);
             return Mono.just(info);
         } catch (Exception ex) {
             log.error("Error creating agent: {}", agentDefinition.title(), ex);
+            return Mono.error(ex);
+        }
+    }
+
+    /**
+     * Refresh an agent: trigger full rescan of its target directory.
+     * Used when an agent's definition is modified and needs reprocessing.
+     *
+     * @param id the agent ID to refresh
+     * @return the refreshed agent info
+     */
+    public Mono<AgentInfo> refreshAgent(String id) {
+        try {
+            AgentInfo info = dynamicAgentManager.refreshAgent(id);
+            if (info == null) {
+                return Mono.error(new RuntimeException("Agent not found: " + id));
+            }
+            return Mono.just(info);
+        } catch (Exception ex) {
+            log.error("Error refreshing agent with id: {}", id, ex);
             return Mono.error(ex);
         }
     }

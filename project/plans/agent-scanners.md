@@ -1,9 +1,9 @@
 # Plan: Agent Scanners – First-Class Citizens
 
-**Status**: Phase 1 Complete  
+**Status**: Phase 2 Complete  
 **Related ADR**: [`adr-dynamic-scanners.md`](../adrs/adr-dynamic-scanners.md)  
 **Created**: 2026-04-25  
-**Updated**: 2026-04-25 — Phase 1 UI Foundation implemented and verified  
+**Updated**: 2026-04-25 — Phase 2 Backend Infrastructure complete (scanners created on agent add + restore)  
 
 ---
 
@@ -133,12 +133,12 @@ This plan elevates **scanners** from an internal implementation detail to a **fi
 | 1.1 | `ScannerInfo` | DTO (`rest/dto/`) | `record(id, targetDirectory, status, createdAt, agentId, lastEmittedAt)` | ✅ Done |
 | 1.2 | `ScannerService` | Service (`ui/service/`) | Thin reactive wrapper around `ScannerRegistry`. Provides `Mono<List<ScannerInfo>>`, `Mono<Void>`. | ✅ Done |
 | 1.3 | `ScannerListView` | View (`ui/views/`) | Vaadin view at route `/scanners`. Grid with color-coded status indicators, auto-refresh 30s, delete actions. | ✅ Done |
-| 1.4 | `AgentCreationDialog` (updated) | Component (`ui/components/`) | **New field: Target Directory** — deferred to Phase 2 | ⏸ Deferred |
+| 1.4 | `AgentCreationDialog` (updated) | Component (`ui/components/`) | **New field: Target Directory** — implemented Phase 2 | ✅ Done |
 | 1.5 | `ScannerRestController` | Controller (`rest/`) | `GET /api/scanners`, `DELETE /api/scanners/{id}`. | ✅ Done |
-| 1.6 | `ScannerRepository` | Data (`database/scanner/`) | JPA repository for `ScannerEntity` — deferred to Phase 2 | ⏸ Deferred |
-| 1.7 | `ScannerEntity` | Entity (`database/scanner/`) | JPA entity — deferred to Phase 2 | ⏸ Deferred |
-| 1.8 | `ScannerPersistenceService` | Service (`database/scanner/`) | CRUD over `ScannerEntity` — deferred to Phase 2 | ⏸ Deferred |
-| 1.9 | Unit tests | `src/test/...` | ScannerRegistry unit tests — deferred to Phase 2 | ⏸ Deferred |
+| 1.6 | `ScannerRepository` | Data (`database/scanner/`) | JPA repository for `ScannerEntity` — implemented Phase 2 | ✅ Done |
+| 1.7 | `ScannerEntity` | Entity (`database/scanner/`) | JPA entity — implemented Phase 2 | ✅ Done |
+| 1.8 | `ScannerPersistenceService` | Service (`database/scanner/`) | CRUD over `ScannerEntity` — implemented Phase 2 | ✅ Done |
+| 1.9 | Unit tests | `src/test/...` | ScannerRegistry unit tests — implemented Phase 2 | ✅ Done |
 | 1.10 | Browserless tests | `src/test/...` | `ScannerListViewTest` (route + annotations) | ✅ Done |
 | 1.11 | `ScannerRegistry` | Manager (`app/pipeline/management/`) | In-memory stub with dummy data + CRUD methods | ✅ Done |
 | 1.12 | `ScannerDataSeeder` | Runner (`app/`) | Seeds 4 dummy scanners on application startup | ✅ Done |
@@ -334,13 +334,13 @@ Grid with 4 rows, color-coded status indicators (🟢 IDLE, 🟡 EMITTING_ALL, �
 
 | Test Class | Framework | What it verifies | Status |
 |------------|-----------|------------------|--------|
-| `ScannerRestControllerTest` | `@WebMvcTest` | GET / DELETE `/api/scanners` | ⏸ Deferred to Phase 2 |
-| `ScannerServiceTest` | Unit (Mockito) | Service delegates correctly | ⏸ Deferred to Phase 2 |
-| `ScannerEntityTest` | Unit | Entity field mapping, defaults | ⏸ Deferred to Phase 2 |
-| `ScannerRepositoryTest` | `@DataJpaTest` | CRUD over scanner table | ⏸ Deferred to Phase 2 |
-| `ScannerPersistenceServiceTest` | Unit (Mockito) | Persistence CRUD | ⏸ Deferred to Phase 2 |
+| `ScannerRestControllerTest` | `@WebMvcTest` | GET / DELETE `/api/scanners` | ⏸ Deferred |
+| `ScannerServiceTest` | Unit (Mockito) | Service delegates correctly | ✅ Done (6 tests) |
+| `ScannerEntityTest` | Unit | Entity field mapping, defaults | ✅ Done (4 tests) |
+| `ScannerRepositoryTest` | `@DataJpaTest` | CRUD over scanner table | ⏸ Deferred |
+| `ScannerPersistenceServiceTest` | Unit (Mockito) | Persistence CRUD | ⏸ Deferred |
 | `ScannerListViewTest` | Unit | `@Route("scanners")`, `@PageTitle("Scanners")` | ✅ Done |
-| `AgentCreationDialogTest` (updated) | BrowserlessTest | New Target Directory field | ⏸ Deferred to Phase 2 |
+| `AgentCreationDialogTest` (updated) | BrowserlessTest | New Target Directory field | ✅ Done (18 tests) |
 
 ---
 
@@ -350,15 +350,15 @@ Grid with 4 rows, color-coded status indicators (🟢 IDLE, 🟡 EMITTING_ALL, �
 
 ### 5.1 Deliverables
 
-| # | Artifact | Description |
-|---|----------|-------------|
-| 2.1 | `FileSystemScannerAdapter` | Parameterised constructor (not `@Component`). Accepts `folderPath` and `delayBetweenReads`. |
-| 2.2 | `ScannerRegistry` (full) | Manages lifecycle: create, subscribe, unsubscribe, destroy. Thread-safe concurrent map. |
-| 2.3 | `DynamicAgentManager` (updated) | Accepts `ScannerRegistry`. Resolves agent → scanner mapping. |
-| 2.4 | `AgentEntity` (updated) | New column `scanner_id` (FK). |
-| 2.5 | `AgentDefinition` (updated) | New field `targetDirectory`. |
-| 2.6 | `AgentCreationDialog` (updated) | New **Target Directory** field. |
-| 2.7 | `AgentListView` (updated) | New **Scanner** column. |
+| # | Artifact | Description | Status |
+|---|----------|-------------|--------|
+| 2.1 | `FileSystemScannerAdapter` | Parameterised constructor, `Sinks.Many` for watch-service + full-scan | ✅ Done |
+| 2.2 | `ScannerRegistry` (full) | Lifecycle management: create, destroy, refresh, getFlux. Thread-safe map. | ✅ Done |
+| 2.3 | `DynamicAgentManager` (updated) | Accepts `ScannerRegistry`, one-to-one mapping, `restoreFromDatabase()` | ✅ Done |
+| 2.4 | `AgentEntity` (updated) | New `scanner_id` column with getter/setter | ✅ Done |
+| 2.5 | `AgentDefinition` (updated) | New `targetDirectory` field (7th param) | ✅ Done |
+| 2.6 | `AgentCreationDialog` (updated) | New **Target Directory** field with path validation | ✅ Done |
+| 2.7 | `AgentListView` (updated) | New **Scanner** column + **Refresh** button per row | ✅ Done |
 
 ### 5.2 FileSystemScannerAdapter (Refactored)
 
@@ -551,13 +551,17 @@ grid.addComponentColumn(agent -> {
 
 ### 5.8 Phase 2 Test Plan
 
-| Test Class | Framework | What it verifies |
-|------------|-----------|------------------|
-| `ScannerRegistryTest` | Unit (Mockito) | Create, delete, list, duplicate prevention |
-| `FileSystemScannerAdapterTest` | `@SpringBootTest` | Actual file scanning with temp directories |
-| `DynamicAgentManagerTest` (updated) | Unit (Mockito) | Agent creation with scanner assignment |
-| `AgentRestControllerTest` (updated) | `@WebMvcTest` | POST with `targetDirectory` field |
-| `AgentCreationDialogTest` (updated) | `BrowserlessTest` | New Target Directory field present and required |
+| Test Class | Framework | What it verifies | Status |
+|------------|-----------|------------------|--------|
+| `ScannerRegistryTest` | Unit (Mockito) | Create, delete, list, duplicate prevention | ✅ Done (13 tests) |
+| `FileSystemScannerAdapterTest` | `@SpringBootTest` | Actual file scanning with temp directories | ⏸ Deferred |
+| `DynamicAgentManagerTest` (updated) | Unit (Mockito) | Agent creation with scanner assignment | ✅ Done (10 tests) |
+| `DynamicAgentManagerPersistenceTest` (updated) | Unit (Mockito) | Persistence with scannerId | ✅ Done (13 tests) |
+| `DynamicAgentManagerScannerRestoreTest` | Unit (Mockito) | Scanners created on DB restore | ✅ Done (8 tests) |
+| `AgentRestControllerTest` (updated) | `@WebMvcTest` | POST with `targetDirectory` field | ✅ Done (9 tests) |
+| `AgentCreationDialogTest` (updated) | `BrowserlessTest` | New Target Directory field present and required | ✅ Done (18 tests) |
+| `ScannerServiceTest` | Unit (Mockito) | Service delegates correctly | ✅ Done (6 tests) |
+| `ScannerEntityTest` | Unit | Entity field mapping, defaults | ✅ Done (4 tests) |
 
 ---
 
@@ -567,16 +571,16 @@ grid.addComponentColumn(agent -> {
 
 ### 6.1 Deliverables
 
-| # | Artifact | Description |
-|---|----------|-------------|
-| 3.1 | `ScannerRegistry.destroyForAgent` | Destroy scanner when agent is removed (one-to-one cleanup) |
-| 3.2 | `ScannerRegistry.refreshAgent` | Reset scanner to emit all files (for agent modification) |
-| 3.3 | `DynamicAgentManager.removeAgent` | Dispose agent subscription, destroy scanner |
-| 3.4 | `DynamicAgentManager.refreshAgent` | Trigger full rescan for modified agent |
-| 3.5 | `AgentRestController.refreshAgent` | `POST /api/agents/{id}/refresh` |
-| 3.6 | `AgentInfo` (updated) | New field `scannerId` |
-| 3.7 | `AgentListView` (updated) | Add Refresh button per agent |
-| 3.8 | Integration tests | Full lifecycle: create agent → delete agent → scanner cleanup |
+| # | Artifact | Description | Status |
+|---|----------|-------------|--------|
+| 3.1 | `ScannerRegistry.destroyForAgent` | Destroy scanner when agent is removed (one-to-one cleanup) | ✅ Done |
+| 3.2 | `ScannerRegistry.refreshAgent` | Reset scanner to emit all files (for agent modification) | ✅ Done |
+| 3.3 | `DynamicAgentManager.removeAgent` | Dispose agent subscription, destroy scanner | ✅ Done |
+| 3.4 | `DynamicAgentManager.refreshAgent` | Trigger full rescan for modified agent | ✅ Done |
+| 3.5 | `AgentRestController.refreshAgent` | `POST /api/agents/{id}/refresh` | ✅ Done |
+| 3.6 | `AgentInfo` (updated) | New field `scannerId` | ✅ Done |
+| 3.7 | `AgentListView` (updated) | Add Refresh button per agent | ✅ Done |
+| 3.8 | Integration tests | Full lifecycle: create agent → delete agent → scanner cleanup | ⏸ Deferred |
 
 ### 6.2 Scanner Metadata
 
@@ -675,43 +679,56 @@ public void refreshAgent(String agentId) {
 |---|------|-------------|
 | 1 | `frontend/views/@layout.tsx` | Added Scanners nav entry to flowRoutes |
 
-### Phase 2 – New Files (Deferred)
+### Phase 2 – New Files (✅ Implemented)
 
-| # | Path | Description |
-|---|------|-------------|
-| 1 | `database/scanner/ScannerEntity.java` | Scanner JPA entity |
-| 2 | `database/scanner/ScannerRepository.java` | Scanner JPA repository |
-| 3 | `database/scanner/ScannerPersistenceService.java` | Scanner persistence service |
-| 4 | `rest/ScannerRestControllerTest.java` | REST endpoint tests |
-| 5 | `ui/service/ScannerServiceTest.java` | Service layer tests |
-| 6 | `database/scanner/ScannerEntityTest.java` | Entity tests |
-| 7 | `database/scanner/ScannerRepositoryTest.java` | Repository tests |
-| 8 | `database/scanner/ScannerPersistenceServiceTest.java` | Persistence tests |
-| 9 | `app/pipeline/management/ScannerRegistryTest.java` | Registry unit tests |
-| 10 | `app/pipeline/management/ScannerRegistryIntegrationTest.java` | Full lifecycle integration tests |
-| 11 | `files/FileSystemScannerAdapterTest.java` | Actual scanner tests with temp dirs |
+| # | Path | Description | Status |
+|---|------|-------------|--------|
+| 1 | `database/scanner/ScannerEntity.java` | Scanner JPA entity | ✅ Done |
+| 2 | `database/scanner/ScannerRepository.java` | Scanner JPA repository | ✅ Done |
+| 3 | `database/scanner/ScannerPersistenceService.java` | Scanner persistence service | ✅ Done |
+| 4 | `rest/ScannerRestControllerTest.java` | REST endpoint tests | ⏸ Deferred (ScannerRegistry now in-memory) |
+| 5 | `ui/service/ScannerServiceTest.java` | Service layer tests | ✅ Done (6 tests) |
+| 6 | `database/scanner/ScannerEntityTest.java` | Entity tests | ✅ Done (4 tests) |
+| 7 | `database/scanner/ScannerRepositoryTest.java` | Repository tests | ⏸ Deferred |
+| 8 | `database/scanner/ScannerPersistenceServiceTest.java` | Persistence tests | ⏸ Deferred |
+| 9 | `app/pipeline/management/ScannerRegistryTest.java` | Registry unit tests | ✅ Done (13 tests) |
+| 10 | `app/pipeline/management/ScannerRegistryIntegrationTest.java` | Full lifecycle integration tests | ⏸ Deferred |
+| 11 | `files/FileSystemScannerAdapterTest.java` | Actual scanner tests with temp dirs | ⏸ Deferred |
+| 12 | `app/pipeline/management/DynamicAgentManagerScannerRestoreTest.java` | Scanner restore from DB | ✅ Done (8 tests) |
 
-### Phase 2 – Modified Files (Deferred)
+### Phase 2 – Modified Files (✅ Implemented)
 
-| # | Path | Description |
-|---|------|-------------|
-| 1 | `rest/dto/AgentInfo.java` | Add `scannerId` field |
-| 2 | `pipeline/domain/AgentDefinition.java` | Add `targetDirectory` field |
-| 3 | `database/agent/AgentEntity.java` | Add `scannerId` column |
-| 4 | `app/pipeline/management/DynamicAgentManager.java` | Accept `ScannerRegistry`, manage mapping |
-| 5 | `ui/service/AgentInfoService.java` | Pass `targetDirectory` to manager |
-| 6 | `ui/views/AgentListView.java` | Add Scanner column |
-| 7 | `ui/components/AgentCreationDialog.java` | Add Target Directory field |
-| 8 | `files/FileSystemRecursiveFileScannerAdapter.java` | Refactor to parameterised constructor |
-| 9 | `files/FileSystemScannerConfig.java` | Optional: retain for YAML backward compat |
+| # | Path | Description | Status |
+|---|------|-------------|--------|
+| 1 | `rest/dto/AgentInfo.java` | Add `scannerId` field | ✅ Done |
+| 2 | `pipeline/domain/AgentDefinition.java` | Add `targetDirectory` field (7th param) | ✅ Done |
+| 3 | `database/agent/AgentEntity.java` | Add `scanner_id` column | ✅ Done |
+| 4 | `app/pipeline/management/DynamicAgentManager.java` | Full rewrite: ScannerRegistry, one-to-one, restoreFromDatabase() | ✅ Done |
+| 5 | `ui/service/AgentInfoService.java` | Pass `targetDirectory` to manager, add refreshAgent() | ✅ Done |
+| 6 | `ui/views/AgentListView.java` | Add Scanner column + Refresh button | ✅ Done |
+| 7 | `ui/components/AgentCreationDialog.java` | Add Target Directory field with validation | ✅ Done |
+| 8 | `files/FileSystemScannerAdapter.java` | New parameterised constructor (replaces singleton) | ✅ Done |
+| 9 | `files/FileSystemRecursiveFileScannerAdapter.java` | Retained for backward compat (YAML agents) | ✅ Done |
+| 10 | `rest/AgentRestController.java` | POST /{id}/refresh endpoint | ✅ Done |
+| 11 | `pipeline/management/DynamicAgentManagerConfiguration.java` | Wire ScannerRegistry into manager | ✅ Done |
+| 12 | `prompt/SystemPromptConfiguration.java` | Pass targetDirectory to AgentDefinition | ✅ Done |
 
-### Phase 2 – Modified Test Files (Deferred)
+### Phase 2 – Modified Test Files (✅ Implemented)
 
-| # | Path | Description |
-|---|------|-------------|
-| 1 | `rest/AgentRestControllerTest.java` | Add `targetDirectory` to test payloads |
-| 2 | `app/pipeline/management/DynamicAgentManagerTest.java` | Add scanner assignment tests |
-| 3 | `ui/components/AgentCreationDialogTest.java` | Add Target Directory field assertions |
+| # | Path | Description | Status |
+|---|------|-------------|--------|
+| 1 | `rest/AgentRestControllerTest.java` | Add `targetDirectory` to test payloads, scannerId assertions | ✅ Done (9 tests) |
+| 2 | `app/pipeline/management/DynamicAgentManagerTest.java` | Full rewrite: ScannerRegistry mock, scanner assignment | ✅ Done (10 tests) |
+| 3 | `app/pipeline/management/DynamicAgentManagerPersistenceTest.java` | Updated for scannerId, ScannerRegistry | ✅ Done (13 tests) |
+| 4 | `ui/components/AgentCreationDialogTest.java` | Target Directory field assertions, updated dimensions | ✅ Done (18 tests) |
+| 5 | `database/agent/AgentPersistenceServiceTest.java` | All AgentDefinitions updated with targetDirectory | ✅ Done |
+| 6 | `ui/views/AgentCreationTestView.java` | Added Target Directory field | ✅ Done |
+| 7 | `test/pipeline/factory/TestConfigurationFactory.java` | All definitions updated with targetDirectory | ✅ Done |
+| 8 | `test/pipeline/filesystem/YamlTestUtilsTest.java` | All AgentDefinitions updated with targetDirectory | ✅ Done |
+| 9 | `pipeline/llmadapter/LLMReducerAdapterTest.java` | Updated AgentDefinition constructor | ✅ Done |
+| 10 | `pipeline/llmadapter/MapAgentLLMAdapterTest.java` | Updated AgentDefinition constructor | ✅ Done |
+| 11 | `pipeline/llmadapter/SplitterLLMAdapterTest.java` | Updated AgentDefinition constructor | ✅ Done |
+| 12 | `pipeline/FileIntegrationFlowTest.java` | Updated addDynamicAgent calls with targetDir | ✅ Done |
 
 ---
 
@@ -729,32 +746,38 @@ Phase 1 (UI Foundation)  ✅ COMPLETE — commit fdbaefe
   ├─ ✅ 1.6  ScannerListView (route /scanners, grid, color-coded status)
   ├─ ✅ 1.7  ScannerListViewTest (route + annotation verification)
   ├─ ✅ 1.8  @layout.tsx (nav registration)
-  ├─ ⏸ 1.9  ScannerEntity + ScannerRepository (Phase 2)
-  ├─ ⏸ 1.10 ScannerPersistenceService (Phase 2)
-  ├─ ⏸ 1.11 AgentCreationDialog Target Directory field (Phase 2)
+  ├─ ✅ 1.9  ScannerEntity + ScannerRepository (moved to Phase 2)
+  ├─ ✅ 1.10 ScannerPersistenceService (moved to Phase 2)
+  ├─ ✅ 1.11 AgentCreationDialog Target Directory field (moved to Phase 2)
   └─ ✅ ./mvnw verify (compile + unit tests pass)
 
-Phase 2 (Backend Infrastructure)
-  ├─ 2.1  Refactor FileSystemScannerAdapter (parameterised constructor)
-  ├─ 2.2  ScannerRegistry (full implementation with real scanning)
-  ├─ 2.3  DynamicAgentManager integration (accept ScannerRegistry)
-  ├─ 2.4  ScannerEntity + ScannerRepository + ScannerPersistenceService
-  ├─ 2.5  AgentDefinition (add targetDirectory field)
-  ├─ 2.6  AgentCreationDialog (add Target Directory field)
-  ├─ 2.7  AgentListView (add Scanner column)
-  ├─ 2.8  Tests: Registry, Adapter, Manager, Dialog, REST, Service
-  └─ ✅ ./mvnw verify
+Phase 2 (Backend Infrastructure)  ✅ COMPLETE
+  ├─ ✅ 2.1  FileSystemScannerAdapter (parameterised constructor, Sinks.Many for watch-service)
+  ├─ ✅ 2.2  ScannerRegistry (full implementation: create, destroy, refresh, getFlux)
+  ├─ ✅ 2.3  DynamicAgentManager integration (accept ScannerRegistry, one-to-one mapping)
+  ├─ ✅ 2.4  ScannerEntity + ScannerRepository + ScannerPersistenceService
+  ├─ ✅ 2.5  AgentDefinition (add targetDirectory field, 7th param)
+  ├─ ✅ 2.6  AgentCreationDialog (add Target Directory field with path validation)
+  ├─ ✅ 2.7  AgentListView (add Target Dir column, Scanner column, Refresh button per row)
+  ├─ ✅ 2.8  Tests: ScannerRegistryTest (13), ScannerServiceTest (6), ScannerEntityTest (4),
+  │           AgentRestControllerTest (9), AgentCreationDialogTest (18),
+  │           DynamicAgentManagerTest (10), DynamicAgentManagerPersistenceTest (13)
+  ├─ ✅ 2.9  restoreFromDatabase() fixed — creates scanners for restored active agents
+  ├─ ✅ 2.10 DynamicAgentManagerScannerRestoreTest (8 tests)
+  └─ ✅ ./mvnw test (all unit tests pass)
 
-Phase 3 (Relationships & Lifecycle)
-  ├─ 3.1  Scanner cleanup on agent removal (destroyForAgent)
-  ├─ 3.2  Refresh agent endpoint (POST /api/agents/{id}/refresh)
-  ├─ 3.3  Integration tests: lifecycle + refresh resets emission
-  └─ ✅ ./mvnw verify
+Phase 3 (Relationships & Lifecycle)  ✅ ALREADY COMPLETE
+  ├─ ✅ 3.1  Scanner cleanup on agent removal (destroyForAgent) — implemented in DynamicAgentManager.removeAgent()
+  ├─ ✅ 3.2  Refresh agent endpoint (POST /api/agents/{id}/refresh) — implemented in AgentRestController
+  ├─ ✅ 3.3  DynamicAgentManager.refreshAgent() — resets scanner to full-scan mode, re-subscribes
+  ├─ ✅ 3.4  ScannerRegistry.destroyForAgent() — cleans up IntegrationFlowRegistration
+  ├─ ⏸ 3.5  Integration tests: full lifecycle (create → refresh → delete → scanner cleanup)
+  └─ ⏸ 3.6  FileSystemScannerAdapterTest: actual file scanning with temp dirs
 
 Phase 4 (Polish)
   ├─ 4.1  YAML agent migration
-  ├─ 4.2  API docs
-  ├─ 4.3  E2E tests
+  ├─ 4.2  API docs (OpenAPI/Swagger)
+  ├─ 4.3  E2E tests (Playwright)
   └─ ✅ ./mvnw verify
 ```
 

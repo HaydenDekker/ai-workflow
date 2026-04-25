@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
  * <p>Validation rules:</p>
  * <ul>
  *   <li>Title: required, max 100 chars</li>
+ *   <li>Target Directory: required, absolute path, must exist</li>
  *   <li>File Input Regex: required, valid Java regex</li>
  *   <li>Agent Type: required (Map / Reduction / Split)</li>
  *   <li>Body: required, non-blank</li>
@@ -43,6 +44,7 @@ public class AgentCreationDialog extends Dialog {
     private static final String[] AGENT_TYPES = {"Map", "Reduction", "Split"};
 
     private final TextField titleField;
+    private final TextField targetDirectoryField;
     private final TextField fileInputRegexField;
     private final ComboBox<String> agentTypeCombo;
     private final TextArea bodyField;
@@ -76,11 +78,13 @@ public class AgentCreationDialog extends Dialog {
         setModal(true);
         setCloseOnEsc(true);
         setCloseOnOutsideClick(true);
-        setWidth("600px");
-        setHeight("700px");
+        setWidth("650px");
+        setHeight("750px");
 
         // Initialize form fields
         titleField = createTextField("Title", "", 100);
+        targetDirectoryField = createTextField("Target Directory", "/tmp", 255);
+        addHelperText(targetDirectoryField, "Absolute path to the directory to scan (e.g., /data/inbox)");
         fileInputRegexField = createTextField("File Input Regex", ".*", 100);
         addHelperText(fileInputRegexField, "Pattern: (?:(.*/)?)(.*)");
 
@@ -105,9 +109,9 @@ public class AgentCreationDialog extends Dialog {
         formLayout.addClassName("agent-creation-form");
         formLayout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("600px", 1)
+                new FormLayout.ResponsiveStep("650px", 1)
         );
-        formLayout.add(titleField, fileInputRegexField, agentTypeCombo,
+        formLayout.add(titleField, targetDirectoryField, fileInputRegexField, agentTypeCombo,
                 bodyField, outputStructureField, outputFilenameTemplateField);
 
         // Build button bar
@@ -154,6 +158,7 @@ public class AgentCreationDialog extends Dialog {
     public void open(AgentDefinition existing) {
         if (existing != null) {
             titleField.setValue(existing.title());
+            targetDirectoryField.setValue(existing.targetDirectory() != null ? existing.targetDirectory() : "/tmp");
             fileInputRegexField.setValue(existing.fileInputRegex());
             agentTypeCombo.setValue(existing.agentType());
             bodyField.setValue(existing.body());
@@ -177,6 +182,7 @@ public class AgentCreationDialog extends Dialog {
      */
     public void resetForm() {
         titleField.setValue("");
+        targetDirectoryField.setValue("/tmp");
         fileInputRegexField.setValue(".*");
         agentTypeCombo.setValue(null);
         bodyField.setValue("");
@@ -195,6 +201,12 @@ public class AgentCreationDialog extends Dialog {
         ValidationResult titleResult = validateTitle();
         if (!titleResult.ok) {
             titleField.setErrorMessage(titleResult.message);
+            hasErrors = true;
+        }
+
+        ValidationResult targetDirResult = validateTargetDirectory();
+        if (!targetDirResult.ok) {
+            targetDirectoryField.setErrorMessage(targetDirResult.message);
             hasErrors = true;
         }
 
@@ -240,7 +252,8 @@ public class AgentCreationDialog extends Dialog {
                 bodyField.getValue().trim(),
                 agentTypeCombo.getValue(),
                 outputStructureField.getValue().trim(),
-                outputFilenameTemplateField.getValue().trim()
+                outputFilenameTemplateField.getValue().trim(),
+                targetDirectoryField.getValue().trim()
         );
 
         // Call confirm callback
@@ -257,6 +270,29 @@ public class AgentCreationDialog extends Dialog {
         }
         if (value.length() > 100) {
             return new ValidationResult(false, "Title must be at most 100 characters");
+        }
+        return new ValidationResult(true, null);
+    }
+
+    private ValidationResult validateTargetDirectory() {
+        String value = targetDirectoryField.getValue();
+        if (value == null || value.isBlank()) {
+            return new ValidationResult(false, "Target directory is required");
+        }
+        // Check if it's an absolute path
+        if (!java.nio.file.Paths.get(value).isAbsolute()) {
+            return new ValidationResult(false, "Must be an absolute path");
+        }
+        // Check if directory exists
+        java.nio.file.Path path = java.nio.file.Paths.get(value);
+        if (!java.nio.file.Files.exists(path)) {
+            return new ValidationResult(false, "Directory does not exist: " + value);
+        }
+        if (!java.nio.file.Files.isDirectory(path)) {
+            return new ValidationResult(false, "Not a directory: " + value);
+        }
+        if (!java.nio.file.Files.isReadable(path)) {
+            return new ValidationResult(false, "Directory is not readable: " + value);
         }
         return new ValidationResult(true, null);
     }

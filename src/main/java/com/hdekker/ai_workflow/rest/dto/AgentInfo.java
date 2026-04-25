@@ -8,5 +8,6 @@ public record AgentInfo(
     AgentDefinition definition,
     LocalDateTime createdAt,
     boolean active,
-    String source
+    String source,
+    String scannerId
 ) {}

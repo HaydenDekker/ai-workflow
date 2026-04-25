@@ -31,7 +31,8 @@ public class LLMReducerAdapterTest {
                 "prompt body", // body
                 null, // agentType
                 "output structure", // outputStructure
-                "out-${title}.txt" // outputFilenameTemplate
+                "out-${title}.txt", // outputFilenameTemplate
+                "/tmp/test-dir" // targetDirectory
         );
 
         List<String> prompts = new ArrayList<>();

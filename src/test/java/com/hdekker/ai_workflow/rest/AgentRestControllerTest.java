@@ -30,7 +30,7 @@ import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 /**
  * Tests for AgentRestController REST API endpoints.
  * 
- * Verifies create, list, delete, enable, and disable agent operations.
+ * Verifies create, list, delete, enable, disable, and refresh agent operations.
  */
 @WebMvcTest(AgentRestController.class)
 public class AgentRestControllerTest {
@@ -51,14 +51,15 @@ public class AgentRestControllerTest {
 				"This is a test prompt.",
 				"Map",
 				"Clean output",
-				"output/{filename}");
+				"output/{filename}",
+				"/tmp/test-dir");
 	}
 
 	@Test
 	public void givenValidAgent_whenCreateAgent_thenReturnCreatedAgent() throws Exception {
 		// Arrange
-		AgentInfo expectedInfo = new AgentInfo("test-id-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
-		when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class))).thenReturn(expectedInfo);
+		AgentInfo expectedInfo = new AgentInfo("test-id-1", testAgent, LocalDateTime.now(), true, "DYNAMIC", "scanner-1");
+		when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(expectedInfo);
 
 		String jsonBody = "{"
 				+ "\"fileInputRegex\":\".*\\\\.txt\","
@@ -66,7 +67,8 @@ public class AgentRestControllerTest {
 				+ "\"body\":\"This is a test prompt.\","
 				+ "\"agentType\":\"Map\","
 				+ "\"outputStructure\":\"Clean output\","
-				+ "\"outputFilenameTemplate\":\"output/{filename}\""
+				+ "\"outputFilenameTemplate\":\"output/{filename}\","
+				+ "\"targetDirectory\":\"/tmp/test-dir\""
 				+ "}";
 
 		// Act & Assert
@@ -77,14 +79,15 @@ public class AgentRestControllerTest {
 				.andExpect(jsonPath("$.id").value("test-id-1"))
 				.andExpect(jsonPath("$.definition.title").value("Test Agent"))
 				.andExpect(jsonPath("$.active").value(true))
-				.andExpect(jsonPath("$.source").value("DYNAMIC"));
+				.andExpect(jsonPath("$.source").value("DYNAMIC"))
+				.andExpect(jsonPath("$.scannerId").value("scanner-1"));
 	}
 
 	@Test
 	public void givenAgents_whenListAgents_thenReturnAllAgents() throws Exception {
 		// Arrange
-		AgentInfo agent1 = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "YAML");
-		AgentInfo agent2 = new AgentInfo("agent-2", testAgent, LocalDateTime.now().minusDays(1), true, "DYNAMIC");
+		AgentInfo agent1 = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "YAML", null);
+		AgentInfo agent2 = new AgentInfo("agent-2", testAgent, LocalDateTime.now().minusDays(1), true, "DYNAMIC", "scanner-2");
 		when(dynamicAgentManager.listAgents()).thenReturn(List.of(agent1, agent2));
 
 		// Act & Assert
@@ -93,7 +96,9 @@ public class AgentRestControllerTest {
 				.andExpect(jsonPath("$").isArray())
 				.andExpect(jsonPath("$.length()").value(2))
 				.andExpect(jsonPath("$[0].id").value("agent-1"))
-				.andExpect(jsonPath("$[1].id").value("agent-2"));
+				.andExpect(jsonPath("$[1].id").value("agent-2"))
+				.andExpect(jsonPath("$[0].scannerId").isEmpty())
+				.andExpect(jsonPath("$[1].scannerId").value("scanner-2"));
 	}
 
 	@Test
@@ -109,14 +114,15 @@ public class AgentRestControllerTest {
 	@Test
 	public void givenAgentId_whenEnableAgent_thenReturnOkWithUpdatedInfo() throws Exception {
 		// Arrange
-		AgentInfo enabledInfo = new AgentInfo("agent-123", testAgent, LocalDateTime.now(), true, "YAML");
+		AgentInfo enabledInfo = new AgentInfo("agent-123", testAgent, LocalDateTime.now(), true, "YAML", "scanner-123");
 		when(dynamicAgentManager.enableAgent(anyString())).thenReturn(enabledInfo);
 
 		// Act & Assert
 		mockMvc.perform(put("/api/agents/agent-123/enable"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value("agent-123"))
-				.andExpect(jsonPath("$.active").value(true));
+				.andExpect(jsonPath("$.active").value(true))
+				.andExpect(jsonPath("$.scannerId").value("scanner-123"));
 	}
 
 	@Test
@@ -142,10 +148,10 @@ public class AgentRestControllerTest {
 	@Test
 	public void givenCreateAndDisable_whenList_thenReturnInactiveAgent() throws Exception {
 		// Arrange
-		AgentInfo createdInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
-		AgentInfo listedInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), false, "DYNAMIC");
+		AgentInfo createdInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC", "scanner-1");
+		AgentInfo listedInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), false, "DYNAMIC", "scanner-1");
 
-		when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class))).thenReturn(createdInfo);
+		when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(createdInfo);
 		doNothing().when(dynamicAgentManager).disableAgent(anyString());
 		when(dynamicAgentManager.listAgents()).thenReturn(List.of(listedInfo));
 
@@ -155,7 +161,8 @@ public class AgentRestControllerTest {
 				+ "\"body\":\"This is a test prompt.\","
 				+ "\"agentType\":\"Map\","
 				+ "\"outputStructure\":\"Clean output\","
-				+ "\"outputFilenameTemplate\":\"output/{filename}\""
+				+ "\"outputFilenameTemplate\":\"output/{filename}\","
+				+ "\"targetDirectory\":\"/tmp/test-dir\""
 				+ "}";
 
 		// Act & Assert - Create
@@ -163,7 +170,8 @@ public class AgentRestControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(jsonBody))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.active").value(true));
+				.andExpect(jsonPath("$.active").value(true))
+				.andExpect(jsonPath("$.scannerId").exists());
 
 		// Act & Assert - Disable
 		mockMvc.perform(put("/api/agents/agent-1/disable"))
@@ -173,5 +181,28 @@ public class AgentRestControllerTest {
 		mockMvc.perform(get("/api/agents"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].active").value(false));
+	}
+
+	@Test
+	public void givenActiveAgent_whenRefreshAgent_thenReturnOkWithUpdatedInfo() throws Exception {
+		// Arrange
+		AgentInfo refreshedInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC", "scanner-1");
+		when(dynamicAgentManager.refreshAgent(anyString())).thenReturn(refreshedInfo);
+
+		// Act & Assert
+		mockMvc.perform(post("/api/agents/agent-1/refresh"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value("agent-1"))
+				.andExpect(jsonPath("$.scannerId").value("scanner-1"));
+	}
+
+	@Test
+	public void givenNonExistentAgent_whenRefreshAgent_thenReturnNotFound() throws Exception {
+		// Arrange
+		when(dynamicAgentManager.refreshAgent(anyString())).thenReturn(null);
+
+		// Act & Assert
+		mockMvc.perform(post("/api/agents/non-existent/refresh"))
+				.andExpect(status().isNotFound());
 	}
 }

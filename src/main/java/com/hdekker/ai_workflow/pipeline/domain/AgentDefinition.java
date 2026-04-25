@@ -13,7 +13,8 @@ public record AgentDefinition(
 		String body,
 		String agentType,
 		String outputStructure,
-		String outputFilenameTemplate
+		String outputFilenameTemplate,
+		String targetDirectory
 		) {
 
 	public Boolean inputRegexMatches(String fileURL) {

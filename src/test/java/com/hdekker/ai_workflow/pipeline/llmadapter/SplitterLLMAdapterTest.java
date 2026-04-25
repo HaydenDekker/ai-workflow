@@ -25,7 +25,8 @@ public class SplitterLLMAdapterTest {
                 "prompt body", // body
                 "Split", // agentType
                 "output structure", // outputStructure
-                "out-${name}.md" // outputFilenameTemplate
+                "out-${name}.md", // outputFilenameTemplate
+                "/tmp/test-dir" // targetDirectory
         );
 
         ChatClient mockChatClient = ChatClientMockBuilder.createMock(List.of(STUB_RESPONSE), null);

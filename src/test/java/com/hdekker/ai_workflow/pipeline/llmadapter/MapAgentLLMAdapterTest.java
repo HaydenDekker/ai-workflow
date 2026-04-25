@@ -25,7 +25,8 @@ public class MapAgentLLMAdapterTest {
                 "prompt body", // body
                 null, // agentType
                 "output structure", // outputStructure
-                "out-${title}.txt" // outputFilenameTemplate
+                "out-${title}.txt", // outputFilenameTemplate
+                "/tmp/test-dir" // targetDirectory
         );
 
         ChatClient mockChatClient = ChatClientMockBuilder.createMock(STUB_RESPONSE);

@@ -7,6 +7,10 @@ import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
@@ -14,7 +18,6 @@ import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
 import com.hdekker.ai_workflow.ui.components.LlmStatusBadge;
 import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.service.LLMStatusService;
-import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -105,8 +108,21 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setHeader("File Regex")
             .setFlexGrow(2);
             
+        grid.addColumn(agent -> agent.definition() != null && agent.definition().targetDirectory() != null 
+            ? agent.definition().targetDirectory() : "N/A")
+            .setHeader("Target Dir")
+            .setAutoWidth(true)
+            .setSortable(true);
+            
         grid.addColumn(AgentInfo::source)
             .setHeader("Source")
+            .setAutoWidth(true)
+            .setSortable(true);
+            
+        grid.addColumn(agent -> agent.scannerId() != null 
+                ? agent.scannerId().substring(0, Math.min(8, agent.scannerId().length())) + "..." 
+                : "N/A")
+            .setHeader("Scanner")
             .setAutoWidth(true)
             .setSortable(true);
             
@@ -119,6 +135,16 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setHeader("Active")
             .setAutoWidth(true)
             .setSortable(true);
+
+        // Actions column: Refresh button per row (component column)
+        grid.addComponentColumn(agent -> {
+            Button refreshBtn = new Button(new Icon(VaadinIcon.REFRESH));
+            refreshBtn.addClassName("agent-refresh-btn");
+            refreshBtn.getElement().setAttribute("title", "Refresh agent (full rescan)");
+            refreshBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            refreshBtn.addClickListener(e -> refreshAgent(agent));
+            return refreshBtn;
+        }).setHeader("Actions").setAutoWidth(true);
         
         // Add grid to its container
         gridContainer.add(grid);
@@ -149,7 +175,6 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         
         HorizontalLayout buttonLayout = new HorizontalLayout(createButton, refreshButton);
         add(buttonLayout);
-        
     
     }
 
@@ -173,6 +198,17 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         } else {
             Notification.show("Loaded " + agentInfos.size() + " agents");
         }
+    }
+
+    private void refreshAgent(AgentInfo agent) {
+        Notification.show("Refreshing agent: " + agent.id(), 2000, Notification.Position.MIDDLE);
+        agentInfoService.refreshAgent(agent.id()).subscribe(
+            info -> {
+                Notification.show("Agent " + agent.id() + " refreshed", 3000, Notification.Position.MIDDLE);
+                reloadData();
+            },
+            err -> Notification.show("Refresh failed: " + err.getMessage(), 4000, Notification.Position.MIDDLE)
+        );
     }
     
     private void showLoading(boolean show) {

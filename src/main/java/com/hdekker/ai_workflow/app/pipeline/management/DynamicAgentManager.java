@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.app.pipeline.management;
 
+import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,290 +9,490 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+
 import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
 import com.hdekker.ai_workflow.database.agent.AgentEntity;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
-import com.hdekker.ai_workflow.files.FileScanner;
+import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import java.nio.file.Path;
 
+/**
+ * Manages the lifecycle of dynamic agents and their associated scanners.
+ * <p>
+ * Each dynamic agent gets its own scanner (one-to-one relationship).
+ * YAML agents share a default scanner created from the application config.
+ * <p>
+ * Scanner lifecycle:
+ * <ul>
+ *   <li>Created when an agent is added (via {@link #addDynamicAgent(AgentDefinition, String)})</li>
+ *   <li>Destroyed when the agent is removed (via {@link #removeAgent(String)})</li>
+ *   <li>Reset to full-scan mode when an agent is refreshed (via {@link #refreshAgent(String)})</li>
+ * </ul>
+ */
 public class DynamicAgentManager {
 
-	private static final Logger log = LoggerFactory.getLogger(DynamicAgentManager.class);
+    private static final Logger log = LoggerFactory.getLogger(DynamicAgentManager.class);
 
-	private final Map<String, AgentRegistryEntry> agentRegistry = new ConcurrentHashMap<>();
-	private final Map<String, DormantAgentEntry> dormantAgents = new ConcurrentHashMap<>();
+    private final Map<String, AgentRegistryEntry> agentRegistry = new ConcurrentHashMap<>();
+    private final Map<String, DormantAgentEntry> dormantAgents = new ConcurrentHashMap<>();
 
-	private final AgentConfigurator agentConfigurator;
-	private final AgentPersistenceService persistenceService;
+    private final ScannerRegistry scannerRegistry;
+    private final FileWriter fileWriter;
+    private final Path outputDirectory;
+    private final ChatClient chatClient;
+    private final AgentPersistenceService persistenceService;
 
-	// Constructor with abstractions
-	public DynamicAgentManager(FileScanner fileScanner, FileWriter fileWriter, Path outputDirectory,
-			ChatClient chatClient) {
-		this.agentConfigurator = new AgentConfigurator(fileScanner.flux(), chatClient,
-				fileWriter.createPersister(outputDirectory));
-		this.persistenceService = null; // Not available when constructed outside Spring
-	}
+    /**
+     * Default constructor for use outside Spring (no persistence, no scanner registry).
+     * Agents use a shared empty flux — suitable for unit tests only.
+     */
+    public DynamicAgentManager() {
+        this.scannerRegistry = null;
+        this.fileWriter = null;
+        this.outputDirectory = null;
+        this.chatClient = null;
+        this.persistenceService = null;
+    }
 
-	// Constructor with Spring-managed persistence service
-	public DynamicAgentManager(FileScanner fileScanner, FileWriter fileWriter, Path outputDirectory,
-			ChatClient chatClient, AgentPersistenceService persistenceService) {
-		this.agentConfigurator = new AgentConfigurator(fileScanner.flux(), chatClient,
-				fileWriter.createPersister(outputDirectory));
-		this.persistenceService = persistenceService;
-	}
+    /**
+     * Full constructor with Spring-managed dependencies.
+     *
+     * @param scannerRegistry     registry for per-agent scanner instances
+     * @param fileWriter          file writer abstraction
+     * @param outputDirectory     default output directory
+     * @param chatClient          LLM chat client
+     * @param persistenceService  agent persistence service (may be null)
+     */
+    public DynamicAgentManager(ScannerRegistry scannerRegistry,
+                               FileWriter fileWriter,
+                               Path outputDirectory,
+                               ChatClient chatClient,
+                               AgentPersistenceService persistenceService) {
+        this.scannerRegistry = scannerRegistry;
+        this.fileWriter = fileWriter;
+        this.outputDirectory = outputDirectory;
+        this.chatClient = chatClient;
+        this.persistenceService = persistenceService;
+    }
 
-	/**
-	 * Initialize agents from YAML configuration.
-	 * Persists each agent to the database with active=true.
-	 */
-	public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
-		yamlAgents.forEach(agent -> {
-			String id = agent.title(); // Use title as ID for YAML agents
-			Flux<PromptResponse> flux = agentConfigurator.configure(agent);
-			Disposable subscription = flux.subscribe();
+    /**
+     * Initialize agents from YAML configuration.
+     * YAML agents share a default scanner (if scannerRegistry is available).
+     * Persists each agent to the database with active=true.
+     */
+    public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
+        yamlAgents.forEach(agent -> {
+            String id = agent.title(); // Use title as ID for YAML agents
+            String targetDir = agent.targetDirectory() != null ? agent.targetDirectory() : "/tmp";
+            Flux<PromptResponse> flux = buildFlux(agent, targetDir);
+            Disposable subscription = flux.subscribe();
 
-			AgentRegistryEntry entry = new AgentRegistryEntry(id, agent, flux, LocalDateTime.now(), "YAML",
-					subscription);
-			agentRegistry.put(id, entry);
+            String scannerId = null;
+            if (scannerRegistry != null) {
+                ScannerInfo scannerInfo = scannerRegistry.createForAgent(id, targetDir, 5);
+                scannerId = scannerInfo.id();
+            }
 
-			// Persist to DB if persistence service is available
-			if (persistenceService != null) {
-				persistenceService.save(id, agent, "YAML");
-			}
+            AgentRegistryEntry entry = new AgentRegistryEntry(id, agent, flux, LocalDateTime.now(), "YAML",
+                    subscription, scannerId);
+            agentRegistry.put(id, entry);
 
-			log.info("Initialized YAML agent: {}", id);
-		});
-	}
+            // Persist to DB if persistence service is available
+            if (persistenceService != null) {
+                persistenceService.save(id, agent, "YAML", scannerId);
+            }
 
-	/**
-	 * Restore agents from the database on startup.
-	 * Active agents get flux/subscription; disabled agents stay dormant.
-	 */
-	public void restoreFromDatabase() {
-		if (persistenceService == null) {
-			return;
-		}
+            log.info("Initialized YAML agent: {} (scannerId: {})", id, scannerId);
+        });
+    }
 
-		// Restore active (enabled) agents
-		List<AgentEntity> activeEntities = persistenceService.findAllActive();
-		int restoredCount = 0;
-		for (AgentEntity entity : activeEntities) {
-			try {
-				Optional<AgentDefinition> definitionOpt = persistenceService.getDefinition(entity.getId());
-				if (definitionOpt.isPresent()) {
-					AgentDefinition def = definitionOpt.get();
-					Flux<PromptResponse> flux = agentConfigurator.configure(def);
-					Disposable subscription = flux.subscribe();
+    /**
+     * Restore agents from the database on startup.
+     * Active agents get flux/subscription AND a new scanner created in the ScannerRegistry.
+     * Disabled agents stay dormant (no scanner created).
+     * <p>
+     * Scanners are recreated on restore because the previous {@code FileSystemScannerAdapter}
+     * instances were ephemeral (Spring singleton scope destroyed on restart). The scannerId
+     * stored in the DB is the old ID — we create a fresh scanner and update the entity.
+     */
+    public void restoreFromDatabase() {
+        if (persistenceService == null) {
+            return;
+        }
 
-					AgentRegistryEntry entry = new AgentRegistryEntry(entity.getId(), def, flux, entity.getCreatedAt(),
-							entity.getSource(), subscription);
-					agentRegistry.put(entity.getId(), entry);
-					restoredCount++;
-					log.info("Restored active agent from DB: {} (source: {})", entity.getId(), entity.getSource());
-				}
-			} catch (Exception e) {
-				log.error("Failed to restore agent from DB: {}", entity.getId(), e);
-			}
-		}
+        // Restore active (enabled) agents — creates scanners for each
+        List<AgentEntity> activeEntities = persistenceService.findAllActive();
+        int restoredCount = 0;
+        for (AgentEntity entity : activeEntities) {
+            try {
+                Optional<AgentDefinition> definitionOpt = persistenceService.getDefinition(entity.getId());
+                if (definitionOpt.isPresent()) {
+                    AgentDefinition def = definitionOpt.get();
+                    String targetDir = def.targetDirectory() != null ? def.targetDirectory() : "/tmp";
 
-		// Load disabled agents as dormant
-		List<AgentEntity> dormantEntities = persistenceService.findAllOrdered();
-		int dormantCount = 0;
-		for (AgentEntity entity : dormantEntities) {
-			if (agentRegistry.containsKey(entity.getId())) {
-				continue; // Already restored as active
-			}
-			try {
-				Optional<AgentDefinition> definitionOpt = persistenceService.getDefinition(entity.getId());
-				if (definitionOpt.isPresent()) {
-					DormantAgentEntry dormantEntry = new DormantAgentEntry(entity.getId(), definitionOpt.get(),
-							entity.getCreatedAt(), entity.getSource());
-					dormantAgents.put(entity.getId(), dormantEntry);
-					dormantCount++;
-					log.info("Loaded dormant agent from DB: {} (source: {})", entity.getId(), entity.getSource());
-				}
-			} catch (Exception e) {
-				log.error("Failed to load dormant agent from DB: {}", entity.getId(), e);
-			}
-		}
+                    // Create a new scanner for this restored agent (one-to-one)
+                    String scannerId = null;
+                    if (scannerRegistry != null) {
+                        ScannerInfo scannerInfo = scannerRegistry.createForAgent(entity.getId(), targetDir, 5);
+                        scannerId = scannerInfo.id();
+                        // Update the entity in DB with the new scannerId
+                        persistenceService.save(entity.getId(), def, entity.getSource(), scannerId);
+                    }
 
-		log.info("Restored {} active agents and {} dormant agents from database", restoredCount, dormantCount);
-	}
+                    Flux<PromptResponse> flux = buildFlux(def, targetDir);
+                    Disposable subscription = flux.subscribe();
 
-	/**
-	 * Add a new dynamic agent.
-	 * Persists to DB with active=true.
-	 */
-	public AgentInfo addDynamicAgent(AgentDefinition def) {
-		String id = UUID.randomUUID().toString();
-		Flux<PromptResponse> flux = agentConfigurator.configure(def);
-		Disposable subscription = flux.subscribe();
+                    AgentRegistryEntry entry = new AgentRegistryEntry(entity.getId(), def, flux, entity.getCreatedAt(),
+                            entity.getSource(), subscription, scannerId);
+                    agentRegistry.put(entity.getId(), entry);
+                    restoredCount++;
+                    log.info("Restored active agent from DB: {} (source: {}, scannerId: {})",
+                            entity.getId(), entity.getSource(), scannerId);
+                }
+            } catch (Exception e) {
+                log.error("Failed to restore agent from DB: {}", entity.getId(), e);
+            }
+        }
 
-		AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux, LocalDateTime.now(), "DYNAMIC", subscription);
-		agentRegistry.put(id, entry);
+        // Load disabled agents as dormant — no scanner created for dormant agents
+        List<AgentEntity> dormantEntities = persistenceService.findAllOrdered();
+        int dormantCount = 0;
+        for (AgentEntity entity : dormantEntities) {
+            if (agentRegistry.containsKey(entity.getId())) {
+                continue; // Already restored as active
+            }
+            try {
+                Optional<AgentDefinition> definitionOpt = persistenceService.getDefinition(entity.getId());
+                if (definitionOpt.isPresent()) {
+                    DormantAgentEntry dormantEntry = new DormantAgentEntry(entity.getId(), definitionOpt.get(),
+                            entity.getCreatedAt(), entity.getSource(), entity.getScannerId());
+                    dormantAgents.put(entity.getId(), dormantEntry);
+                    dormantCount++;
+                    log.info("Loaded dormant agent from DB: {} (source: {}, scannerId: {})",
+                            entity.getId(), entity.getSource(), entity.getScannerId());
+                }
+            } catch (Exception e) {
+                log.error("Failed to load dormant agent from DB: {}", entity.getId(), e);
+            }
+        }
 
-		// Persist to DB if persistence service is available
-		if (persistenceService != null) {
-			persistenceService.save(id, def, "DYNAMIC");
-		}
+        log.info("Restored {} active agents and {} dormant agents from database", restoredCount, dormantCount);
+    }
 
-		log.info("Added dynamic agent: {}", id);
+    /**
+     * Build a Flux for an agent's processing pipeline.
+     * Uses the scanner registry to get the agent's scanner flux if available.
+     */
+    private Flux<PromptResponse> buildFlux(AgentDefinition def, String targetDir) {
+        if (scannerRegistry != null) {
+            // Get the scanner's flux for this agent
+            Flux<FileHistory> scannerFlux = scannerRegistry.getScannerFlux(def.title());
+            return new AgentConfigurator(
+                    scannerFlux,
+                    chatClient,
+                    fileWriter.createPersister(outputDirectory))
+                    .configure(def);
+        } else {
+            // No scanner registry — use empty flux
+            return new AgentConfigurator(
+                    Flux.empty(),
+                    chatClient,
+                    fileWriter.createPersister(outputDirectory))
+                    .configure(def);
+        }
+    }
 
-		return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC");
-	}
+    /**
+     * Add a new dynamic agent with its target directory.
+     * Creates a dedicated scanner for this agent (one-to-one relationship).
+     * Persists to DB with active=true.
+     *
+     * @param def              the agent definition
+     * @param targetDirectory  the directory to scan (must be absolute path)
+     * @return the created agent info with scannerId
+     */
+    public AgentInfo addDynamicAgent(AgentDefinition def, String targetDirectory) {
+        String id = UUID.randomUUID().toString();
 
-	/**
-	 * Remove an agent from both memory and database.
-	 */
-	public void removeAgent(String id) {
-		AgentRegistryEntry entry = agentRegistry.remove(id);
-		if (entry != null) {
-			entry.subscription().dispose();
-			log.info("Removed active agent: {}", id);
-		} else {
-			// Check dormant registry
-			DormantAgentEntry dormantEntry = dormantAgents.remove(id);
-			if (dormantEntry != null) {
-				log.info("Removed dormant agent: {}", id);
-			} else {
-				log.warn("Agent not found for removal: {}", id);
-			}
-		}
+        // 1. Create scanner for this agent (one-to-one, immediate)
+        String scannerId = null;
+        if (scannerRegistry != null) {
+            try {
+                ScannerInfo scannerInfo = scannerRegistry.createForAgent(id, targetDirectory, 5);
+                scannerId = scannerInfo.id();
+                log.info("Created scanner {} for agent {} (target={}, dir={})",
+                        scannerId, id, targetDirectory, targetDirectory);
+            } catch (Exception e) {
+                log.warn("Failed to create scanner for agent {}, continuing without scanner", id, e);
+            }
+        }
 
-		// Delete from DB if persistence service is available
-		if (persistenceService != null) {
-			persistenceService.deleteById(id);
-		}
-	}
+        // 2. Build the agent's flux (uses scanner's flux if available)
+        Flux<PromptResponse> flux = buildFluxForScanner(def, id, targetDirectory);
+        Disposable subscription = flux.subscribe();
 
-	/**
-	 * Enable a disabled agent.
-	 * Re-subscribes the flux and updates the database.
-	 */
-	public AgentInfo enableAgent(String id) {
-		// Check if it's in dormant registry
-		DormantAgentEntry dormantEntry = dormantAgents.remove(id);
-		if (dormantEntry == null) {
-			// Check if already active
-			if (agentRegistry.containsKey(id)) {
-				log.warn("Agent {} is already enabled", id);
-				return getAgentInfo(id);
-			}
-			log.warn("Agent {} not found for enabling", id);
-			return null;
-		}
+        // 3. Track in registry
+        AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux,
+                LocalDateTime.now(), "DYNAMIC", subscription, scannerId);
+        agentRegistry.put(id, entry);
 
-		// Update database
-		if (persistenceService != null) {
-			persistenceService.enable(id);
-		}
+        // 4. Persist agent with scannerId
+        if (persistenceService != null) {
+            persistenceService.save(id, def, "DYNAMIC", scannerId);
+        }
 
-		// Re-configure and subscribe
-		AgentDefinition def = dormantEntry.agentDefinition();
-		Flux<PromptResponse> flux = agentConfigurator.configure(def);
-		Disposable subscription = flux.subscribe();
+        log.info("Added dynamic agent: {} (scannerId: {})", id, scannerId);
 
-		AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux, dormantEntry.createdAt(),
-				dormantEntry.source(), subscription);
-		agentRegistry.put(id, entry);
+        return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC", scannerId);
+    }
 
-		log.info("Enabled agent: {}", id);
-		return new AgentInfo(id, def, entry.createdAt(), true, entry.source());
-	}
+    /**
+     * Build flux for a specific scanner-backed agent.
+     */
+    private Flux<PromptResponse> buildFluxForScanner(AgentDefinition def, String agentId, String targetDir) {
+        if (scannerRegistry != null) {
+            Flux<FileHistory> scannerFlux = scannerRegistry.getScannerFlux(agentId);
+            return new AgentConfigurator(
+                    scannerFlux,
+                    chatClient,
+                    fileWriter.createPersister(outputDirectory))
+                    .configure(def);
+        } else {
+            return new AgentConfigurator(
+                    Flux.empty(),
+                    chatClient,
+                    fileWriter.createPersister(outputDirectory))
+                    .configure(def);
+        }
+    }
 
-	/**
-	 * Disable an active agent.
-	 * Disposes the subscription and updates the database.
-	 */
-	public void disableAgent(String id) {
-		AgentRegistryEntry entry = agentRegistry.remove(id);
-		if (entry == null) {
-			log.warn("Agent {} not found for disabling (not active)", id);
-			return;
-		}
+    /**
+     * Remove an agent from both memory and database.
+     * Also destroys the associated scanner (one-to-one cleanup).
+     */
+    public void removeAgent(String id) {
+        AgentRegistryEntry entry = agentRegistry.remove(id);
+        if (entry != null) {
+            entry.subscription().dispose();
 
-		// Dispose subscription
-		entry.subscription().dispose();
+            // One-to-one: destroy scanner when agent is removed
+            if (entry.scannerId() != null && scannerRegistry != null) {
+                try {
+                    scannerRegistry.destroyForAgent(entry.scannerId());
+                    log.info("Destroyed scanner {} for removed agent {}", entry.scannerId(), id);
+                } catch (Exception e) {
+                    log.warn("Failed to destroy scanner {} for agent {}", entry.scannerId(), id, e);
+                }
+            }
 
-		// Update database
-		if (persistenceService != null) {
-			persistenceService.disable(id);
-		}
+            log.info("Removed active agent: {}", id);
+        } else {
+            // Check dormant registry
+            DormantAgentEntry dormantEntry = dormantAgents.remove(id);
+            if (dormantEntry != null) {
+                // Also clean up scanner for dormant agent
+                if (dormantEntry.scannerId() != null && scannerRegistry != null) {
+                    try {
+                        scannerRegistry.destroyForAgent(dormantEntry.scannerId());
+                        log.info("Destroyed scanner {} for removed dormant agent {}", dormantEntry.scannerId(), id);
+                    } catch (Exception e) {
+                        log.warn("Failed to destroy scanner {} for dormant agent {}", dormantEntry.scannerId(), id, e);
+                    }
+                }
+                log.info("Removed dormant agent: {}", id);
+            } else {
+                log.warn("Agent not found for removal: {}", id);
+            }
+        }
 
-		// Store in dormant registry
-		DormantAgentEntry dormantEntry = new DormantAgentEntry(id, entry.agentDefinition(), entry.createdAt(),
-				entry.source());
-		dormantAgents.put(id, dormantEntry);
+        // Delete from DB if persistence service is available
+        if (persistenceService != null) {
+            persistenceService.deleteById(id);
+        }
+    }
 
-		log.info("Disabled agent: {}", id);
-	}
+    /**
+     * Enable a disabled agent.
+     * Re-subscribes the flux and updates the database.
+     */
+    public AgentInfo enableAgent(String id) {
+        // Check if it's in dormant registry
+        DormantAgentEntry dormantEntry = dormantAgents.remove(id);
+        if (dormantEntry == null) {
+            // Check if already active
+            if (agentRegistry.containsKey(id)) {
+                log.warn("Agent {} is already enabled", id);
+                return getAgentInfo(id);
+            }
+            log.warn("Agent {} not found for enabling", id);
+            return null;
+        }
 
-	/**
-	 * List all agents — both active (running) and dormant (disabled).
-	 */
-	public List<AgentInfo> listAgents() {
-		List<AgentInfo> result = new ArrayList<>();
+        // Update database
+        if (persistenceService != null) {
+            persistenceService.enable(id);
+        }
 
-		// Active agents
-		for (AgentRegistryEntry entry : agentRegistry.values()) {
-			result.add(new AgentInfo(entry.id(), entry.agentDefinition(), entry.createdAt(), true, entry.source()));
-		}
+        // Re-configure and subscribe
+        AgentDefinition def = dormantEntry.agentDefinition();
+        String targetDir = def.targetDirectory() != null ? def.targetDirectory() : "/tmp";
+        Flux<PromptResponse> flux = buildFlux(def, targetDir);
+        Disposable subscription = flux.subscribe();
 
-		// Dormant agents
-		for (DormantAgentEntry entry : dormantAgents.values()) {
-			result.add(new AgentInfo(entry.id(), entry.agentDefinition(), entry.createdAt(), false, entry.source()));
-		}
+        AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux, dormantEntry.createdAt(),
+                dormantEntry.source(), subscription, dormantEntry.scannerId());
+        agentRegistry.put(id, entry);
 
-		return result;
-	}
+        log.info("Enabled agent: {} (scannerId: {})", id, dormantEntry.scannerId());
+        return new AgentInfo(id, def, entry.createdAt(), true, entry.source(), dormantEntry.scannerId());
+    }
 
-	/**
-	 * Get an agent info by ID (searches both active and dormant).
-	 */
-	public AgentInfo getAgentInfo(String id) {
-		AgentRegistryEntry activeEntry = agentRegistry.get(id);
-		if (activeEntry != null) {
-			return new AgentInfo(activeEntry.id(), activeEntry.agentDefinition(), activeEntry.createdAt(), true,
-					activeEntry.source());
-		}
+    /**
+     * Disable an active agent.
+     * Disposes the subscription and updates the database.
+     */
+    public void disableAgent(String id) {
+        AgentRegistryEntry entry = agentRegistry.remove(id);
+        if (entry == null) {
+            log.warn("Agent {} not found for disabling (not active)", id);
+            return;
+        }
 
-		DormantAgentEntry dormantEntry = dormantAgents.get(id);
-		if (dormantEntry != null) {
-			return new AgentInfo(dormantEntry.id(), dormantEntry.agentDefinition(), dormantEntry.createdAt(), false,
-					dormantEntry.source());
-		}
+        // Dispose subscription
+        entry.subscription().dispose();
 
-		return null;
-	}
+        // Update database
+        if (persistenceService != null) {
+            persistenceService.disable(id);
+        }
 
-	/**
-	 * Get count of active (running) agents.
-	 */
-	public int getActiveAgentCount() {
-		return agentRegistry.size();
-	}
+        // Store in dormant registry
+        DormantAgentEntry dormantEntry = new DormantAgentEntry(id, entry.agentDefinition(), entry.createdAt(),
+                entry.source(), entry.scannerId());
+        dormantAgents.put(id, dormantEntry);
 
-	/**
-	 * Get count of dormant (disabled) agents.
-	 */
-	public int getDormantAgentCount() {
-		return dormantAgents.size();
-	}
+        log.info("Disabled agent: {} (scannerId: {})", id, entry.scannerId());
+    }
 
-	private record AgentRegistryEntry(String id, AgentDefinition agentDefinition, Flux<PromptResponse> flux,
-			LocalDateTime createdAt, String source, Disposable subscription) {
-	}
+    /**
+     * Refresh an agent: dispose current subscription, reset scanner to full-scan mode, re-subscribe.
+     * Used when an agent's definition is modified and needs reprocessing.
+     *
+     * @param agentId the agent to refresh
+     * @return the refreshed agent info, or null if not found
+     */
+    public AgentInfo refreshAgent(String agentId) {
+        AgentRegistryEntry entry = agentRegistry.get(agentId);
+        if (entry == null) {
+            log.warn("Agent {} not found for refresh", agentId);
+            return null;
+        }
 
-	private record DormantAgentEntry(String id, AgentDefinition agentDefinition, LocalDateTime createdAt, String source) {
-	}
+        // Dispose current subscription
+        entry.subscription().dispose();
+
+        // Reset scanner to emit all files
+        String scannerId = entry.scannerId();
+        if (scannerId != null && scannerRegistry != null) {
+            try {
+                scannerRegistry.refreshAgent(scannerId);
+                log.info("Reset scanner {} to full-scan mode for agent {}", scannerId, agentId);
+            } catch (Exception e) {
+                log.warn("Failed to refresh scanner for agent {}", agentId, e);
+            }
+        }
+
+        // Re-configure and subscribe with fresh flux
+        AgentDefinition def = entry.agentDefinition();
+        String targetDir = def.targetDirectory() != null ? def.targetDirectory() : "/tmp";
+        Flux<PromptResponse> flux = buildFlux(def, targetDir);
+        Disposable subscription = flux.subscribe();
+
+        AgentRegistryEntry newEntry = new AgentRegistryEntry(agentId, def, flux,
+                entry.createdAt(), entry.source(), subscription, scannerId);
+        agentRegistry.put(agentId, newEntry);
+
+        log.info("Refreshed agent: {} (scannerId: {})", agentId, scannerId);
+        return new AgentInfo(agentId, def, newEntry.createdAt(), true, newEntry.source(), scannerId);
+    }
+
+    /**
+     * List all agents — both active (running) and dormant (disabled).
+     */
+    public List<AgentInfo> listAgents() {
+        List<AgentInfo> result = new ArrayList<>();
+
+        // Active agents
+        for (AgentRegistryEntry entry : agentRegistry.values()) {
+            result.add(new AgentInfo(entry.id(), entry.agentDefinition(), entry.createdAt(), true,
+                    entry.source(), entry.scannerId()));
+        }
+
+        // Dormant agents
+        for (DormantAgentEntry entry : dormantAgents.values()) {
+            result.add(new AgentInfo(entry.id(), entry.agentDefinition(), entry.createdAt(), false,
+                    entry.source(), entry.scannerId()));
+        }
+
+        return result;
+    }
+
+    /**
+     * Get an agent info by ID (searches both active and dormant).
+     */
+    public AgentInfo getAgentInfo(String id) {
+        AgentRegistryEntry activeEntry = agentRegistry.get(id);
+        if (activeEntry != null) {
+            return new AgentInfo(activeEntry.id(), activeEntry.agentDefinition(), activeEntry.createdAt(), true,
+                    activeEntry.source(), activeEntry.scannerId());
+        }
+
+        DormantAgentEntry dormantEntry = dormantAgents.get(id);
+        if (dormantEntry != null) {
+            return new AgentInfo(dormantEntry.id(), dormantEntry.agentDefinition(), dormantEntry.createdAt(), false,
+                    dormantEntry.source(), dormantEntry.scannerId());
+        }
+
+        return null;
+    }
+
+    /**
+     * Get count of active (running) agents.
+     */
+    public int getActiveAgentCount() {
+        return agentRegistry.size();
+    }
+
+    /**
+     * Get count of dormant (disabled) agents.
+     */
+    public int getDormantAgentCount() {
+        return dormantAgents.size();
+    }
+
+    /**
+     * Check if the manager has scanner registry support.
+     */
+    public boolean hasScannerRegistry() {
+        return scannerRegistry != null;
+    }
+
+    private record AgentRegistryEntry(String id, AgentDefinition agentDefinition, Flux<PromptResponse> flux,
+            LocalDateTime createdAt, String source, Disposable subscription, String scannerId) {
+    }
+
+    private record DormantAgentEntry(String id, AgentDefinition agentDefinition, LocalDateTime createdAt,
+            String source, String scannerId) {
+    }
 }

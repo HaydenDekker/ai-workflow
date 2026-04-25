@@ -19,7 +19,8 @@ public class TestConfigurationFactory {
             "Process this Java function and return a structured analysis.",
             "Map",
             "Return a JSON object with function name, details, and category.",
-            "output/function-analysis/analysis/${name}.md"
+            "output/function-analysis/analysis/${name}.md",
+            "/tmp/test-dir"
         );
     }
 
@@ -34,7 +35,8 @@ public class TestConfigurationFactory {
             "Analyze this Java code for SOLID principle violations and categorize them.",
             "Split",
             "Split the analysis into different violation categories using --- ItemKey --- format.",
-            "output/solid-priority/non-compliance/${name}.md"
+            "output/solid-priority/non-compliance/${name}.md",
+            "/tmp/test-dir"
         );
     }
 
@@ -49,7 +51,8 @@ public class TestConfigurationFactory {
             "Accumulate this new function analysis into the previous response.",
             "Reduction",
             "List all analyzed functions with their categories and provide a system summary.",
-            "output/function-analysis/summary.md"
+            "output/function-analysis/summary.md",
+            "/tmp/test-dir"
         );
     }
 
@@ -63,7 +66,8 @@ public class TestConfigurationFactory {
             "Process this file and return a structured response.",
             null, // null agentType should default to Map
             "Return a JSON object with processing results.",
-            "output/default/${name}.md"
+            "output/default/${name}.md",
+            "/tmp/test-dir"
         );
     }
 
@@ -77,13 +81,28 @@ public class TestConfigurationFactory {
             String prompt,
             String outputStructure,
             String outputFilenameTemplate) {
+        return createCustomDefinition(fileInputRegex, title, body, prompt, outputStructure, outputFilenameTemplate, "/tmp/test-dir");
+    }
+
+    /**
+     * Creates an AgentDefinition with custom parameters including target directory.
+     */
+    public static AgentDefinition createCustomDefinition(
+            String fileInputRegex,
+            String title,
+            String body,
+            String prompt,
+            String outputStructure,
+            String outputFilenameTemplate,
+            String targetDirectory) {
         return new AgentDefinition(
             fileInputRegex,
             title,
             body,
             prompt,
             outputStructure,
-            outputFilenameTemplate
+            outputFilenameTemplate,
+            targetDirectory
         );
     }
 }

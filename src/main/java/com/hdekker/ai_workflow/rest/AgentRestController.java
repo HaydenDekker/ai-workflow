@@ -26,7 +26,8 @@ public class AgentRestController {
 
     @PostMapping
     public ResponseEntity<AgentInfo> createAgent(@RequestBody AgentDefinition agentDefinition) {
-        AgentInfo agentInfo = dynamicAgentManager.addDynamicAgent(agentDefinition);
+        AgentInfo agentInfo = dynamicAgentManager.addDynamicAgent(agentDefinition, 
+                agentDefinition.targetDirectory() != null ? agentDefinition.targetDirectory() : "/tmp");
         return ResponseEntity.ok(agentInfo);
     }
 
@@ -55,5 +56,18 @@ public class AgentRestController {
     public ResponseEntity<Void> disableAgent(@PathVariable String id) {
         dynamicAgentManager.disableAgent(id);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Refresh an agent: trigger full rescan of its target directory.
+     * Used when an agent's definition is modified and needs reprocessing.
+     */
+    @PostMapping("/{id}/refresh")
+    public ResponseEntity<AgentInfo> refreshAgent(@PathVariable String id) {
+        AgentInfo agentInfo = dynamicAgentManager.refreshAgent(id);
+        if (agentInfo != null) {
+            return ResponseEntity.ok(agentInfo);
+        }
+        return ResponseEntity.notFound().build();
     }
 }

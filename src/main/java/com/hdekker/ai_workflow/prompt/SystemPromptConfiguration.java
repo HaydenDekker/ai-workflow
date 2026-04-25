@@ -158,7 +158,8 @@ public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles
 						pp.agentType(),
 						bodyFileAsString, 
 						outputFileAsString,
-						pp.outputFilenameTemplate());
+						pp.outputFilenameTemplate(),
+						pp.targetDirectory());
 				
 			}).toList());
 	}

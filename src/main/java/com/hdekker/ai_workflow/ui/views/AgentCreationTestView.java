@@ -45,6 +45,7 @@ public class AgentCreationTestView extends VerticalLayout {
     private static final String API_BASE_URL = "http://localhost:8080/api/agents";
 
     private final TextField titleField;
+    private final TextField targetDirectoryField;
     private final TextField fileInputRegexField;
     private final ComboBox<String> agentTypeCombo;
     private final TextArea bodyField;
@@ -73,6 +74,10 @@ public class AgentCreationTestView extends VerticalLayout {
         titleField = new TextField("Title", "Test Agent");
         titleField.setPlaceholder("Enter agent title");
         titleField.addClassName("test-form-field");
+
+        targetDirectoryField = new TextField("Target Directory", "/tmp/test-dir");
+        targetDirectoryField.setPlaceholder("Enter target directory path");
+        targetDirectoryField.addClassName("test-form-field");
 
         fileInputRegexField = new TextField("File Input Regex", ".*\\.java");
         fileInputRegexField.setPlaceholder("Enter file input regex");
@@ -145,6 +150,7 @@ public class AgentCreationTestView extends VerticalLayout {
 
         // Add field value listeners for live preview update
         titleField.addValueChangeListener(e -> updatePreview());
+        targetDirectoryField.addValueChangeListener(e -> updatePreview());
         fileInputRegexField.addValueChangeListener(e -> updatePreview());
         agentTypeCombo.addValueChangeListener(e -> updatePreview());
         bodyField.addValueChangeListener(e -> updatePreview());
@@ -245,7 +251,8 @@ public class AgentCreationTestView extends VerticalLayout {
                 bodyField.getValue().trim(),
                 agentTypeCombo.getValue(),
                 outputStructureField.getValue().trim(),
-                outputFilenameTemplateField.getValue().trim()
+                outputFilenameTemplateField.getValue().trim(),
+                targetDirectoryField.getValue().trim()
         );
     }
 
@@ -327,6 +334,7 @@ public class AgentCreationTestView extends VerticalLayout {
         previewLayout.addClassName("preview-grid");
 
         previewLayout.add(buildPreviewRow("Title:", titleField.getValue()));
+        previewLayout.add(buildPreviewRow("Target Directory:", targetDirectoryField.getValue()));
         previewLayout.add(buildPreviewRow("File Input Regex:", fileInputRegexField.getValue()));
         previewLayout.add(buildPreviewRow("Agent Type:", agentTypeCombo.getValue()));
         previewLayout.add(buildPreviewRow("Body:", bodyField.getValue()));

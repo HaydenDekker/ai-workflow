@@ -129,7 +129,7 @@ class YamlTestUtilsTest {
         // Test with custom definition having null agentType
         AgentDefinition defWithNullType = TestConfigurationFactory.createDefaultMapAgentDefinition();
         AgentDefinition defWithEmptyType = new AgentDefinition(
-            ".*\\.java", "TITLE", "BODY", "", "STRUCTURE", "TEMPLATE"
+            ".*\\.java", "TITLE", "BODY", "", "STRUCTURE", "TEMPLATE", "/tmp/test"
         );
         
         assertFalse(YamlTestUtils.areEqual(defWithNullType, defWithEmptyType));
@@ -161,7 +161,7 @@ class YamlTestUtilsTest {
     @Test
     void testAgentDefinitionToYamlWithNullValues() {
         AgentDefinition definitionWithNulls = new AgentDefinition(
-            null, "Title", null, null, null, "template.md"
+            null, "Title", null, null, null, "template.md", null
         );
         
         String yaml = YamlTestUtils.agentDefinitionToYaml(definitionWithNulls);
@@ -204,7 +204,8 @@ class YamlTestUtilsTest {
             "Multi-line\nbody\nwith\nspecial\ncharacters: {}[]",
             "Split",
             "JSON output with \"quotes\": {\"key\": \"value\", \"array\": [1,2,3]}",
-            "output/${filename}-${timestamp}.md"
+            "output/${filename}-${timestamp}.md",
+            "/tmp/test-dir"
         );
         
         assertTrue(YamlTestUtils.roundTripTest(complexDefinition));

@@ -2,6 +2,8 @@ package com.hdekker.ai_workflow.app.pipeline.management;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -17,11 +19,11 @@ import com.hdekker.ai_workflow.database.agent.AgentEntity;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
-import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;
@@ -34,6 +36,7 @@ public class DynamicAgentManagerPersistenceTest {
 
 	DynamicAgentManager manager;
 	AgentPersistenceService mockPersistenceService;
+	ScannerRegistry mockScannerRegistry;
 
 	String expectedMockResult = "This is the expected result";
 
@@ -50,9 +53,6 @@ public class DynamicAgentManagerPersistenceTest {
 
 		ChatClient chatClient = ChatClientMockBuilder.createMock(expectedMockResult);
 
-		FileScanner fileScanner = mock(FileScanner.class);
-		when(fileScanner.flux()).thenReturn(Flux.just(fh));
-
 		FileWriter fileWriter = mock(FileWriter.class);
 		when(fileWriter.createPersister(any(Path.class))).thenReturn((pr) -> {
 			// No-op for tests
@@ -64,8 +64,19 @@ public class DynamicAgentManagerPersistenceTest {
 		when(mockPersistenceService.findAllActive()).thenReturn(List.of());
 		when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
 
+		// Mock scanner registry
+		mockScannerRegistry = mock(ScannerRegistry.class);
+		when(mockScannerRegistry.createForAgent(anyString(), anyString(), anyInt())).thenAnswer(invocation -> {
+			String agentId = invocation.getArgument(0);
+			String targetDir = invocation.getArgument(1);
+			return new ScannerInfo(
+					"scanner-" + agentId, agentId, targetDir,
+					"IDLE", java.time.LocalDateTime.now(), null);
+		});
+		when(mockScannerRegistry.getScannerFlux(any())).thenReturn(Flux.just(fh));
+
 		manager = new DynamicAgentManager(
-				fileScanner,
+				mockScannerRegistry,
 				fileWriter,
 				outputDirectory,
 				chatClient,
@@ -76,27 +87,28 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenDynamicAgentAdded_whenPersistenceEnabled_thenPersistServiceCalled() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
-				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC"));
+		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class), any()))
+				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC", "scanner-test-1"));
 
 		// Act
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 
 		// Assert
 		assertThat(info).isNotNull();
 		assertThat(info.active()).isTrue();
 		assertThat(info.source()).isEqualTo("DYNAMIC");
+		assertThat(info.scannerId()).isNotNull();
 
 		// Verify persistence was called
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
-				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC"));
+		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class), any()))
+				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC", "scanner-test-1"));
 	}
 
 	@Test
 	public void givenActiveAgent_whenDisabled_thenMovesToDormantAndNotListedAsActive() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 
 		assertThat(manager.listAgents()).hasSize(1);
 		assertThat(manager.getActiveAgentCount()).isEqualTo(1);
@@ -121,7 +133,7 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenDormantAgent_whenEnabled_thenMovesToActive() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 		manager.disableAgent(info.id());
 
 		assertThat(manager.getDormantAgentCount()).isEqualTo(1);
@@ -148,8 +160,8 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenYAMLAgent_whenDisabled_thenMovesToDormant() {
 		// Arrange
 		AgentDefinition yamlAgent = TestData.basicPrompt();
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
-				.thenReturn(createAgentEntity(yamlAgent.title(), yamlAgent, "YAML"));
+		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class), any()))
+				.thenReturn(createAgentEntity(yamlAgent.title(), yamlAgent, "YAML", null));
 
 		manager.initializeFromYAML(List.of(yamlAgent));
 
@@ -188,7 +200,7 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenRemoveActiveAgent_thenNotListedAndNotDormant() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 
 		assertThat(manager.listAgents()).hasSize(1);
 
@@ -208,7 +220,7 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenRemoveDormantAgent_thenNotListed() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 		manager.disableAgent(info.id());
 		assertThat(manager.getDormantAgentCount()).isEqualTo(1);
 
@@ -224,10 +236,10 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenMultipleAgentsWithMixedStates_thenListShowsCorrectActiveFlags() {
 		// Arrange
 		AgentDefinition agent1 = TestData.basicPrompt();
-		AgentDefinition agent2 = new AgentDefinition(".*\\.md", "Agent2", "Body 2", "Map", "Out 2", "out2");
+		AgentDefinition agent2 = new AgentDefinition(".*\\.md", "Agent2", "Body 2", "Map", "Out 2", "out2", "/tmp/dir2");
 
-		AgentInfo info1 = manager.addDynamicAgent(agent1);
-		AgentInfo info2 = manager.addDynamicAgent(agent2);
+		AgentInfo info1 = manager.addDynamicAgent(agent1, "/tmp/dir1");
+		AgentInfo info2 = manager.addDynamicAgent(agent2, "/tmp/dir2");
 
 		// Disable agent1
 		doNothing().when(mockPersistenceService).disable(any(String.class));
@@ -265,7 +277,7 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenGetAgentInfo_whenAgentInActiveRegistry_thenReturnsActiveInfo() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 
 		// Act
 		AgentInfo retrieved = manager.getAgentInfo(info.id());
@@ -280,7 +292,7 @@ public class DynamicAgentManagerPersistenceTest {
 	public void givenGetAgentInfo_whenAgentInDormantRegistry_thenReturnsInactiveInfo() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		AgentInfo info = manager.addDynamicAgent(agent);
+		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
 		manager.disableAgent(info.id());
 
 		// Act
@@ -301,7 +313,7 @@ public class DynamicAgentManagerPersistenceTest {
 		assertThat(retrieved).isNull();
 	}
 
-	private AgentEntity createAgentEntity(String id, AgentDefinition def, String source) {
+	private AgentEntity createAgentEntity(String id, AgentDefinition def, String source, String scannerId) {
 		AgentEntity entity = new AgentEntity();
 		entity.setId(id);
 		try {
@@ -310,12 +322,14 @@ public class DynamicAgentManagerPersistenceTest {
 							+ "\",\"body\":\"" + def.body()
 							 + "\",\"agentType\":\"" + def.agentType()
 							 + "\",\"outputStructure\":\"" + def.outputStructure()
-							 + "\",\"outputFilenameTemplate\":\"" + def.outputFilenameTemplate() + "\"}");
+							 + "\",\"outputFilenameTemplate\":\"" + def.outputFilenameTemplate()
+							 + "\",\"targetDirectory\":\"" + (def.targetDirectory() != null ? def.targetDirectory() : "/tmp") + "\"}");
 		} catch (Exception e) {
 			entity.setAgentDefinitionJson("{}");
 		}
 		entity.setTitle(def.title());
 		entity.setSource(source);
+		entity.setScannerId(scannerId);
 		entity.setCreatedAt(java.time.LocalDateTime.now());
 		entity.setActive(true);
 		return entity;

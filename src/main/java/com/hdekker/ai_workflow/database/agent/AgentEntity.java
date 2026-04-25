@@ -24,6 +24,9 @@ public class AgentEntity {
 
 	private String source; // "YAML" or "DYNAMIC"
 
+	@Column(name = "scanner_id")
+	private String scannerId; // FK to scanner.id
+
 	private LocalDateTime createdAt;
 
 	private LocalDateTime lastStartedAt;
@@ -63,6 +66,14 @@ public class AgentEntity {
 
 	public void setSource(String source) {
 		this.source = source;
+	}
+
+	public String getScannerId() {
+		return scannerId;
+	}
+
+	public void setScannerId(String scannerId) {
+		this.scannerId = scannerId;
 	}
 
 	public LocalDateTime getCreatedAt() {

@@ -146,7 +146,7 @@ public class FileIntegrationFlowTest {
                 "Provide a structured analysis.",
                 "output/analysis-${name}.md");
 
-        dynamicAgentManager.addDynamicAgent(agentDef);
+        dynamicAgentManager.addDynamicAgent(agentDef, "/tmp/test-dir");
         log.info("Added dynamic agent: {}", agentDef.title());
 
         // Wait for the subscription chain to establish
@@ -239,7 +239,7 @@ public class FileIntegrationFlowTest {
                 "Provide analysis.",
                 "output/subscriber-test-${name}.md");
 
-        dynamicAgentManager.addDynamicAgent(agentDef);
+        dynamicAgentManager.addDynamicAgent(agentDef, "/tmp/test-dir");
         log.info("Added agent: {}", agentDef.title());
 
         // Wait for the subscription chain to establish
