@@ -11,6 +11,7 @@ import "@vaadin/vaadin-lumo-styles/utility.css";
 // Flow routes (server-side Vaadin views) — not auto-discovered by Hilla file router
 const flowRoutes = [
   { to: "agents", title: "Agent List", icon: "line-awesome/svg/list-solid.svg" },
+  { to: "scanners", title: "Scanners", icon: "line-awesome/svg/radar-solid.svg" },
   { to: "observability", title: "Observability", icon: "line-awesome/svg/chart-bar-solid.svg" },
 ];
 
