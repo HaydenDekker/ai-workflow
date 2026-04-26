@@ -26,6 +26,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,7 +39,8 @@ import java.util.concurrent.TimeUnit;
 @Route("agents")
 @PageTitle("Agent List")
 public class AgentListView extends VerticalLayout implements AfterNavigationObserver {
-    private final Grid<AgentInfo> grid;
+    private static final Logger log = LoggerFactory.getLogger(AgentListView.class);
+    final Grid<AgentInfo> grid;  // package-private for browserless test access
     private final AgentInfoService agentInfoService;
     private final LLMStatusService llmStatusService;
     private final ProgressBar loadingIndicator;
@@ -95,8 +98,13 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             AgentDetailDialog dialog = new AgentDetailDialog(
                     agentInfoService,
                     e.getItem(),
-                    updatedInfo -> UI.getCurrent().accessLater(() -> reloadData(), null),    // onSave: refresh grid
-                    deletedId -> UI.getCurrent().accessLater(() -> reloadData(), null)       // onDelete: refresh grid
+                    updatedInfo ->  grid.getUI().orElseThrow().access(() -> reloadData()),    // onSave: refresh grid
+                    deletedId -> {
+                    	log.info("reloading");
+                    	grid.getUI().orElseThrow().access(() -> {reloadData();}); 
+                    }
+                    	
+                          // onDelete: refresh grid
             );
             dialog.open();
         });
@@ -192,10 +200,12 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
     
     }
 
-    private void reloadData() {
+    void reloadData() {  // package-private for browserless test access
+        log.debug("reloadData() called - refreshing agent grid");
         showLoading(true);
         try {
             List<AgentInfo> agentInfos = agentInfoService.getAllAgentInfos().block();
+            log.info("Loaded {} agents", agentInfos.size());
             grid.setItems(agentInfos);
         } catch (Exception error) {
             Notification.show("Error loading data: " + error.getMessage());

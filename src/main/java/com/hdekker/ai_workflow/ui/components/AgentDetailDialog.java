@@ -331,16 +331,28 @@ public class AgentDetailDialog extends Dialog {
 
     /**
      * Performs the actual delete operation via the service.
+     * The reactive callback queues the reload via UI.access() so it runs on
+     * the Vaadin UI thread and triggers push to the browser when the session
+     * unlocks.
      */
     private void performDelete() {
         final String agentId = existingAgent.id();
+
         agentInfoService.deleteAgent(agentId).subscribe(
-                unused -> {
+                deletedId -> {
+                    log.info("Agent deleted: {} - refreshing grid", deletedId);
                     Notification.show(
-                            "Agent deleted: " + agentId,
+                            "Agent deleted: " + deletedId,
                             5000, Notification.Position.MIDDLE);
                     if (onDelete != null) {
-                        onDelete.accept(agentId);
+                        // Queue reload on Vaadin UI thread. The session unlock
+                        // (triggered when this method returns) will process this
+                        // queued callback and push the grid update to the browser.
+                        com.vaadin.flow.component.UI.getCurrent()
+                                .access(() -> {
+                                    log.info("Reload callback executing - refreshing agent grid");
+                                    onDelete.accept(deletedId);
+                                });
                     }
                 },
                 error -> {

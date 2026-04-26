@@ -35,13 +35,13 @@ public class AgentInfoService {
         }
     }
 
-    public Mono<Void> deleteAgent(String id) {
+    public Mono<String> deleteAgent(String id) {
         try {
             dynamicAgentManager.removeAgent(id);
-            return Mono.empty();
+            return Mono.just(id);
         } catch (Exception ex) {
             log.error("Error deleting agent with id: {}", id, ex);
-            return Mono.empty();
+            return Mono.error(ex);
         }
     }
 

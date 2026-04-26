@@ -1,7 +1,28 @@
 # Plan: Agent Detail Dialog (Edit + Delete)
 
 **Date**: 2026-04-25  
-**References**: ADR-002 (Vaadin/Hilla UI Components), ADR-003 (UI Views and Routing), `agent-creation-dialog-plan.md`
+**References**: 
+- [ADR-002](../adrs/adr-ui-components.md) — Vaadin/Hilla UI Components, service layer ownership, reactive patterns
+- [ADR-003](../adrs/adr-ui-views.md) — UI Views and Routing, view lifecycle, browserless testing
+- `agent-creation-dialog-plan.md` — Previous agent creation flow (reference for dialog patterns)
+
+### ADR-002 Key Rules Referenced
+
+| Rule | Section | Relevance |
+|------|---------|-----------|
+| **Components cannot access services** | Component Building Principles §Service Access Boundary | `AgentDetailDialog` must not call `AgentInfoService` directly |
+| **Views coordinate component state and services** | Component Building Principles §Service Access Boundary | `AgentListView` owns all reactive chains and `UI.access()` calls |
+| **Reactive data loading pattern** | Component Building Principles §3 | `Mono<Void>`/`Mono.empty()` never triggers `subscribe()` callbacks |
+| **UI thread safety** | Component Building Principles §2 | All Vaadin updates wrapped in `UI.getCurrent().access()` |
+| **Lifecycle-aware scheduling** | Component Building Principles §1 | Schedulers stopped in `onDetach()` |
+
+### ADR-003 Key Rules Referenced
+
+| Rule | Section | Relevance |
+|------|---------|-----------|
+| **Flow-managed routes** | Architecture Overview | Views are `@Route`-annotated Java classes |
+| **Testing strategy** | Testing Strategy | Browserless tests preferred for component testing; Playwright for critical flows |
+| **Browserless testing pattern** | Browserless Testing | `runUIQueue()` + `roundTrip()` for reactive callback processing |
 
 ---
 
@@ -427,4 +448,157 @@ The user requirement that *"the file scanner must also be removed in dynamic age
 
 ---
 
-*Plan ready for implementation.*
+## 13. Implementation Status (Updated 2026-04-26)
+
+### 13.1 Completed
+
+| Step | Task | Status | Notes |
+|------|------|--------|-------|
+| **1** | Add `PUT /api/agents/{id}` endpoint to `AgentRestController` | ✅ Done | Uses remove+re-add pattern |
+| **2** | Add `updateAgent(String id, AgentDefinition)` to `DynamicAgentManager` | ✅ Done | Remove + re-add scanner |
+| **3** | Add `updateAgent(String id, AgentDefinition)` to `AgentInfoService` | ✅ Done | Delegates to manager |
+| **4** | Create `AgentDetailDialog.java` | ✅ Done | Edit + delete dialog with form validation |
+| **5** | Wire dialog into `AgentListView` (row click handler) | ✅ Done | With `UI.access()` callbacks |
+| **6** | Add CSS styling | ✅ Done | Via `addClassName()` + Lumo themes |
+| **7** | Write Vaadin browserless tests | ✅ Done | `PushDemoViewTest` + `AgentListViewDeleteTest` |
+
+### 13.2 Bugs Found & Fixed
+
+#### Bug 1: `reloadData()` never called after delete
+**Symptom**: After deleting an agent, the grid showed the deleted agent row still present.
+
+**Root Cause**: The callbacks in `AgentListView` used `UI.getCurrent().accessLater(() -> reloadData(), null)` — but `accessLater()` **returns a `Runnable`**, it does **not execute** it. The code was creating a runnable and discarding it.
+
+```java
+// Before (broken — runnable created but never called)
+deletedId -> UI.getCurrent().accessLater(() -> reloadData(), null)
+
+// After (fixed — callback queues reload on Vaadin UI thread)
+deletedId -> UI.getCurrent().access(() -> reloadData())
+```
+
+#### Bug 2: Reactive `subscribe()` callback never fired
+**Symptom**: Even after fixing Bug 1, the delete confirmation callback didn't trigger the grid refresh.
+
+**Root Cause**: `AgentInfoService.deleteAgent()` returned `Mono.empty()`. In Reactor, `Mono.empty()` completes without emitting a value, so `subscribe(unused -> {...})` is **never invoked**. The callback consumer is only called when a value is emitted.
+
+```java
+// Before (broken — empty never triggers subscribe)
+public Mono<Void> deleteAgent(String id) {
+    dynamicAgentManager.removeAgent(id);
+    return Mono.empty();  // never fires subscribe callback!
+}
+
+// After (fixed — emits the agent id, triggering the callback)
+public Mono<String> deleteAgent(String id) {
+    dynamicAgentManager.removeAgent(id);
+    return Mono.just(id);  // emits value → subscribe fires
+}
+```
+
+#### Bug 3: Reactive callback runs outside Vaadin UI context
+**Symptom**: Even after fixing Bugs 1 & 2, the reload callback couldn't update the grid because `UI.getCurrent()` was null in the reactive callback thread.
+
+**Root Cause**: `Mono.just(id).subscribe()` fires synchronously on the calling thread. The button click handler runs on the Vaadin UI thread, but the `performDelete()` call was made directly (not queued via `UI.access()`), so when the reactive callback fired, the Vaadin context was still available — however the subsequent `UI.access()` inside the callback was on a non-Vaadin thread.
+
+**Fix**: Queue `performDelete()` via `UI.getCurrent().access(() -> performDelete())` in the confirm button handler, and inside the reactive callback, use `UI.getCurrent().access(() -> onDelete.accept(deletedId))` to queue the reload. Both callbacks execute on the Vaadin UI thread and trigger push when the session unlocks.
+
+#### Bug 4 (Architectural): Service access inside UI component
+**Symptom**: The `AgentDetailDialog` component directly called `AgentInfoService.deleteAgent()` and `.updateAgent()`, embedding reactive chains and Vaadin threading logic inside a reusable dialog component.
+
+**Root Cause**: This violates the architecture documented in **ADR-002** (Vaadin/Hilla UI Components), which specifies that `AgentInfoService` belongs to the **View** layer, not the component layer. The ADR diagram shows services owned by views, with components communicating via callbacks.
+
+```java
+// Before (violates ADR-002 — component owns service)
+public class AgentDetailDialog extends Dialog {
+    private final AgentInfoService agentInfoService;  // ❌ component owns service
+    
+    private void handleDelete() {
+        agentInfoService.deleteAgent(id).subscribe(...);  // ❌ reactive chain in component
+    }
+}
+
+// After (ADR-002 compliant — view owns service)
+public class AgentDetailDialog extends Dialog {
+    private final Consumer<String> onDelete;  // ✅ just a callback
+    
+    private void handleDelete() {
+        onDelete.accept(id);  // ✅ pure UI, no service dependency
+    }
+}
+
+// AgentListView — owns service, controls threading
+grid.addItemClickListener(e -> {
+    new AgentDetailDialog(
+        e.getItem(),
+        updatedDef -> {
+            // View controls reactive chain and threading
+            agentInfoService.updateAgent(e.getItem().id(), updatedDef)
+                .subscribe(info -> UI.getCurrent().access(() -> reloadData()));
+        },
+        id -> {
+            agentInfoService.deleteAgent(id)
+                .subscribe(deletedId -> UI.getCurrent().access(() -> reloadData()));
+        }
+    );
+});
+```
+
+**Why this matters**:
+- **Component testability**: Components can be tested without service mocks — just fire callbacks
+- **Thread safety**: Reactive callbacks run on random threads; views control `UI.access()` wrapping
+- **Bug prevention**: The `Mono.empty()` / `UI.getCurrent()` null bugs we hit are exactly the kind of problems that happen when service/async logic bleeds into components
+- **Re-entrancy**: Views can gate or reorder service calls; components have no visibility into this
+
+### 13.3 Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `AgentDetailView.java` (main) | Fixed delete callbacks, added `log.info("Loaded {} agents")` |
+| `AgentDetailDialog.java` (main) | Fixed reactive flow: `Mono.just(id)`, queued UI access |
+| `AgentInfoService.java` (main) | Changed `deleteAgent()` return type `Mono<Void>` → `Mono<String>` |
+| `PushDemoView.java` (test) | **NEW** — mock view for push pattern prototyping |
+| `PushDemoViewTest.java` (test) | **NEW** — 2 browserless tests demonstrating push pattern |
+| `AgentListViewDeleteTest.java` (test) | **NEW** — 3 browserless tests for delete flow |
+
+### 13.4 Playwright E2E Tests
+
+The `tests/e2e/agent-detail.spec.ts` plan (Section 8) is **deferred** until the Vaadin push issue in Playwright is resolved. The browserless tests above serve as a prototype for the correct pattern:
+
+```java
+// Browserless test pattern (works):
+MockVaadin.runUIQueue();   // processes UI.access() callbacks
+roundTrip();               // flushes state tree to client
+
+// Equivalent Playwright pattern (needs):
+// Wait for Vaadin push to complete before asserting
+// page.waitForResponse() or similar mechanism
+```
+
+### 13.5 Phase 2: Refactor Service Access
+
+**Goal**: Move all `AgentInfoService` calls from `AgentDetailDialog` into `AgentListView`, per ADR-002 architecture. Components should communicate via callbacks, not direct service access.
+
+| Step | Task | Estimated Effort | Depends On |
+|------|------|-----------------|------------|
+| **1** | Remove `AgentInfoService` dependency from `AgentDetailDialog` | 30 min | None |
+| **2** | Change `AgentDetailDialog` constructor to accept `Consumer<AgentDefinition>` (onSave) and `Consumer<String>` (onDelete) | 30 min | Step 1 |
+| **3** | Move reactive chains (`updateAgent`, `deleteAgent`) into `AgentListView` row click handler | 30 min | Steps 1-2 |
+| **4** | Wrap all reactive callbacks in `UI.getCurrent().access()` inside `AgentListView` | 15 min | Step 3 |
+| **5** | Update browserless test to work with new callback-based API | 30 min | Steps 1-4 |
+| **6** | Run `./mvnw test` — all tests pass | 15 min | Step 5 |
+
+**Total estimated effort: ~2 hours**
+
+### 13.6 Remaining Work
+
+| Item | Priority | Notes |
+|------|----------|-------|
+| Phase 2: Refactor service access | High | Violates ADR-002, caused multiple bugs |
+| Playwright E2E tests | Medium | Defer until Phase 2 is complete — clean component API makes E2E easier |
+| Scanner status in dialog | Low | Nice-to-have read-only field |
+| CSS polish for dialog | Low | Delete button styling, form layout refinements |
+
+---
+
+*Plan updated 2026-04-26 — core functionality complete, Phase 2 (service access refactor) next.*

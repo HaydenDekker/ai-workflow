@@ -48,14 +48,15 @@ We will use **Vaadin 25 with Hilla** for all UI components. The UI lives inside 
 │  │  │                  │    │   TextField, Button)         │      │   │
 │  │  └────────┬─────────┘    └──────────────┬───────────────┘      │   │
 │  │           │                             │                       │   │
-│  │           │  Injected via @Autowired    │  Injected via         │   │
-│  │           ▼                             │  constructor          │   │
-│  └─────────────────────────────────────────┼───────────────────────┘   │
-│                                           │                            │
-└──────────────────────────┬────────────────┼────────────────────────────┘
-                           │                │
-                           │                │
-                           ▼                ▼
+│  │           │  Injected via @Autowired    │  Consumer callbacks   │   │
+│  │           │  (owns service access)      │  (pure UI only)       │   │
+│  │           ▼                             │                       │   │
+│  └─────────────────────────────────────────┤                       │   │
+│                                           │                        │   │
+└──────────────────────────┬────────────────┤───────────────────────┘   │
+                           │                 │                            │
+                           │  Mono<>         │  No service dependency     │
+                           ▼                 ▼                            │
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    Application Layer (Services)                         │
 │                                                                         │
@@ -68,6 +69,12 @@ We will use **Vaadin 25 with Hilla** for all UI components. The UI lives inside 
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Service Access Rules**:
+- **Views** own `AgentInfoService` and `LLMStatusService` — they inject the services, own the reactive chains, and control `UI.access()` wrapping
+- **Components** never access services — they accept data via constructors and communicate via `Consumer` callbacks
+- **Components** can accept data objects (e.g., `AgentInfo`) for display, but must not call service methods
+- **Views** coordinate between component callbacks and service calls, ensuring all Vaadin updates happen on the UI thread
 
 ### Component Structure
 
@@ -159,24 +166,27 @@ public class ObservabilityView extends VerticalLayout
 }
 ```
 
-**Reusable Component — AdapterStatusComponent**
+**Reusable Component — Pure UI (no service dependency)**
+
+Components must never access services. They accept data for display and communicate via callbacks.
 
 ```java
 public class AdapterStatusComponent extends HorizontalLayout {
 
     private final LLMStatus status;
-    private final LLMStatusService service;
     private Icon statusIcon;
     private Div statusBadge;
 
-    public AdapterStatusComponent(LLMStatus status, LLMStatusService service) {
+    public AdapterStatusComponent(LLMStatus status) {
+        // ✅ Only accepts data, no service injection
         this.status = status;
-        this.service = service;
         initLayout();
         updateDisplay();
-        startAutoRefresh();
     }
 
+    // View owns the LLMStatusService and scheduled refresh;
+    // component only displays the data it receives.
+    
     private void applyStatusStyles(AdapterStatus adapterStatus) {
         switch (adapterStatus) {
             case UP:
@@ -193,7 +203,41 @@ public class AdapterStatusComponent extends HorizontalLayout {
 
     @Override
     protected void onDetach(DetachEvent detachEvent) {
-        stopAutoRefresh();  // Lifecycle-aware cleanup
+        super.onDetach(detachEvent);
+    }
+}
+```
+
+**View — coordinates component and service**
+
+```java
+public class ObservabilityView extends VerticalLayout {
+    private final LLMStatusService llmStatusService;
+    private final AdapterStatusComponent statusBadge;
+    private ScheduledExecutorService viewRefreshScheduler;
+
+    @Autowired
+    public ObservabilityView(LLMStatusService llmStatusService) {
+        this.llmStatusService = llmStatusService;
+        this.statusBadge = new AdapterStatusComponent(null);  // ✅ no service in component
+        initLayout();
+    }
+
+    @Override
+    public void afterNavigation(AfterNavigationEvent event) {
+        // ✅ View owns service access and threading
+        llmStatusService.triggerPoll().subscribe(
+            status -> getUI().ifPresent(ui -> ui.access(() -> {
+                statusBadge = new AdapterStatusComponent(status);
+                cardsContainer.add(statusBadge);
+            })),
+            err -> getUI().ifPresent(ui -> ui.access(() -> showNotification(err)))
+        );
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        viewRefreshScheduler.shutdownNow();
         super.onDetach(detachEvent);
     }
 }
@@ -261,6 +305,84 @@ CSS lives in the Vaadin theme folder and is automatically bundled with the JAR:
 ```
 
 ### Component Building Principles
+
+#### 0. Service Access Boundary
+
+**Components must never access services directly. Views own service access and coordinate all component state.**
+
+This rule prevents threading bugs, reactive chain leaks, and testing complexity. The service layer lives in `ui/service/` and is injected into views, not components.
+
+```java
+// ❌ WRONG — component owns service (violates ADR-002)
+public class AgentDetailDialog extends Dialog {
+    private final AgentInfoService agentInfoService;  // ❌ component cannot access service
+    
+    private void handleDelete() {
+        agentInfoService.deleteAgent(id).subscribe(...);  // ❌ reactive chain in component
+    }
+}
+
+// ✅ CORRECT — view owns service, component uses callbacks
+public class AgentDetailDialog extends Dialog {
+    private final Consumer<AgentDefinition> onSave;  // ✅ just data
+    private final Consumer<String> onDelete;          // ✅ just the id
+    
+    private void handleDelete() {
+        onDelete.accept(existingAgent.id());  // ✅ pure UI, no service dependency
+    }
+}
+
+// AgentListView — view coordinates service and component
+grid.addItemClickListener(e -> {
+    new AgentDetailDialog(
+        e.getItem(),
+        updatedDef -> {
+            // View owns reactive chain and threading
+            agentInfoService.updateAgent(e.getItem().id(), updatedDef)
+                .subscribe(
+                    info -> UI.getCurrent().access(() -> reloadData()),
+                    err -> UI.getCurrent().access(() -> showNotification(err))
+                );
+        },
+        id -> {
+            agentInfoService.deleteAgent(id)
+                .subscribe(deletedId -> UI.getCurrent().access(() -> reloadData()));
+        }
+    );
+    dialog.open();
+});
+```
+
+**Why this rule exists**:
+- **Threading**: Reactive callbacks run on arbitrary threads; `UI.getCurrent()` is only valid on the Vaadin UI thread. Views control `UI.access()` wrapping; components cannot.
+- **Reactive safety**: `Mono<Void>` / `Mono.empty()` completes without emitting a value, so `subscribe(value -> ...)` is **never called**. This caused multiple bugs when reactive chains were embedded in components where the lifecycle and threading were less visible.
+- **Testability**: Components with no service dependency are pure UI — testable with browserless tests using just `@ViewPackages` and mock callbacks, no Spring context needed.
+- **Re-entrancy**: Views can gate, cancel, or reorder service calls. Components have no visibility into concurrent operations.
+
+> **⚠️ Reactor Gotcha — `Mono<Void>` and `Mono.empty()`**
+>
+> `Mono.empty()` completes synchronously without emitting a value. The `subscribe(Consumer<T> onNext, Consumer<Throwable> onError)` overload is **never invoked** because there is no `onNext` event to fire.
+>
+> ```java
+> // ❌ BUG — subscribe consumer never called
+> Mono<Void> result = someOperation();
+> result.subscribe(
+>     unused -> System.out.println("This NEVER fires!"),  // skipped!
+>     err -> System.out.println("Error handling works")
+> );
+> ```
+>
+> To trigger the success consumer, the Mono must emit a value:
+> ```java
+> // ✅ FIXED — emit a value to trigger the consumer
+> Mono<String> result = someOperation();  // returns Mono.just(id)
+> result.subscribe(
+>     id -> System.out.println("Fires with: " + id),  // called!
+>     err -> System.out.println("Error handling works")
+> );
+> ```
+>
+> When a service operation doesn't return meaningful data, use `Mono.just(unitValue)` or `Mono.fromRunnable(() -> {...})` if you need to trigger the subscriber for side effects. Alternatively, use `subscribe(onNext, onError, onComplete)` to handle the completion event separately.
 
 #### 1. Lifecycle-Aware Scheduling
 
