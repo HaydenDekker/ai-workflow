@@ -22,7 +22,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 
@@ -31,7 +31,7 @@ import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
  * 
  * This test verifies the complete end-to-end flow:
  * 1. Spring Boot starts with the full Spring Integration pipeline
- * 2. An agent is registered via DynamicAgentManager (subscribes to fileInboundFluxChannel)
+ * 2. An agent is registered via AgentLifecycleUseCase (subscribes to fileInboundFluxChannel)
  * 3. Placing a file in the watched directory triggers the flow
  * 4. WatchService/polling detects the file and sends it to fileInboundFluxChannel
  * 5. The agent's flux receives the file, processes it, and calls the LLM mock
@@ -65,7 +65,7 @@ public class FileIntegrationFlowTest {
     private ChatClientTestConfig chatClientTestConfig;
 
     @Autowired
-    private DynamicAgentManager dynamicAgentManager;
+    private AgentLifecycleUseCase dynamicAgentManager;
 
     @TempDir
     Path tempDir;

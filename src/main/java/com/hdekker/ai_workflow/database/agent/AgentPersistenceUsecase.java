@@ -13,18 +13,18 @@ import org.springframework.stereotype.Service;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 
 /**
- * Service layer to handle entity↔domain mapping for agents.
+ * Use case layer to handle entity↔domain mapping for agents.
  * Handles JSON serialization of AgentDefinition and CRUD operations.
  */
 @Service
-public class AgentPersistenceService {
+public class AgentPersistenceUsecase {
 
-	private static final Logger log = LoggerFactory.getLogger(AgentPersistenceService.class);
+	private static final Logger log = LoggerFactory.getLogger(AgentPersistenceUsecase.class);
 
 	private final AgentRepository agentRepository;
 	private final ObjectMapper objectMapper;
 
-	public AgentPersistenceService(AgentRepository agentRepository, ObjectMapper objectMapper) {
+	public AgentPersistenceUsecase(AgentRepository agentRepository, ObjectMapper objectMapper) {
 		this.agentRepository = agentRepository;
 		this.objectMapper = objectMapper;
 	}

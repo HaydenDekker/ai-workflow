@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline.management;
+package com.hdekker.ai_workflow.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -15,7 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
@@ -27,11 +28,11 @@ import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;
 
-public class DynamicAgentManagerTest {
+public class AgentLifecycleUseCaseTest {
 
-    DynamicAgentManager manager;
+    AgentLifecycleUseCase manager;
     ScannerRegistry scannerRegistry;
-    AgentPersistenceService mockPersistenceService;
+    AgentPersistenceUsecase mockPersistenceService;
 
     String expectedMockResult = "This is the expected result";
 
@@ -74,7 +75,7 @@ public class DynamicAgentManagerTest {
         when(scannerRegistry.getScannerFlux(any())).thenReturn(Flux.just(fh));
 
         // Mock persistence service
-        mockPersistenceService = mock(AgentPersistenceService.class);
+        mockPersistenceService = mock(AgentPersistenceUsecase.class);
         when(mockPersistenceService.findAllActive()).thenReturn(List.of());
         when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
         doNothing().when(mockPersistenceService).disable(anyString());
@@ -82,7 +83,7 @@ public class DynamicAgentManagerTest {
         doNothing().when(mockPersistenceService).deleteById(anyString());
 
         // Use the new constructor with ScannerRegistry
-        manager = new DynamicAgentManager(
+        manager = new AgentLifecycleUseCase(
                 scannerRegistry,
                 fileWriter,
                 outputDirectory,

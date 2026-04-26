@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.service.LLMStatusService;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 
 @WebMvcTest(ObservabilityRestController.class)
 public class ObservabilityRestControllerTest {
@@ -27,7 +27,7 @@ public class ObservabilityRestControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private LLMStatusService llmStatusService;
+    private AgentStatusUsecase llmStatusService;
 
     @Test
     public void givenStatusExists_whenGetLLMStatus_thenReturnsStatusList() throws Exception {

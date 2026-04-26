@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import reactor.core.publisher.Mono;
 
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import org.slf4j.Logger;
@@ -18,10 +18,10 @@ public class AgentInfoService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentInfoService.class);
 
-    private final DynamicAgentManager dynamicAgentManager;
+    private final AgentLifecycleUseCase dynamicAgentManager;
 
     @Autowired
-    public AgentInfoService(DynamicAgentManager dynamicAgentManager) {
+    public AgentInfoService(AgentLifecycleUseCase dynamicAgentManager) {
         this.dynamicAgentManager = dynamicAgentManager;
     }
 

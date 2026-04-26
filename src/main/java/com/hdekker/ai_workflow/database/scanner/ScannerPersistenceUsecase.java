@@ -11,17 +11,17 @@ import org.springframework.stereotype.Service;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 
 /**
- * Service layer for scanner persistence operations.
+ * Use case layer for scanner persistence operations.
  * Handles CRUD operations over {@link ScannerEntity}.
  */
 @Service
-public class ScannerPersistenceService {
+public class ScannerPersistenceUsecase {
 
-    private static final Logger log = LoggerFactory.getLogger(ScannerPersistenceService.class);
+    private static final Logger log = LoggerFactory.getLogger(ScannerPersistenceUsecase.class);
 
     private final ScannerRepository scannerRepository;
 
-    public ScannerPersistenceService(ScannerRepository scannerRepository) {
+    public ScannerPersistenceUsecase(ScannerRepository scannerRepository) {
         this.scannerRepository = scannerRepository;
     }
 

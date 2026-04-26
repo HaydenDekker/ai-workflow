@@ -12,7 +12,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
  * Usage:
  * <pre>
  *     LlmStatusBadge badge = new LlmStatusBadge(AdapterStatus.UP);
- *     // or with auto-refresh from LLMStatusService:
+ *     // or with auto-refresh from AgentStatusUsecase:
  *     LlmStatusBadge badge = new LlmStatusBadge(llmStatusService);
  * </pre>
  */

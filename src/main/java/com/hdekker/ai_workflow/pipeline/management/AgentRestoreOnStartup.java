@@ -6,7 +6,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 /**
  * Restores persisted agents from the database when the application starts.
@@ -17,9 +17,9 @@ public class AgentRestoreOnStartup {
 
 	private static final Logger log = LoggerFactory.getLogger(AgentRestoreOnStartup.class);
 
-	private final DynamicAgentManager dynamicAgentManager;
+	private final AgentLifecycleUseCase dynamicAgentManager;
 
-	public AgentRestoreOnStartup(DynamicAgentManager dynamicAgentManager) {
+	public AgentRestoreOnStartup(AgentLifecycleUseCase dynamicAgentManager) {
 		this.dynamicAgentManager = dynamicAgentManager;
 	}
 

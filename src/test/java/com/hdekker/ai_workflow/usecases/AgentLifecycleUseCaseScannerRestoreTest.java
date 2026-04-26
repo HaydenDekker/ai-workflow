@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline.management;
+package com.hdekker.ai_workflow.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,8 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.TestData;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentEntity;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
+import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
@@ -29,16 +30,16 @@ import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 import reactor.core.publisher.Flux;
 
 /**
- * Tests for DynamicAgentManager scanner creation during restore-from-database.
+ * Tests for AgentLifecycleUseCase scanner creation during restore-from-database.
  * 
  * Validates that when the application starts and restores agents from the database,
  * scanners are created in the ScannerRegistry for each restored agent — ensuring
  * the /scanners view shows dynamic agents alongside YAML agents.
  */
-public class DynamicAgentManagerScannerRestoreTest {
+public class AgentLifecycleUseCaseScannerRestoreTest {
 
-    DynamicAgentManager manager;
-    AgentPersistenceService mockPersistenceService;
+    AgentLifecycleUseCase manager;
+    AgentPersistenceUsecase mockPersistenceService;
     ScannerRegistry mockScannerRegistry;
     java.util.List<ScannerInfo> createdScanners;
     java.util.List<String> fluxLookups;
@@ -60,7 +61,7 @@ public class DynamicAgentManagerScannerRestoreTest {
 
         Path outputDirectory = Path.of("/test/output");
 
-        mockPersistenceService = mock(AgentPersistenceService.class);
+        mockPersistenceService = mock(AgentPersistenceUsecase.class);
         mockScannerRegistry = mock(ScannerRegistry.class);
 
         // Track scanner creations
@@ -86,7 +87,7 @@ public class DynamicAgentManagerScannerRestoreTest {
         doNothing().when(mockPersistenceService).enable(anyString());
         doNothing().when(mockPersistenceService).deleteById(anyString());
 
-        manager = new DynamicAgentManager(
+        manager = new AgentLifecycleUseCase(
                 mockScannerRegistry,
                 fileWriter,
                 outputDirectory,

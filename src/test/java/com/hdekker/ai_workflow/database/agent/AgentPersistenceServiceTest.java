@@ -20,13 +20,13 @@ import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 
 /**
- * Unit tests for AgentPersistenceService — verifies entity↔domain mapping.
+ * Unit tests for AgentPersistenceUsecase — verifies entity↔domain mapping.
  * 
- * Uses @DataJpaTest with @Import to test the service with a real repository backed by H2.
+ * Uses @DataJpaTest with @Import to test the usecase with a real repository backed by H2.
  */
 @DataJpaTest
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
-@Import({ AgentPersistenceService.class, AgentPersistenceServiceTest.TestConfig.class })
+@Import({ AgentPersistenceUsecase.class, AgentPersistenceServiceTest.TestConfig.class })
 public class AgentPersistenceServiceTest {
 
 	static class TestConfig {
@@ -39,7 +39,7 @@ public class AgentPersistenceServiceTest {
 	}
 
 	@Autowired
-	private AgentPersistenceService persistenceService;
+	private AgentPersistenceUsecase persistenceService;
 
 	@Autowired
 	private AgentRepository agentRepository;

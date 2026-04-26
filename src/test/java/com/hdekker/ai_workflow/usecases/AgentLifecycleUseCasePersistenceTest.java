@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline.management;
+package com.hdekker.ai_workflow.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,8 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.TestData;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentEntity;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
+import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
@@ -29,13 +30,13 @@ import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 import reactor.core.publisher.Flux;
 
 /**
- * Tests for DynamicAgentManager with persistence service integration.
+ * Tests for AgentLifecycleUseCase with persistence service integration.
  * Verifies enable/disable agents, dormant agent registry, and restore-from-DB behavior.
  */
-public class DynamicAgentManagerPersistenceTest {
+public class AgentLifecycleUseCasePersistenceTest {
 
-	DynamicAgentManager manager;
-	AgentPersistenceService mockPersistenceService;
+	AgentLifecycleUseCase manager;
+	AgentPersistenceUsecase mockPersistenceService;
 	ScannerRegistry mockScannerRegistry;
 
 	String expectedMockResult = "This is the expected result";
@@ -60,7 +61,7 @@ public class DynamicAgentManagerPersistenceTest {
 
 		Path outputDirectory = Path.of("/test/output");
 
-		mockPersistenceService = mock(AgentPersistenceService.class);
+		mockPersistenceService = mock(AgentPersistenceUsecase.class);
 		when(mockPersistenceService.findAllActive()).thenReturn(List.of());
 		when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
 
@@ -75,7 +76,7 @@ public class DynamicAgentManagerPersistenceTest {
 		});
 		when(mockScannerRegistry.getScannerFlux(any())).thenReturn(Flux.just(fh));
 
-		manager = new DynamicAgentManager(
+		manager = new AgentLifecycleUseCase(
 				mockScannerRegistry,
 				fileWriter,
 				outputDirectory,

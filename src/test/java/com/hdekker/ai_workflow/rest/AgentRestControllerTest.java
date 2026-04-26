@@ -23,7 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
@@ -39,7 +39,7 @@ public class AgentRestControllerTest {
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private DynamicAgentManager dynamicAgentManager;
+	private AgentLifecycleUseCase dynamicAgentManager;
 
 	private AgentDefinition testAgent;
 

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline.management;
+package com.hdekker.ai_workflow.usecases;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -15,8 +15,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 
 import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentEntity;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
+import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
@@ -28,7 +29,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 /**
- * Manages the lifecycle of dynamic agents and their associated scanners.
+ * Orchestrates the lifecycle of dynamic agents and their associated scanners.
  * <p>
  * Each dynamic agent gets its own scanner (one-to-one relationship).
  * YAML agents share a default scanner created from the application config.
@@ -40,9 +41,9 @@ import reactor.core.publisher.Flux;
  *   <li>Reset to full-scan mode when an agent is refreshed (via {@link #refreshAgent(String)})</li>
  * </ul>
  */
-public class DynamicAgentManager {
+public class AgentLifecycleUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(DynamicAgentManager.class);
+    private static final Logger log = LoggerFactory.getLogger(AgentLifecycleUseCase.class);
 
     private final Map<String, AgentRegistryEntry> agentRegistry = new ConcurrentHashMap<>();
     private final Map<String, DormantAgentEntry> dormantAgents = new ConcurrentHashMap<>();
@@ -51,13 +52,13 @@ public class DynamicAgentManager {
     private final FileWriter fileWriter;
     private final Path outputDirectory;
     private final ChatClient chatClient;
-    private final AgentPersistenceService persistenceService;
+    private final AgentPersistenceUsecase persistenceService;
 
     /**
      * Default constructor for use outside Spring (no persistence, no scanner registry).
      * Agents use a shared empty flux — suitable for unit tests only.
      */
-    public DynamicAgentManager() {
+    public AgentLifecycleUseCase() {
         this.scannerRegistry = null;
         this.fileWriter = null;
         this.outputDirectory = null;
@@ -72,13 +73,13 @@ public class DynamicAgentManager {
      * @param fileWriter          file writer abstraction
      * @param outputDirectory     default output directory
      * @param chatClient          LLM chat client
-     * @param persistenceService  agent persistence service (may be null)
+     * @param persistenceService  agent persistence usecase (may be null)
      */
-    public DynamicAgentManager(ScannerRegistry scannerRegistry,
-                               FileWriter fileWriter,
-                               Path outputDirectory,
-                               ChatClient chatClient,
-                               AgentPersistenceService persistenceService) {
+    public AgentLifecycleUseCase(ScannerRegistry scannerRegistry,
+                                 FileWriter fileWriter,
+                                 Path outputDirectory,
+                                 ChatClient chatClient,
+                                 AgentPersistenceUsecase persistenceService) {
         this.scannerRegistry = scannerRegistry;
         this.fileWriter = fileWriter;
         this.outputDirectory = outputDirectory;

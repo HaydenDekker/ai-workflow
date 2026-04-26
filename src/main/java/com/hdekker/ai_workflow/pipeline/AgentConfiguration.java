@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
@@ -65,7 +65,7 @@ public class AgentConfiguration {
 	Path outputFolderPath;
 
 	@Autowired
-	DynamicAgentManager dynamicAgentManager;
+	AgentLifecycleUseCase dynamicAgentManager;
 
 	public AgentConfiguration(
 			FileSystemRecursiveFileScannerAdapter fileScanner,
@@ -73,7 +73,7 @@ public class AgentConfiguration {
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
-			DynamicAgentManager dynamicAgentManager) {
+			AgentLifecycleUseCase dynamicAgentManager) {
 
 		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;

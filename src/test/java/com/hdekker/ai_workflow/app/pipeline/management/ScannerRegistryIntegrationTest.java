@@ -27,7 +27,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.integration.dsl.context.IntegrationFlowContext;
 
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceService;
+import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
@@ -63,7 +64,7 @@ public class ScannerRegistryIntegrationTest {
     private Path outputDir;
 
     private ScannerRegistry scannerRegistry;
-    private DynamicAgentManager agentManager;
+    private AgentLifecycleUseCase agentManager;
     private IntegrationFlowContext flowContext;
     private FileMetadataDatabase fileMetadataDb;
     private ApplicationContext appContext;
@@ -93,7 +94,7 @@ public class ScannerRegistryIntegrationTest {
         });
 
         // Create agent manager with real scanner registry
-        agentManager = new DynamicAgentManager(
+        agentManager = new AgentLifecycleUseCase(
                 scannerRegistry,
                 fileWriter,
                 outputDir,

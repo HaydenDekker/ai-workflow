@@ -25,7 +25,7 @@ import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 
-import com.hdekker.ai_workflow.app.pipeline.management.DynamicAgentManager;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
@@ -46,7 +46,7 @@ import com.hdekker.ai_workflow.ui.service.AgentInfoService;
  *   <li>Verify the agent is removed from the grid</li>
  * </ol>
  * 
- * <p>This test uses a mock {@link DynamicAgentManager} that provides
+ * <p>This test uses a mock {@link AgentLifecycleUseCase} that provides
  * a pre-populated agent list and supports deletion.</p>
  * 
  * @see AgentListView
@@ -58,7 +58,7 @@ import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
     @Autowired
-    private MockDynamicAgentManager mockManager;
+    private MockAgentLifecycleUseCase mockManager;
 
     @Autowired
     private AgentInfoService agentInfoService;
@@ -217,8 +217,8 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         @Bean
         @Primary
-        public DynamicAgentManager dynamicAgentManager() {
-            return new MockDynamicAgentManager();
+        public AgentLifecycleUseCase dynamicAgentManager() {
+            return new MockAgentLifecycleUseCase();
         }
 
         @Bean
@@ -229,19 +229,19 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         @Bean
         @Primary
-        public com.hdekker.ai_workflow.service.LLMStatusService llmStatusService() {
-            return new MockLLMStatusService();
+        public com.hdekker.ai_workflow.usecases.AgentStatusUsecase llmStatusService() {
+            return new MockAgentStatusUsecase();
         }
     }
 
     /**
-     * Mock DynamicAgentManager for browserless testing.
+     * Mock AgentLifecycleUseCase for browserless testing.
      * Provides a configurable list of agents that supports deletion.
      */
-    static class MockDynamicAgentManager extends DynamicAgentManager {
+    static class MockAgentLifecycleUseCase extends AgentLifecycleUseCase {
         private final ConcurrentHashMap<String, AgentInfo> agents = new ConcurrentHashMap<>();
 
-        public MockDynamicAgentManager() {
+        public MockAgentLifecycleUseCase() {
             super();  // uses no-arg constructor which sets all deps to null
             reset();
         }
@@ -272,11 +272,11 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
     }
 
     /**
-     * Mock LLMStatusService for browserless testing.
+     * Mock AgentStatusUsecase for browserless testing.
      */
-    static class MockLLMStatusService extends com.hdekker.ai_workflow.service.LLMStatusService {
+    static class MockAgentStatusUsecase extends com.hdekker.ai_workflow.usecases.AgentStatusUsecase {
 
-        public MockLLMStatusService() {
+        public MockAgentStatusUsecase() {
             super(null, null, null);
         }
 

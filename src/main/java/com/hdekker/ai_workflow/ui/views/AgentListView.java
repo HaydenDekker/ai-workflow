@@ -19,7 +19,7 @@ import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
 import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
 import com.hdekker.ai_workflow.ui.components.LlmStatusBadge;
 import com.hdekker.ai_workflow.ui.service.AgentInfoService;
-import com.hdekker.ai_workflow.service.LLMStatusService;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -42,13 +42,13 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
     private static final Logger log = LoggerFactory.getLogger(AgentListView.class);
     final Grid<AgentInfo> grid;  // package-private for browserless test access
     private final AgentInfoService agentInfoService;
-    private final LLMStatusService llmStatusService;
+    private final AgentStatusUsecase llmStatusService;
     private final ProgressBar loadingIndicator;
     private final LlmStatusBadge llmStatusBadge;
     private ScheduledExecutorService refreshScheduler;
 
     @Autowired
-    public AgentListView(AgentInfoService agentInfoService, LLMStatusService llmStatusService) {
+    public AgentListView(AgentInfoService agentInfoService, AgentStatusUsecase llmStatusService) {
         this.agentInfoService = agentInfoService;
         this.llmStatusService = llmStatusService;
         

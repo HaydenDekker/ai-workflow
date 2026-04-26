@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.service;
+package com.hdekker.ai_workflow.usecases;
 
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Service for managing LLM endpoint health status.
+ * Use case for managing LLM endpoint health status.
  *
  * Responsibilities:
  * - Poll configured endpoints on schedule
@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
  * - Log warnings for DOWN/WARN states
  */
 @Service
-public class LLMStatusService {
+public class AgentStatusUsecase {
 
-    private static final Logger log = LoggerFactory.getLogger(LLMStatusService.class);
+    private static final Logger log = LoggerFactory.getLogger(AgentStatusUsecase.class);
 
     private final LLMStatusRepository repository;
     private final OpenAiHealthAdapter healthAdapter;
@@ -39,9 +39,9 @@ public class LLMStatusService {
     @Value("${app.observability.warn-after-hours:1}")
     private long warnAfterHours;
 
-    public LLMStatusService(LLMStatusRepository repository,
-                            OpenAiHealthAdapter healthAdapter,
-                            ObservabilityProperties observabilityProperties) {
+    public AgentStatusUsecase(LLMStatusRepository repository,
+                              OpenAiHealthAdapter healthAdapter,
+                              ObservabilityProperties observabilityProperties) {
         this.repository = repository;
         this.healthAdapter = healthAdapter;
         this.observabilityProperties = observabilityProperties;

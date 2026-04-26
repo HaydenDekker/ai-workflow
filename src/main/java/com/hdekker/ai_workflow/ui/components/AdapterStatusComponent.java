@@ -2,7 +2,7 @@ package com.hdekker.ai_workflow.ui.components;
 
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.service.LLMStatusService;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.icon.Icon;
@@ -44,7 +44,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
     private static final int DEFAULT_REFRESH_INTERVAL_SECONDS = 30;
 
     private LLMStatus status;
-    private final LLMStatusService service;
+    private final AgentStatusUsecase service;
     private final int refreshIntervalSeconds;
 
     // UI Components
@@ -66,7 +66,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
      * @param status current status of the LLM endpoint
      * @param service service for triggering health checks
      */
-    public AdapterStatusComponent(LLMStatus status, LLMStatusService service) {
+    public AdapterStatusComponent(LLMStatus status, AgentStatusUsecase service) {
         this(status, service, DEFAULT_REFRESH_INTERVAL_SECONDS);
     }
 
@@ -77,7 +77,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
      * @param service service for triggering health checks
      * @param refreshIntervalSeconds interval for auto-refresh (0 to disable)
      */
-    public AdapterStatusComponent(LLMStatus status, LLMStatusService service,
+    public AdapterStatusComponent(LLMStatus status, AgentStatusUsecase service,
                                   int refreshIntervalSeconds) {
         this.status = status;
         this.service = service;

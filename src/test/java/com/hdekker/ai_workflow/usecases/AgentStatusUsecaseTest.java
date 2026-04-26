@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.service;
+package com.hdekker.ai_workflow.usecases;
 
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for LLMStatusService.
+ * Unit tests for AgentStatusUsecase.
  * 
  * Tests cover:
  * - Scheduled polling (success, failure, null endpoint)
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
  * - Status retrieval
  */
 @ExtendWith(MockitoExtension.class)
-class LLMStatusServiceTest {
+class AgentStatusUsecaseTest {
 
     @Mock
     private LLMStatusRepository repository;
@@ -48,11 +48,11 @@ class LLMStatusServiceTest {
     @Captor
     private ArgumentCaptor<LLMStatusEntity> entityCaptor;
 
-    private LLMStatusService service;
+    private AgentStatusUsecase service;
 
     @BeforeEach
     void setUp() {
-        service = new LLMStatusService(repository, healthAdapter, observabilityProperties);
+        service = new AgentStatusUsecase(repository, healthAdapter, observabilityProperties);
     }
     
     /**
@@ -60,7 +60,7 @@ class LLMStatusServiceTest {
      */
     private void setServiceField(String fieldName, Object value) {
         try {
-            java.lang.reflect.Field field = LLMStatusService.class.getDeclaredField(fieldName);
+            java.lang.reflect.Field field = AgentStatusUsecase.class.getDeclaredField(fieldName);
             field.setAccessible(true);
             field.set(service, value);
         } catch (Exception e) {
@@ -404,7 +404,7 @@ class LLMStatusServiceTest {
      */
     private LLMStatus checkWarnConditionPrivate(LLMStatus status) {
         try {
-            java.lang.reflect.Method method = LLMStatusService.class
+            java.lang.reflect.Method method = AgentStatusUsecase.class
                 .getDeclaredMethod("checkWarnCondition", LLMStatus.class);
             method.setAccessible(true);
             return (LLMStatus) method.invoke(service, status);

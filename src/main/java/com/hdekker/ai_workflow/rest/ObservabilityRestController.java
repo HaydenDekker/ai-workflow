@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.service.LLMStatusService;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 
 /**
  * REST endpoint for observability data.
@@ -24,7 +24,7 @@ import com.hdekker.ai_workflow.service.LLMStatusService;
 public class ObservabilityRestController {
 
     @Autowired
-    private LLMStatusService llmStatusService;
+    private AgentStatusUsecase llmStatusService;
 
     /**
      * Get current LLM status from database cache.

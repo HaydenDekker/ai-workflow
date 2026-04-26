@@ -1,7 +1,7 @@
 package com.hdekker.ai_workflow.ui.views;
 
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.service.LLMStatusService;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 import com.hdekker.ai_workflow.ui.components.AdapterStatusComponent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H2;
@@ -43,7 +43,7 @@ public class ObservabilityView extends VerticalLayout
 
     private static final int VIEW_REFRESH_SECONDS = 30;
 
-    private final LLMStatusService llmStatusService;
+    private final AgentStatusUsecase llmStatusService;
     private VerticalLayout cardsContainer;
     private Button refreshButton;
     private ProgressBar loadingIndicator;
@@ -52,7 +52,7 @@ public class ObservabilityView extends VerticalLayout
     private ScheduledExecutorService viewRefreshScheduler;
 
     @Autowired
-    public ObservabilityView(LLMStatusService llmStatusService) {
+    public ObservabilityView(AgentStatusUsecase llmStatusService) {
         this.llmStatusService = llmStatusService;
         initLayout();
     }
