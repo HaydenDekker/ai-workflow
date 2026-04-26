@@ -205,4 +205,56 @@ public class AgentRestControllerTest {
 		mockMvc.perform(post("/api/agents/non-existent/refresh"))
 				.andExpect(status().isNotFound());
 	}
+
+	@Test
+	public void givenValidAgentId_whenUpdateAgent_thenReturnUpdatedAgent() throws Exception {
+		// Arrange
+		AgentDefinition updatedDef = new AgentDefinition(
+				".*\\.md", "Updated Agent", "Updated prompt", "Reduction", "Updated structure", "updated/{filename}", "/tmp/updated-dir");
+		AgentInfo updatedInfo = new AgentInfo("agent-1", updatedDef, LocalDateTime.now(), true, "DYNAMIC", "scanner-1-updated");
+		when(dynamicAgentManager.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(updatedInfo);
+
+		String jsonBody = "{" +
+				"\"fileInputRegex\":\".*\\\\.md\"," +
+				"\"title\":\"Updated Agent\"," +
+				"\"body\":\"Updated prompt\"," +
+				"\"agentType\":\"Reduction\"," +
+				"\"outputStructure\":\"Updated structure\"," +
+				"\"outputFilenameTemplate\":\"updated/{filename}\"," +
+				"\"targetDirectory\":\"/tmp/updated-dir\"" +
+				"}";
+
+		// Act & Assert
+		mockMvc.perform(put("/api/agents/agent-1")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonBody))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value("agent-1"))
+				.andExpect(jsonPath("$.definition.title").value("Updated Agent"))
+				.andExpect(jsonPath("$.definition.agentType").value("Reduction"))
+				.andExpect(jsonPath("$.scannerId").value("scanner-1-updated"));
+	}
+
+	@Test
+	public void givenNonExistentAgent_whenUpdateAgent_thenReturnNotFound() throws Exception {
+		// Arrange - mock both removeAgent (called by updateAgent internally) and updateAgent
+		doNothing().when(dynamicAgentManager).removeAgent(anyString());
+		when(dynamicAgentManager.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(null);
+
+		String jsonBody = "{" +
+				"\"fileInputRegex\":\".*\\\\.txt\"," +
+				"\"title\":\"Test\"," +
+				"\"body\":\"Body\"," +
+				"\"agentType\":\"Map\"," +
+				"\"outputStructure\":\"Structure\"," +
+				"\"outputFilenameTemplate\":\"output\"," +
+				"\"targetDirectory\":\"/tmp\"" +
+				"}";
+
+		// Act & Assert
+		mockMvc.perform(put("/api/agents/non-existent")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonBody))
+				.andExpect(status().isNotFound());
+	}
 }

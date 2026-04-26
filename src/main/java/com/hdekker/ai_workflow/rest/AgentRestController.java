@@ -37,6 +37,21 @@ public class AgentRestController {
         return ResponseEntity.ok(agents);
     }
 
+    /**
+     * Update an agent: remove the existing agent (including scanner) and re-add
+     * with the updated definition.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<AgentInfo> updateAgent(
+            @PathVariable String id,
+            @RequestBody AgentDefinition agentDefinition) {
+        AgentInfo agentInfo = dynamicAgentManager.updateAgent(id, agentDefinition);
+        if (agentInfo != null) {
+            return ResponseEntity.ok(agentInfo);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAgent(@PathVariable String id) {
         dynamicAgentManager.removeAgent(id);

@@ -224,4 +224,38 @@ public class DynamicAgentManagerTest {
         assertThat(agents).hasSize(1);
         assertThat(agents.get(0).active()).isFalse();
     }
+
+    @Test
+    public void givenDynamicAgentUpdated_ExpectAgentWithNewDefinition() {
+        AgentDefinition original = TestData.basicPrompt();
+        original = new AgentDefinition(".*\\.txt", "OriginalAgent", "Original body", "Map", "Original structure", "original-{filename}", "/tmp/test-dir");
+
+        AgentInfo info = manager.addDynamicAgent(original, "/tmp/test-dir");
+        assertThat(manager.listAgents()).hasSize(1);
+
+        AgentDefinition updated = new AgentDefinition(".*\\.md", "UpdatedAgent", "Updated body", "Reduction", "Updated structure", "updated-{filename}", "/tmp/test-dir-updated");
+        AgentInfo updatedInfo = manager.updateAgent(info.id(), updated);
+
+        assertThat(updatedInfo).isNotNull();
+        // updateAgent uses remove+re-add, so a new UUID is generated
+        assertThat(updatedInfo.definition().title()).isEqualTo("UpdatedAgent");
+        assertThat(updatedInfo.definition().agentType()).isEqualTo("Reduction");
+        assertThat(updatedInfo.definition().body()).isEqualTo("Updated body");
+        assertThat(updatedInfo.definition().targetDirectory()).isEqualTo("/tmp/test-dir-updated");
+        assertThat(updatedInfo.scannerId()).isNotNull();
+
+        List<AgentInfo> agents = manager.listAgents();
+        assertThat(agents).hasSize(1);
+        assertThat(agents.get(0).definition().title()).isEqualTo("UpdatedAgent");
+    }
+
+    @Test
+    public void givenNonExistentAgentUpdated_ExpectNewAgentCreated() {
+        // updateAgent uses remove+re-add pattern, so it always creates a new agent
+        AgentDefinition updated = TestData.basicPrompt();
+        AgentInfo result = manager.updateAgent("non-existent-id", updated);
+        assertThat(result).isNotNull();
+        assertThat(result.definition().title()).isEqualTo(TestData.basicPrompt().title());
+        assertThat(result.source()).isEqualTo("DYNAMIC");
+    }
 }

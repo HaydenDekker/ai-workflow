@@ -60,6 +60,27 @@ public class AgentInfoService {
     }
 
     /**
+     * Update an existing agent: removes the agent (including scanner) and
+     * re-adds with the updated definition.
+     *
+     * @param id               the agent ID to update
+     * @param agentDefinition  the updated agent definition
+     * @return the updated agent info
+     */
+    public Mono<AgentInfo> updateAgent(String id, AgentDefinition agentDefinition) {
+        try {
+            AgentInfo info = dynamicAgentManager.updateAgent(id, agentDefinition);
+            if (info != null) {
+                return Mono.just(info);
+            }
+            return Mono.error(new RuntimeException("Agent not found: " + id));
+        } catch (Exception ex) {
+            log.error("Error updating agent with id: {}", id, ex);
+            return Mono.error(ex);
+        }
+    }
+
+    /**
      * Refresh an agent: trigger full rescan of its target directory.
      * Used when an agent's definition is modified and needs reprocessing.
      *

@@ -5,6 +5,7 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.icon.Icon;
@@ -15,10 +16,12 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
+import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
 import com.hdekker.ai_workflow.ui.components.LlmStatusBadge;
 import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.service.LLMStatusService;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -86,6 +89,17 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         grid.setWidthFull();
         grid.setHeightFull();
         grid.setMinHeight("500px");
+        // Enable row click to open detail dialog
+        grid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
+        grid.addItemClickListener(e -> {
+            AgentDetailDialog dialog = new AgentDetailDialog(
+                    agentInfoService,
+                    e.getItem(),
+                    updatedInfo -> UI.getCurrent().accessLater(() -> reloadData(), null),    // onSave: refresh grid
+                    deletedId -> UI.getCurrent().accessLater(() -> reloadData(), null)       // onDelete: refresh grid
+            );
+            dialog.open();
+        });
         
         // Configure columns with proper sizing and sorting
         grid.addColumn(AgentInfo::id)
@@ -180,15 +194,14 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
 
     private void reloadData() {
         showLoading(true);
-        agentInfoService.getAllAgentInfos()
-            .doFinally(signalType -> grid.getUI().get().access(() -> showLoading(false)))
-            .subscribe(
-                agentInfos -> grid.getUI().get().access(() -> updateGrid(agentInfos)),
-                error -> grid.getUI().get().access(() -> {
-                    Notification.show("Error loading data: " + error.getMessage());
-                    showLoading(false);
-                })
-            );
+        try {
+            List<AgentInfo> agentInfos = agentInfoService.getAllAgentInfos().block();
+            grid.setItems(agentInfos);
+        } catch (Exception error) {
+            Notification.show("Error loading data: " + error.getMessage());
+        } finally {
+            showLoading(false);
+        }
     }
 
     private void updateGrid(List<AgentInfo> agentInfos) {

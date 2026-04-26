@@ -386,6 +386,28 @@ public class DynamicAgentManager {
     }
 
     /**
+     * Update an agent: remove the existing agent (including scanner),
+     * then re-add with the updated definition. This ensures clean scanner state.
+     *
+     * @param id               the agent ID to update
+     * @param updatedDefinition the new agent definition
+     * @return the updated agent info, or null if the original agent was not found
+     */
+    public AgentInfo updateAgent(String id, AgentDefinition updatedDefinition) {
+        // Remove the existing agent (destroys scanner, removes from registry and DB)
+        removeAgent(id);
+
+        // Re-add with updated definition
+        String targetDir = updatedDefinition.targetDirectory() != null
+                ? updatedDefinition.targetDirectory()
+                : "/tmp";
+        AgentInfo agentInfo = addDynamicAgent(updatedDefinition, targetDir);
+
+        log.info("Updated agent: {} (scannerId: {})", id, agentInfo.scannerId());
+        return agentInfo;
+    }
+
+    /**
      * Refresh an agent: dispose current subscription, reset scanner to full-scan mode, re-subscribe.
      * Used when an agent's definition is modified and needs reprocessing.
      *
