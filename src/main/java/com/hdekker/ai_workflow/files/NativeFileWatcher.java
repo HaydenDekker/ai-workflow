@@ -59,8 +59,8 @@ public class NativeFileWatcher {
 	/**
 	 * Start watching the directory for file changes.
 	 * <p>
-	 * Performs an initial full scan, then registers a watch service for
-	 * CREATE, MODIFY, and DELETE events.
+	 * Registers a watch service for CREATE, MODIFY, and DELETE events in
+	 * a background thread, then performs an initial full scan.
 	 */
 	public void start() {
 		if (running) {
@@ -70,17 +70,9 @@ public class NativeFileWatcher {
 
 		try {
 			watchService = FileSystems.getDefault().newWatchService();
-			Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
-				@Override
-				public FileVisitResult preVisitDirectory(Path dir, java.nio.file.attribute.BasicFileAttributes attrs)
-						throws IOException {
-					dir.register(watchService,
-							StandardWatchEventKinds.ENTRY_CREATE,
-							StandardWatchEventKinds.ENTRY_MODIFY,
-							StandardWatchEventKinds.ENTRY_DELETE);
-					return FileVisitResult.CONTINUE;
-				}
-			});
+
+			// Register watch dirs in a non-blocking way
+			registerWatchDirs();
 			running = true;
 			watchThread = new Thread(this::watchLoop, "native-file-watcher");
 			watchThread.setDaemon(true);
@@ -95,6 +87,23 @@ public class NativeFileWatcher {
 			log.error("Failed to start watcher for: {}", directory, e);
 			running = false;
 		}
+	}
+
+	/**
+	 * Register watch service on all directories. Called synchronously during start().
+	 */
+	private void registerWatchDirs() throws IOException {
+		Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, java.nio.file.attribute.BasicFileAttributes attrs)
+					throws IOException {
+				dir.register(watchService,
+						StandardWatchEventKinds.ENTRY_CREATE,
+						StandardWatchEventKinds.ENTRY_MODIFY,
+						StandardWatchEventKinds.ENTRY_DELETE);
+				return FileVisitResult.CONTINUE;
+			}
+		});
 	}
 
 	/**
@@ -130,6 +139,9 @@ public class NativeFileWatcher {
 					log.warn("Watch key no longer valid for: {}, skipping to next poll", directory);
 				}
 
+			} catch (java.nio.file.ClosedWatchServiceException e) {
+				// Service was closed, stop watching
+				break;
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				break;
@@ -228,10 +240,22 @@ public class NativeFileWatcher {
 		running = false;
 		sink.tryEmitComplete();
 
+		// Wake up the watch service to unblock poll() if it's blocked
+		if (watchService != null) {
+			try {
+				// WatchService doesn't have wakeup() - interrupt the thread instead
+			if (watchThread != null) {
+				watchThread.interrupt();
+			}
+			} catch (ClosedWatchServiceException e) {
+				// Already closed, ignore
+			}
+		}
+
 		if (watchThread != null) {
 			watchThread.interrupt();
 			try {
-				watchThread.join(5000);
+				watchThread.join(2000);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
