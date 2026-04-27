@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import org.slf4j.Logger;
@@ -19,10 +21,13 @@ public class AgentInfoService {
     private static final Logger log = LoggerFactory.getLogger(AgentInfoService.class);
 
     private final AgentLifecycleUseCase dynamicAgentManager;
+    private final TargetDirectoryValidator targetDirectoryValidator;
 
     @Autowired
-    public AgentInfoService(AgentLifecycleUseCase dynamicAgentManager) {
+    public AgentInfoService(AgentLifecycleUseCase dynamicAgentManager,
+                            TargetDirectoryValidator targetDirectoryValidator) {
         this.dynamicAgentManager = dynamicAgentManager;
+        this.targetDirectoryValidator = targetDirectoryValidator;
     }
 
     public Mono<List<AgentInfo>> getAllAgentInfos() {
@@ -47,10 +52,11 @@ public class AgentInfoService {
 
     public Mono<AgentInfo> createAgent(AgentDefinition agentDefinition) {
         try {
-            // Extract targetDirectory from the definition, default to /tmp if not set
-            String targetDir = agentDefinition.targetDirectory() != null 
-                    ? agentDefinition.targetDirectory() 
-                    : "/tmp";
+            String targetDir = agentDefinition.targetDirectory();
+            ValidationResult result = targetDirectoryValidator.validate(targetDir);
+            if (!result.valid()) {
+                return Mono.error(new IllegalArgumentException(result.reason()));
+            }
             AgentInfo info = dynamicAgentManager.addDynamicAgent(agentDefinition, targetDir);
             return Mono.just(info);
         } catch (Exception ex) {

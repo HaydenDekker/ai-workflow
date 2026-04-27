@@ -26,7 +26,7 @@ public class TestData {
 				"This prompt is part of a basic pipeline stage configuration. You should simply confirm you've received this prompt.", 
 				"Neat and tidy output is required.",
 				"output/${name}",
-				"/tmp/ai-workflow-test");
+				System.getProperty("java.io.tmpdir") + "/ai-workflow-test");
 	}
 	
 	public static PromptResponse basicResponse() {

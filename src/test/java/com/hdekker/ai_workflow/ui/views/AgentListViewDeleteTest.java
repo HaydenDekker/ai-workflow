@@ -70,7 +70,8 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
     private static AgentInfo createAgent(String id, String title, String regex) {
         return new AgentInfo(
                 id,
-                new AgentDefinition(regex, title, "Body", "Map", "Output", "out/${name}.md", "/tmp"),
+                new AgentDefinition(regex, title, "Body", "Map", "Output", "out/${name}.md",
+                        System.getProperty("java.io.tmpdir")),
                 LocalDateTime.now(), true, "TEST", "scanner-" + id);
     }
 
@@ -224,7 +225,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         @Bean
         @Primary
         public AgentInfoService agentInfoService() {
-            return new AgentInfoService(dynamicAgentManager());
+            return new AgentInfoService(dynamicAgentManager(), new com.hdekker.ai_workflow.files.TargetDirectoryValidator());
         }
 
         @Bean

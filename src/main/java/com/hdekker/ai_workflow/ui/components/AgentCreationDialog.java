@@ -83,7 +83,7 @@ public class AgentCreationDialog extends Dialog {
 
         // Initialize form fields
         titleField = createTextField("Title", "", 100);
-        targetDirectoryField = createTextField("Target Directory", "/tmp", 255);
+        targetDirectoryField = createTextField("Target Directory", "", 255);
         addHelperText(targetDirectoryField, "Absolute path to the directory to scan (e.g., /data/inbox)");
         fileInputRegexField = createTextField("File Input Regex", ".*", 100);
         addHelperText(fileInputRegexField, "Pattern: (?:(.*/)?)(.*)");
@@ -158,7 +158,7 @@ public class AgentCreationDialog extends Dialog {
     public void open(AgentDefinition existing) {
         if (existing != null) {
             titleField.setValue(existing.title());
-            targetDirectoryField.setValue(existing.targetDirectory() != null ? existing.targetDirectory() : "/tmp");
+            targetDirectoryField.setValue(existing.targetDirectory() != null ? existing.targetDirectory() : "");
             fileInputRegexField.setValue(existing.fileInputRegex());
             agentTypeCombo.setValue(existing.agentType());
             bodyField.setValue(existing.body());
@@ -182,7 +182,7 @@ public class AgentCreationDialog extends Dialog {
      */
     public void resetForm() {
         titleField.setValue("");
-        targetDirectoryField.setValue("/tmp");
+        targetDirectoryField.setValue("");
         fileInputRegexField.setValue(".*");
         agentTypeCombo.setValue(null);
         bodyField.setValue("");

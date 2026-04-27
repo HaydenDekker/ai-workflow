@@ -20,6 +20,8 @@ import com.hdekker.ai_workflow.database.agent.AgentEntity;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
@@ -53,6 +55,7 @@ public class AgentLifecycleUseCase {
     private final Path outputDirectory;
     private final ChatClient chatClient;
     private final AgentPersistenceUsecase persistenceService;
+    private final TargetDirectoryValidator targetDirectoryValidator;
 
     /**
      * Default constructor for use outside Spring (no persistence, no scanner registry).
@@ -64,27 +67,31 @@ public class AgentLifecycleUseCase {
         this.outputDirectory = null;
         this.chatClient = null;
         this.persistenceService = null;
+        this.targetDirectoryValidator = null;
     }
 
     /**
      * Full constructor with Spring-managed dependencies.
      *
-     * @param scannerRegistry     registry for per-agent scanner instances
-     * @param fileWriter          file writer abstraction
-     * @param outputDirectory     default output directory
-     * @param chatClient          LLM chat client
-     * @param persistenceService  agent persistence usecase (may be null)
+     * @param scannerRegistry          registry for per-agent scanner instances
+     * @param fileWriter               file writer abstraction
+     * @param outputDirectory          default output directory
+     * @param chatClient               LLM chat client
+     * @param persistenceService       agent persistence usecase (may be null)
+     * @param targetDirectoryValidator target directory validator
      */
     public AgentLifecycleUseCase(ScannerRegistry scannerRegistry,
                                  FileWriter fileWriter,
                                  Path outputDirectory,
                                  ChatClient chatClient,
-                                 AgentPersistenceUsecase persistenceService) {
+                                 AgentPersistenceUsecase persistenceService,
+                                 TargetDirectoryValidator targetDirectoryValidator) {
         this.scannerRegistry = scannerRegistry;
         this.fileWriter = fileWriter;
         this.outputDirectory = outputDirectory;
         this.chatClient = chatClient;
         this.persistenceService = persistenceService;
+        this.targetDirectoryValidator = targetDirectoryValidator;
     }
 
     /**
@@ -95,7 +102,17 @@ public class AgentLifecycleUseCase {
     public void initializeFromYAML(List<AgentDefinition> yamlAgents) {
         yamlAgents.forEach(agent -> {
             String id = agent.title(); // Use title as ID for YAML agents
-            String targetDir = agent.targetDirectory() != null ? agent.targetDirectory() : "/tmp";
+            ValidationResult result = validateTargetDirectory(agent.targetDirectory());
+            if (!result.valid()) {
+                log.warn("Agent {} has no valid targetDirectory: {}. Initialization halted.", id, result.reason());
+                // Persist to DB but skip scanner/flux/subscription
+                if (persistenceService != null) {
+                    persistenceService.save(id, agent, "YAML", null);
+                }
+                return;
+            }
+
+            String targetDir = agent.targetDirectory();
             Flux<PromptResponse> flux = buildFlux(agent, targetDir);
             Disposable subscription = flux.subscribe();
 
@@ -135,13 +152,21 @@ public class AgentLifecycleUseCase {
         // Restore active (enabled) agents — creates scanners for each
         List<AgentEntity> activeEntities = persistenceService.findAllActive();
         int restoredCount = 0;
+        int skippedCount = 0;
         for (AgentEntity entity : activeEntities) {
             try {
                 Optional<AgentDefinition> definitionOpt = persistenceService.getDefinition(entity.getId());
                 if (definitionOpt.isPresent()) {
                     AgentDefinition def = definitionOpt.get();
-                    String targetDir = def.targetDirectory() != null ? def.targetDirectory() : "/tmp";
+                    ValidationResult result = validateTargetDirectory(def.targetDirectory());
+                    if (!result.valid()) {
+                        log.warn("Agent {} has no valid targetDirectory: {}. Initialization halted.",
+                                entity.getId(), result.reason());
+                        skippedCount++;
+                        continue;
+                    }
 
+                    String targetDir = def.targetDirectory();
                     // Create a new scanner for this restored agent (one-to-one)
                     String scannerId = null;
                     if (scannerRegistry != null) {
@@ -188,7 +213,8 @@ public class AgentLifecycleUseCase {
             }
         }
 
-        log.info("Restored {} active agents and {} dormant agents from database", restoredCount, dormantCount);
+        log.info("Restored {} active agents and {} dormant agents from database (skipped {} with invalid targetDirectory)",
+                restoredCount, dormantCount, skippedCount);
     }
 
     /**
@@ -347,7 +373,15 @@ public class AgentLifecycleUseCase {
 
         // Re-configure and subscribe
         AgentDefinition def = dormantEntry.agentDefinition();
-        String targetDir = def.targetDirectory() != null ? def.targetDirectory() : "/tmp";
+        ValidationResult result = validateTargetDirectory(def.targetDirectory());
+        if (!result.valid()) {
+            log.warn("Agent {} has no valid targetDirectory: {}. Re-initialization halted.", id, result.reason());
+            // Put the agent back into dormant registry
+            dormantAgents.put(id, dormantEntry);
+            return null;
+        }
+
+        String targetDir = def.targetDirectory();
         Flux<PromptResponse> flux = buildFlux(def, targetDir);
         Disposable subscription = flux.subscribe();
 
@@ -399,9 +433,13 @@ public class AgentLifecycleUseCase {
         removeAgent(id);
 
         // Re-add with updated definition
-        String targetDir = updatedDefinition.targetDirectory() != null
-                ? updatedDefinition.targetDirectory()
-                : "/tmp";
+        ValidationResult result = validateTargetDirectory(updatedDefinition.targetDirectory());
+        if (!result.valid()) {
+            log.warn("Agent {} has no valid targetDirectory: {}. Update halted.", id, result.reason());
+            return null;
+        }
+
+        String targetDir = updatedDefinition.targetDirectory();
         AgentInfo agentInfo = addDynamicAgent(updatedDefinition, targetDir);
 
         log.info("Updated agent: {} (scannerId: {})", id, agentInfo.scannerId());
@@ -438,7 +476,13 @@ public class AgentLifecycleUseCase {
 
         // Re-configure and subscribe with fresh flux
         AgentDefinition def = entry.agentDefinition();
-        String targetDir = def.targetDirectory() != null ? def.targetDirectory() : "/tmp";
+        ValidationResult validationResult = validateTargetDirectory(def.targetDirectory());
+        if (!validationResult.valid()) {
+            log.warn("Agent {} has no valid targetDirectory: {}. Refresh halted.", agentId, validationResult.reason());
+            return null;
+        }
+
+        String targetDir = def.targetDirectory();
         Flux<PromptResponse> flux = buildFlux(def, targetDir);
         Disposable subscription = flux.subscribe();
 
@@ -509,6 +553,22 @@ public class AgentLifecycleUseCase {
      */
     public boolean hasScannerRegistry() {
         return scannerRegistry != null;
+    }
+
+    /**
+     * Validates the target directory using the configured validator (if present).
+     * Returns {@code ValidationResult.valid()} when no validator is configured (e.g. unit tests
+     * using the no-arg constructor).
+     *
+     * @param targetDir the target directory path to validate (may be null)
+     * @return the validation result
+     */
+    private ValidationResult validateTargetDirectory(String targetDir) {
+        if (targetDirectoryValidator == null) {
+            // No validator configured — assume valid (e.g. unit tests without Spring)
+            return ValidationResult.success();
+        }
+        return targetDirectoryValidator.validate(targetDir);
     }
 
     private record AgentRegistryEntry(String id, AgentDefinition agentDefinition, Flux<PromptResponse> flux,

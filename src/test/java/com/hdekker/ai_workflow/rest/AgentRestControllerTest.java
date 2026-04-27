@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
@@ -41,6 +42,9 @@ public class AgentRestControllerTest {
 	@MockitoBean
 	private AgentLifecycleUseCase dynamicAgentManager;
 
+	@MockitoBean
+	private TargetDirectoryValidator targetDirectoryValidator;
+
 	private AgentDefinition testAgent;
 
 	@BeforeEach
@@ -53,6 +57,15 @@ public class AgentRestControllerTest {
 				"Clean output",
 				"output/{filename}",
 				"/tmp/test-dir");
+		// Mock the validator to accept /tmp/test-dir as valid
+		org.mockito.Mockito.when(targetDirectoryValidator.validate(org.mockito.ArgumentMatchers.anyString()))
+				.thenAnswer(invocation -> {
+					String path = invocation.getArgument(0);
+					if (path == null || path.isBlank()) {
+						return com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult.failure("targetDirectory is required");
+					}
+					return com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult.success();
+				});
 	}
 
 	@Test

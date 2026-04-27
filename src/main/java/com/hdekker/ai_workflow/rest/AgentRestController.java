@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
@@ -24,10 +26,17 @@ public class AgentRestController {
     @Autowired
     private AgentLifecycleUseCase dynamicAgentManager;
 
+    @Autowired
+    private TargetDirectoryValidator targetDirectoryValidator;
+
     @PostMapping
-    public ResponseEntity<AgentInfo> createAgent(@RequestBody AgentDefinition agentDefinition) {
-        AgentInfo agentInfo = dynamicAgentManager.addDynamicAgent(agentDefinition, 
-                agentDefinition.targetDirectory() != null ? agentDefinition.targetDirectory() : "/tmp");
+    public ResponseEntity<?> createAgent(@RequestBody AgentDefinition agentDefinition) {
+        String targetDir = agentDefinition.targetDirectory();
+        ValidationResult result = targetDirectoryValidator.validate(targetDir);
+        if (!result.valid()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", result.reason()));
+        }
+        AgentInfo agentInfo = dynamicAgentManager.addDynamicAgent(agentDefinition, targetDir);
         return ResponseEntity.ok(agentInfo);
     }
 

@@ -21,6 +21,7 @@ import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
@@ -67,7 +68,7 @@ public class AgentLifecycleUseCasePersistenceTest {
 
 		// Mock scanner registry
 		mockScannerRegistry = mock(ScannerRegistry.class);
-		when(mockScannerRegistry.createForAgent(anyString(), anyString(), anyInt())).thenAnswer(invocation -> {
+		when(mockScannerRegistry.createForAgent(anyString(), any(), anyInt())).thenAnswer(invocation -> {
 			String agentId = invocation.getArgument(0);
 			String targetDir = invocation.getArgument(1);
 			return new ScannerInfo(
@@ -81,7 +82,8 @@ public class AgentLifecycleUseCasePersistenceTest {
 				fileWriter,
 				outputDirectory,
 				chatClient,
-				mockPersistenceService);
+				mockPersistenceService,
+				null);
 	}
 
 	@Test
@@ -324,7 +326,7 @@ public class AgentLifecycleUseCasePersistenceTest {
 							 + "\",\"agentType\":\"" + def.agentType()
 							 + "\",\"outputStructure\":\"" + def.outputStructure()
 							 + "\",\"outputFilenameTemplate\":\"" + def.outputFilenameTemplate()
-							 + "\",\"targetDirectory\":\"" + (def.targetDirectory() != null ? def.targetDirectory() : "/tmp") + "\"}");
+							 + "\",\"targetDirectory\":\"" + (def.targetDirectory() != null ? def.targetDirectory() : "") + "\"}");
 		} catch (Exception e) {
 			entity.setAgentDefinitionJson("{}");
 		}

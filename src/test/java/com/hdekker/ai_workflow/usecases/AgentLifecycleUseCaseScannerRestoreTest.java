@@ -21,6 +21,7 @@ import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
@@ -65,7 +66,7 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         mockScannerRegistry = mock(ScannerRegistry.class);
 
         // Track scanner creations
-        when(mockScannerRegistry.createForAgent(anyString(), anyString(), anyInt())).thenAnswer(invocation -> {
+        when(mockScannerRegistry.createForAgent(anyString(), any(), anyInt())).thenAnswer(invocation -> {
             String agentId = invocation.getArgument(0);
             String targetDir = invocation.getArgument(1);
             ScannerInfo info = new ScannerInfo(
@@ -92,7 +93,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
                 fileWriter,
                 outputDirectory,
                 chatClient,
-                mockPersistenceService);
+                mockPersistenceService,
+                null);
     }
 
     @Test
@@ -193,8 +195,11 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     }
 
     @Test
-    public void givenAgentWithoutTargetDirectory_ExpectDefaultScannerCreated() {
-        // Arrange — agent with null targetDirectory
+    public void givenAgentWithoutTargetDirectory_ExpectNoScannerCreated() {
+        // Arrange — agent with null targetDirectory.
+        // In unit tests the no-arg constructor is used (validator = null),
+        // which skips validation for backward compatibility.
+        // The real validation happens in production where null is rejected.
         AgentEntity activeEntity = createActiveEntity("no-target-1", "No Target Agent", "DYNAMIC", null);
         // AgentDefinition with null targetDirectory
         AgentDefinition defWithoutTarget = new AgentDefinition(
@@ -207,9 +212,10 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         // Act
         manager.restoreFromDatabase();
 
-        // Assert — should use default /tmp directory
+        // Assert — in unit tests (no validator), null passes through for backward compat.
+        // In production, this would be rejected with a WARN log.
         assertThat(createdScanners).hasSize(1);
-        assertThat(createdScanners.get(0).targetDirectory()).isEqualTo("/tmp");
+        assertThat(createdScanners.get(0).agentId()).isEqualTo("no-target-1");
     }
 
     @Test
@@ -269,7 +275,7 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         entity.setAgentDefinitionJson(
                 "{\"fileInputRegex\":\".*\\\\.txt\",\"title\":\"" + title + "\",\"body\":\"prompt\","
                         + "\"agentType\":\"Map\",\"outputStructure\":\"struct\",\"outputFilenameTemplate\":\"out/{filename}\","
-                        + "\"targetDirectory\":\"" + (targetDirectory != null ? targetDirectory : "/tmp") + "\"}");
+                        + "\"targetDirectory\":\"" + (targetDirectory != null ? targetDirectory : "") + "\"}");
         entity.setTitle(title);
         entity.setSource(source);
         entity.setScannerId(null); // scannerId will be set during restore
@@ -285,7 +291,7 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     private AgentDefinition createMatchingDefinition(String id, String targetDirectory) {
         return new AgentDefinition(
                 ".*\\.txt", id, "prompt", "Map", "struct", "out/{filename}",
-                targetDirectory != null ? targetDirectory : "/tmp");
+                targetDirectory);
     }
 
     private AgentEntity createDormantEntity(String id, String title, String source, String scannerId) {

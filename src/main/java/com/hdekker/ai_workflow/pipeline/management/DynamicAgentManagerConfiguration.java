@@ -12,6 +12,7 @@ import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileSystemFileWriter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 
 /**
  * Configuration for AgentLifecycleUseCase.
@@ -23,18 +24,25 @@ import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 public class DynamicAgentManagerConfiguration {
 
 	@Bean
+	public TargetDirectoryValidator targetDirectoryValidator() {
+		return new TargetDirectoryValidator();
+	}
+
+	@Bean
 	public AgentLifecycleUseCase dynamicAgentManager(
 			ScannerRegistry scannerRegistry,
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
 			FileSystemFileWriter fileWriter,
-			AgentPersistenceUsecase agentPersistenceUsecase) throws IOException {
+			AgentPersistenceUsecase agentPersistenceUsecase,
+			TargetDirectoryValidator targetDirectoryValidator) throws IOException {
 		Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
 		return new AgentLifecycleUseCase(
 				scannerRegistry,
 				fileWriter,
 				outputFolderPath,
 				chatClient,
-				agentPersistenceUsecase);
+				agentPersistenceUsecase,
+				targetDirectoryValidator);
 	}
 }

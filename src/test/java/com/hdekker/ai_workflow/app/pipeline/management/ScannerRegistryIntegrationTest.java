@@ -93,7 +93,8 @@ public class ScannerRegistryIntegrationTest {
                 fileWriter,
                 outputDir,
                 chatClient,
-                null); // no persistence for these tests
+                null, // no persistence for these tests
+                null); // no target directory validator for these tests
     }
 
     @AfterEach

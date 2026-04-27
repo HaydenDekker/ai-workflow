@@ -20,6 +20,7 @@ import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
@@ -61,7 +62,7 @@ public class AgentLifecycleUseCaseTest {
 
         // Create a mock scanner registry
         scannerRegistry = mock(ScannerRegistry.class);
-        when(scannerRegistry.createForAgent(anyString(), anyString(), anyInt())).thenAnswer(invocation -> {
+        when(scannerRegistry.createForAgent(anyString(), any(), anyInt())).thenAnswer(invocation -> {
             String agentId = invocation.getArgument(0);
             String targetDir = invocation.getArgument(1);
             return new ScannerInfo(
@@ -88,7 +89,8 @@ public class AgentLifecycleUseCaseTest {
                 fileWriter,
                 outputDirectory,
                 chatClient,
-                mockPersistenceService);
+                mockPersistenceService,
+                null);
     }
 
     @Test

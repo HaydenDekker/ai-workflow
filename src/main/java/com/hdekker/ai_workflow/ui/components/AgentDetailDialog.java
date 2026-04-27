@@ -97,7 +97,7 @@ public class AgentDetailDialog extends Dialog {
 
         // Initialize editable form fields
         titleField = createTextField("Title", "", 100);
-        targetDirectoryField = createTextField("Target Directory", "/tmp", 255);
+        targetDirectoryField = createTextField("Target Directory", "", 255);
         addHelperText(targetDirectoryField, "Absolute path to the directory to scan (e.g., /data/inbox)");
         fileInputRegexField = createTextField("File Input Regex", ".*", 100);
         addHelperText(fileInputRegexField, "Pattern: (?:(.*/)?)(.*)");
@@ -186,7 +186,7 @@ public class AgentDetailDialog extends Dialog {
         if (existingAgent != null && existingAgent.definition() != null) {
             AgentDefinition def = existingAgent.definition();
             titleField.setValue(def.title() != null ? def.title() : "");
-            targetDirectoryField.setValue(def.targetDirectory() != null ? def.targetDirectory() : "/tmp");
+            targetDirectoryField.setValue(def.targetDirectory() != null ? def.targetDirectory() : "");
             fileInputRegexField.setValue(def.fileInputRegex() != null ? def.fileInputRegex() : ".*");
             agentTypeCombo.setValue(def.agentType() != null ? def.agentType() : "Map");
             bodyField.setValue(def.body() != null ? def.body() : "");
