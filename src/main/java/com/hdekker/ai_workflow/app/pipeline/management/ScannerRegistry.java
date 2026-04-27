@@ -65,22 +65,18 @@ public class ScannerRegistry implements org.springframework.beans.factory.Dispos
     }
 
     private final ConcurrentHashMap<String, ScannerMetadata> scanners = new ConcurrentHashMap<>();
-    private final org.springframework.integration.dsl.context.IntegrationFlowContext integrationFlowContext;
     private final ApplicationContext applicationContext;
     private final FileMetadataDatabase fileMetadataDatabase;
 
     /**
      * Creates a new ScannerRegistry with the required Spring dependencies.
      *
-     * @param integrationFlowContext    Spring Integration flow context for managing flows
      * @param applicationContext        Spring application context
      * @param fileMetadataDatabase      Database for file metadata change detection
      */
     public ScannerRegistry(
-            org.springframework.integration.dsl.context.IntegrationFlowContext integrationFlowContext,
             ApplicationContext applicationContext,
             FileMetadataDatabase fileMetadataDatabase) {
-        this.integrationFlowContext = integrationFlowContext;
         this.applicationContext = applicationContext;
         this.fileMetadataDatabase = fileMetadataDatabase;
     }
@@ -123,7 +119,6 @@ public class ScannerRegistry implements org.springframework.beans.factory.Dispos
         FileSystemScannerAdapter scanner = new FileSystemScannerAdapter(
                 targetDirectory,
                 delay,
-                integrationFlowContext,
                 fileMetadataDatabase);
 
         ScannerMetadata metadata = new ScannerMetadata(

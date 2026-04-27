@@ -16,7 +16,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
-import org.springframework.integration.dsl.context.IntegrationFlowContext;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
@@ -24,7 +23,6 @@ import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 public class ScannerRegistryTest {
 
     private ScannerRegistry registry;
-    private IntegrationFlowContext flowContext;
     private FileMetadataDatabase fileMetadataDb;
     private ApplicationContext appContext;
     private Path tempDir;
@@ -34,11 +32,10 @@ public class ScannerRegistryTest {
         // Create a real temp directory for testing
         tempDir = Files.createTempDirectory("scanner-registry-test-");
 
-        flowContext = mock(IntegrationFlowContext.class);
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
 
-        registry = new ScannerRegistry(flowContext, appContext, fileMetadataDb);
+        registry = new ScannerRegistry(appContext, fileMetadataDb);
     }
 
     @Test

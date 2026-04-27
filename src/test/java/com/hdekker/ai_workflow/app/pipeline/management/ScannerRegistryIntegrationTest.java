@@ -2,9 +2,6 @@ package com.hdekker.ai_workflow.app.pipeline.management;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +22,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.integration.dsl.context.IntegrationFlowContext;
 
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
@@ -65,7 +61,6 @@ public class ScannerRegistryIntegrationTest {
 
     private ScannerRegistry scannerRegistry;
     private AgentLifecycleUseCase agentManager;
-    private IntegrationFlowContext flowContext;
     private FileMetadataDatabase fileMetadataDb;
     private ApplicationContext appContext;
 
@@ -76,12 +71,11 @@ public class ScannerRegistryIntegrationTest {
         outputDir = Files.createDirectory(tempDir.resolve("output"));
 
         // Create real (non-mocked) dependencies for scanner integration
-        flowContext = mock(IntegrationFlowContext.class);
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
 
         // Create the real scanner registry
-        scannerRegistry = new ScannerRegistry(flowContext, appContext, fileMetadataDb);
+        scannerRegistry = new ScannerRegistry(appContext, fileMetadataDb);
 
         // Create a mock ChatClient and FileWriter for the agent manager
         String mockResponse = "## Analysis\n\nDocument processed successfully.";
