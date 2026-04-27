@@ -1,23 +1,15 @@
 package com.hdekker.ai_workflow.files;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.integration.file.DefaultDirectoryScanner;
-import org.springframework.integration.file.inbound.FileReadingMessageSource;
-import org.springframework.integration.util.IntegrationReactiveUtils;
-import org.springframework.messaging.Message;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.files.FileMetadataStore;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 
 import reactor.core.publisher.Flux;
@@ -26,11 +18,10 @@ import reactor.core.publisher.Sinks;
 /**
  * Parameterised file scanner adapter for use with {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}.
  * <p>
- * Unlike {@link FileSystemRecursiveFileScannerAdapter} which is a Spring singleton tied to a single path,
- * this adapter accepts its folder path and delay at construction time, enabling one adapter per agent.
+ * This adapter accepts its folder path and delay at construction time, enabling one adapter per agent.
  * <p>
- * Lifecycle is managed externally: the adapter uses a direct {@code FileReadingMessageSource} pipeline
- * (no {@code IntegrationFlowContext}) for watching the target directory.
+ * Lifecycle is managed externally: the adapter uses a native NIO WatchService pipeline
+ * for watching the target directory.
  */
 public class FileSystemScannerAdapter implements FileScanner {
 
@@ -38,10 +29,9 @@ public class FileSystemScannerAdapter implements FileScanner {
 
     private final String folderPath;
     private final Duration delayBetweenReads;
-    private final FileMetadataDatabase fileMetadataDatabase;
+    private final FileMetadataStore fileMetadataStore;
 
-    private final Sinks.Many<FileHistory> sink;
-    private volatile FileReadingMessageSource messageSource;
+    private final NativeFileWatcher nativeFileWatcher;
     private volatile boolean disposed = false;
 
     /**
@@ -49,78 +39,27 @@ public class FileSystemScannerAdapter implements FileScanner {
      *
      * @param folderPath          absolute path to watch
      * @param delayBetweenReads   poll interval for the watch service
-     * @param fileMetadataDatabase metadata for change detection
+     * @param fileMetadataStore metadata for change detection
      */
     public FileSystemScannerAdapter(String folderPath,
                                      Duration delayBetweenReads,
-                                     FileMetadataDatabase fileMetadataDatabase) {
+                                     FileMetadataStore fileMetadataStore) {
         this.folderPath = folderPath;
         this.delayBetweenReads = delayBetweenReads;
-        this.fileMetadataDatabase = fileMetadataDatabase;
-        this.sink = Sinks.many().multicast().directBestEffort();
+        this.fileMetadataStore = fileMetadataStore;
+        this.nativeFileWatcher = new NativeFileWatcher(Path.of(folderPath), delayBetweenReads, fileMetadataStore);
         initSource();
     }
 
     /**
-     * Initialise the direct FileReadingMessageSource pipeline for watching the target directory.
+     * Initialise the native file watcher for watching the target directory.
      */
     private void initSource() {
         try {
             Path folder = Path.of(folderPath).toAbsolutePath();
             log.info("Setting up scanner for folder: {}", folder);
 
-            messageSource = new FileReadingMessageSource();
-            messageSource.setDirectory(folder.toFile());
-            // Configure scanner to return all files (needed for watch service to work)
-            DefaultDirectoryScanner scanner = new DefaultDirectoryScanner();
-            scanner.setFilter(files -> Arrays.asList(files));
-            messageSource.setScanner(scanner);
-            messageSource.setUseWatchService(true);
-            messageSource.setWatchEvents(
-                    FileReadingMessageSource.WatchEventType.CREATE,
-                    FileReadingMessageSource.WatchEventType.MODIFY,
-                    FileReadingMessageSource.WatchEventType.DELETE);
-            // Provide a minimal application context with required integration beans
-            // to prevent "No such bean 'integrationEvaluationContext'" errors
-            // when scanning directories outside of Spring context
-            GenericApplicationContext appCtx = new GenericApplicationContext();
-            // Register the evaluation context bean before refresh
-            appCtx.getBeanFactory().registerSingleton(
-                    "integrationEvaluationContext",
-                    new StandardEvaluationContext());
-            appCtx.refresh();
-            messageSource.setBeanFactory(appCtx.getBeanFactory());
-
-            // Build the reactive pipeline directly from source to sink
-            Flux<FileHistory> sourceFlux = IntegrationReactiveUtils.messageSourceToFlux(messageSource)
-                    .doOnSubscribe(s -> log.info("Starting scanner at {}", folderPath))
-                    .map(Message::getPayload)
-                    .map(file -> {
-                        try {
-                            String content = Files.readString(file.toPath());
-                            String hash = FileHash.hash(content);
-                            String relativePath = folder.relativize(file.toPath()).toString().replace("\\", "/");
-                            return Optional.of(new FileMetadata(relativePath, content, hash));
-                        } catch (IOException e) {
-                            log.warn("Failed to read file: {}", file, e);
-                            return Optional.<FileMetadata>empty();
-                        }
-                    })
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .map(metadata -> fileComparator().matches(metadata))
-                    .filter(fh -> {
-                        boolean passes = !fh.hashMatches();
-                        log.debug("Filter result for {}: {}", fh.currentFile().url(), passes);
-                        return passes;
-                    })
-                    .doOnNext(fh -> {
-                        log.debug("Saving to database: {}", fh.currentFile().url());
-                        fileMetadataDatabase.save(fh.currentFile());
-                    })
-                    .onBackpressureBuffer();
-
-            sourceFlux.subscribe(sink::tryEmitNext);
+            nativeFileWatcher.start();
 
             log.info("Scanner initialised for folder: {}", folderPath);
 
@@ -130,19 +69,12 @@ public class FileSystemScannerAdapter implements FileScanner {
     }
 
     /**
-     * Create a FileComparator for the given database.
-     */
-    private FileComparator fileComparator() {
-        return new FileComparator(fileMetadataDatabase);
-    }
-
-    /**
      * Returns the flux of file changes. Subscribers receive incremental updates
      * from the watch service.
      */
     @Override
     public Flux<FileHistory> flux() {
-        return sink.asFlux().onBackpressureBuffer();
+        return nativeFileWatcher.flux().onBackpressureBuffer();
     }
 
     /**
@@ -167,7 +99,7 @@ public class FileSystemScannerAdapter implements FileScanner {
                 return;
             }
 
-            FileComparator comparator = fileComparator();
+            FileComparator comparator = new FileComparator(fileMetadataStore);
 
             Files.walk(folder)
                     .filter(Files::isRegularFile)
@@ -181,8 +113,8 @@ public class FileSystemScannerAdapter implements FileScanner {
 
                             if (!history.hashMatches()) {
                                 log.debug("Full scan - emitting new file: {}", p);
-                                fileMetadataDatabase.save(metadata);
-                                sink.tryEmitNext(history);
+                                fileMetadataStore.save(metadata);
+                                nativeFileWatcher.emit(history);
                             } else {
                                 log.debug("Full scan - skipping existing file: {}", p);
                             }
@@ -203,10 +135,7 @@ public class FileSystemScannerAdapter implements FileScanner {
             return;
         }
         disposed = true;
-        sink.tryEmitComplete();
-        if (messageSource != null) {
-            messageSource.stop();
-        }
+        nativeFileWatcher.stop();
         log.info("Scanner destroyed for folder: {}", folderPath);
     }
 

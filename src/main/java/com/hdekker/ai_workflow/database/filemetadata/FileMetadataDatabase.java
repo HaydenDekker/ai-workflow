@@ -6,10 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.hdekker.ai_workflow.files.FileMetaDatabaseSearcher;
+import com.hdekker.ai_workflow.files.FileMetadataStore;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 
 @Service
-public class FileMetadataDatabase implements FileMetaDatabaseSearcher{
+public class FileMetadataDatabase implements FileMetaDatabaseSearcher, FileMetadataStore {
 	
 	@Autowired
 	FileMetaRepository fileMetaRepository;

@@ -14,7 +14,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.files.FileSystemRecursiveFileScannerAdapter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
@@ -32,9 +31,6 @@ public class AgentConfiguration {
 	
 	@Autowired
 	FileSystemScannerConfig fileScannerConfig;
-
-	@Autowired
-	FileSystemRecursiveFileScannerAdapter fileScanner;
 	
 	@Autowired
 	PromptConfiguration promptConfiguration;
@@ -68,14 +64,12 @@ public class AgentConfiguration {
 	AgentLifecycleUseCase dynamicAgentManager;
 
 	public AgentConfiguration(
-			FileSystemRecursiveFileScannerAdapter fileScanner,
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
 			AgentLifecycleUseCase dynamicAgentManager) {
 
-		this.fileScanner = fileScanner;
 		this.promptConfiguration = promptConfiguration;
 		this.systemPromptConfiguration = systemPromptConfiguration;
 		this.fileScannerConfig = fileScannerConfig;
