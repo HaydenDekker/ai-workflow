@@ -258,17 +258,26 @@ In Storybook v10, **no other addon packages are needed** — viewport, controls,
 
 ### Component Development Workflow
 
-#### 1. Creating a New Component
+The complete lifecycle for creating a new Hilla/React component, from scratch to integration:
+
+#### Step 1 — Create the Component File
+
+**Location:** `src/main/frontend/components/<ComponentName>.tsx`
+
+Define a typed `Props` interface with JSDoc comments, then implement the component:
 
 ```tsx
 // src/main/frontend/components/StatusBadge.tsx
 export interface StatusBadgeProps {
-  status: "up" | "down" | "warn";
-  label: string;
+  /** Display label for the status */
+  label?: string;
+  /** Current status value */
+  status: "up" | "down" | "warn" | "unknown";
 }
 
-export function StatusBadge({ status, label }: StatusBadgeProps) {
-  const color = status === "up" ? "green" : status === "down" ? "red" : "orange";
+export function StatusBadge({ label = "Status", status }: StatusBadgeProps) {
+  const color =
+    status === "up" ? "green" : status === "down" ? "red" : status === "warn" ? "orange" : "gray";
   return (
     <span style={{ color, fontWeight: "bold" }}>
       {label} ({status})
@@ -277,47 +286,155 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
 }
 ```
 
-#### 2. Writing Stories (co-located)
+**Key rules:**
+- Export a typed `Props` interface (naming: `<ComponentName>Props`).
+- Use JSDoc comments on each prop — Storybook's docs panel generates the props table from these.
+- Set sensible defaults for optional props.
+- If the component calls Hilla endpoints, use either `vi.mock()` (see mocking patterns) or graceful degradation (see below).
+
+#### Step 2 — Create the Story File (Co-located)
+
+**Location:** `src/main/frontend/components/<ComponentName>.stories.tsx`
 
 ```tsx
 // src/main/frontend/components/StatusBadge.stories.tsx
 import type { Meta, StoryObj } from "@storybook/react";
 import { StatusBadge } from "./StatusBadge";
 
-export default {
+const meta = {
   title: "Components/StatusBadge",
   component: StatusBadge,
   tags: ["autodocs"],
   argTypes: {
-    status: { control: "select", options: ["up", "down", "warn"] },
+    status: { control: "select", options: ["up", "down", "warn", "unknown"] },
     label: { control: "text" },
+  },
+  parameters: {
+    docs: {
+      description: {
+        component: "A simple status badge with color-coded status indicator.",
+      },
+    },
   },
 } satisfies Meta<typeof StatusBadge>;
 
-type Story = StoryObj<typeof StatusBadge>;
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const Up: Story = { args: { status: "up", label: "Service A" } };
+// Default — most common usage
+export const Default: Story = { args: { status: "up", label: "Service A" } };
+
+// Variants for each status
 export const Down: Story = { args: { status: "down", label: "Service B" } };
 export const Warn: Story = { args: { status: "warn", label: "Service C" } };
+export const Unknown: Story = { args: { status: "unknown", label: "Service D" } };
+
+// Edge cases
+export const NoLabel: Story = { args: { status: "up" } };
+export const WithInteraction: Story = {
+  args: { status: "up", label: "Clickable" },
+  play: async ({ canvasElement }) => {
+    const { within, expect, userEvent } = await import("storybook/test");
+    const canvas = within(canvasElement);
+    const badge = canvas.getByText("Clickable (up)");
+    expect(badge).toBeInTheDocument();
+    await userEvent.hover(badge);
+    // Add hover assertions here
+  },
+};
 ```
 
-#### 3. Running and Inspecting
+**Story file rules:**
+- Co-locate with the component (`Component.stories.tsx` next to `Component.tsx`).
+- Use `tags: ["autodocs"]` to enable auto-generated docs panel.
+- Provide a `Default` story representing the most common usage.
+- Cover all prop variants and edge cases as separate named stories.
+- Use `play` functions for interaction testing (click, hover, type).
+
+#### Step 3 — Run Storybook and Inspect
 
 ```bash
 npm run storybook
 # Opens http://localhost:6006
-# - Sidebar shows story tree
-# - Controls panel lets you change props live
-# - Docs panel shows auto-generated props table
 ```
 
-#### 4. Building Static Output
+In the Storybook UI:
+- **Sidebar** — Navigate the story tree (e.g., `Components/StatusBadge`).
+- **Controls panel** — Live-edit props to see changes instantly.
+- **Docs panel** — Auto-generated props table, description, and source code.
+- **Interaction panel** — If a `play` function is defined, step through interactions.
+
+#### Step 4 — Add Interaction Tests (Optional but Recommended)
+
+```tsx
+export const WithInteraction: Story = {
+  args: { status: "up", label: "Clickable" },
+  play: async ({ canvasElement }) => {
+    const { within, expect, userEvent } = await import("storybook/test");
+    const canvas = within(canvasElement);
+    const badge = canvas.getByText("Clickable (up)");
+    expect(badge).toBeInTheDocument();
+    await userEvent.click(badge);
+    expect(badge).toHaveAttribute("aria-pressed", "true");
+  },
+};
+```
+
+#### Step 5 — Build Static Output (For Review/CI)
 
 ```bash
 npm run build-storybook
 # Outputs to storybook-static/
 # Can be served with any static file server or committed to a branch for review
 ```
+
+#### Step 6 — Integrate into the Application
+
+Once the component is designed and tested in Storybook, import it into the Hilla views or layout:
+
+```tsx
+// src/main/frontend/views/@layout.tsx
+import { StatusBadge } from "Frontend/components/StatusBadge";
+
+// Usage in a view:
+<StatusBadge status={agentStatus} label={agentName} />
+```
+
+For Flow (Java) views, use the Vaadin component equivalents (see [ADR-002](adr-ui-components.md)).
+
+#### Step 7 — Write Browserless Tests (If Applicable)
+
+For components that also exist in the Flow layer (Java), write browserless tests in `src/test/java/**/components/`:
+
+```java
+@ViewPackages
+class StatusBadgeTest extends BrowserlessTest {
+    @Test
+    void rendersUpStatusInGreen() {
+        var badge = new AdapterStatusComponent(LLMStatus.UP);
+        UI.getCurrent().add(badge);
+        var icon = $(Icon.class).single();
+        assertThat(icon.getColor()).isEqualTo("success");
+    }
+}
+```
+
+> **See:** [ADR-002](adr-ui-components.md) for browserless testing patterns.
+
+### Quick-Reference: Component vs. Story Checklist
+
+| Item | Component (`.tsx`) | Story (`.stories.tsx`) |
+|------|-------------------|----------------------|
+| Props interface with JSDoc | ✅ Required | — |
+| Default prop values | ✅ Recommended | — |
+| `Meta` object with `component` reference | — | ✅ Required |
+| `tags: ["autodocs"]` | — | ✅ Required |
+| `Default` story | — | ✅ Required |
+| Variant stories for all prop combinations | — | ✅ Recommended |
+| `play` function for interaction testing | — | ✅ Optional but recommended |
+| `vi.mock()` for Hilla endpoints | — | ✅ Required if component calls endpoints |
+| Graceful degradation (try/catch fallback) | ✅ If no `vi.mock()` | — |
+| JSDoc explaining fallback behavior | ✅ If using graceful degradation | — |
 
 ### Testing Strategy
 
@@ -356,6 +473,83 @@ The testing module provides:
 
 > **Note:** Browserless testing (`BrowserlessTest`) is the preferred approach for testing Java-side Flow components and views. It runs 100× faster than Playwright and provides direct Java API access. See [ADR-002](adr-ui-components.md) for details.
 
+### Service Mocking Workaround — Graceful Degradation
+
+When a Hilla component calls generated endpoints (`Frontend/generated/endpoints`), two approaches exist for Storybook isolation:
+
+1. **`vi.mock()` (preferred for complex components)** — Mock the endpoint module with local data. See the "No Backend Calls in Stories" section above for full patterns.
+2. **Graceful degradation (fallback pattern)** — Wrap endpoint calls in `try/catch` and fall back to local state updates. This allows the component to render and be interactive in Storybook **without any mocking setup**, at the cost of not persisting state to the server.
+
+The graceful degradation pattern is simple but effective for demo widgets, simple stateful components, and components where the backend interaction is secondary to the UI behavior being tested:
+
+```tsx
+// src/main/frontend/components/Counter.tsx
+export function Counter({ label = "Counter", initialCount = 0 }: CounterProps) {
+  const count = useSignal(initialCount);
+
+  const handleIncrement = async () => {
+    try {
+      const result = await CounterService.increment(count.value).block();
+      count.value = result.currentCount;
+    } catch (error) {
+      console.error("Failed to increment counter:", error);
+      count.value = count.value + 1; // fallback for offline/demo
+    }
+  };
+
+  const handleDecrement = async () => {
+    try {
+      const result = await CounterService.decrement(count.value).block();
+      count.value = result.currentCount;
+    } catch (error) {
+      console.error("Failed to decrement counter:", error);
+      count.value = count.value - 1; // fallback for offline/demo
+    }
+  };
+
+  // ... similar for reset, etc.
+}
+```
+
+**When to use each approach:**
+
+| Scenario | Preferred Approach | Reason |
+|----------|-------------------|--------|
+| Complex component with multiple endpoint calls | `vi.mock()` | Single mock covers all calls; easy to maintain |
+| Simple stateful component (counter, toggle, etc.) | Graceful degradation | Zero setup; component works out of the box |
+| Component used in both Storybook and production | `vi.mock()` | Explicit mock makes the separation clear |
+| Demo/prototype widget | Graceful degradation | Fast iteration; no mock maintenance |
+| Component with conditional endpoint calls | `vi.mock()` | Easier to test each code path |
+
+**Caveats of graceful degradation:**
+- The fallback path is not tested by Storybook interactions (only the happy path is exercised in `vi.mock()` stories).
+- The fallback behavior may differ from the server response (e.g., the server might validate the input and reject invalid operations).
+- Add a JSDoc comment to the component explaining the fallback so future maintainers understand the pattern.
+
+> **Note:** The `Counter` component (placed in the layout drawer as a demo widget) demonstrates this pattern. It works in Storybook without `vi.mock()` because the try/catch silently falls back to local state. In production with a running server, the `try` branch succeeds and persists state to the backend.
+
+### Real-World Example: Counter Component
+
+The `Counter` component demonstrates the complete workflow including the graceful degradation workaround:
+
+**1. Component** (`src/main/frontend/components/Counter.tsx`):
+- Defines `CounterProps` with `label` and `initialCount` props
+- Calls `CounterService.increment/decrement/reset` (generated Hilla endpoints)
+- Uses **graceful degradation** — `try/catch` falls back to local state if the server is unavailable
+- JSDoc comment explains the fallback pattern
+
+**2. Story** (`src/main/frontend/components/Counter.stories.tsx`):
+- Uses `vi.mock()` is **not** needed because the component has graceful degradation
+- `Default` story with `initialCount: 0`
+- `play` function tests click interactions (increment, decrement, reset)
+- `StartingAtFive` and `NegativeStart` cover edge cases
+
+**3. Integration** (`src/main/frontend/views/@layout.tsx`):
+- Imported and placed in the drawer slot as a demo widget
+- Works in production (server running) and Storybook (no server) seamlessly
+
+This pattern is ideal for simple stateful widgets. For components with complex endpoint interactions, prefer `vi.mock()` for explicit, testable mocks.
+
 ### Component Conventions
 
 #### 1. Co-location
@@ -374,12 +568,206 @@ The `Default` story should represent the most common usage. Other stories cover 
 
 Include `tags: ["autodocs"]` in the meta to enable the docs panel with props table, description, and source code.
 
-#### 5. No Backend Calls in Stories
+#### 5. No Backend Calls in Stories — Direct Service Mocking with `vi.mock()`
 
-Components that call Hilla endpoints (e.g., `HelloWorldService.sayHello()`) should either:
-- Accept the service call as a prop (dependency injection) and pass a mock in stories
-- Use the `play` function to intercept and verify calls
-- Skip the call behind a feature flag or optional prop
+Components that call Hilla endpoints (generated in `Frontend/generated/endpoints.ts`) **must not** require a running backend server to render in Storybook. The primary approach is **direct module mocking with `vi.mock()`** using local mock data.
+
+This is the default and preferred strategy. It requires zero infrastructure — no Spring Boot server, no MSW setup, no proxy config. Just a mock file and a `vi.mock()` call in the story.
+
+##### Pattern A: Mock the Generated Endpoint Module
+
+When a component imports from `Frontend/generated/endpoints.ts` (or a specific endpoint file), mock the entire module:
+
+```tsx
+// src/main/frontend/views/agent-list/AgentList.stories.tsx
+import type { Meta, StoryObj } from "@storybook/react";
+import { AgentList } from "./AgentList";
+
+// Mock the generated endpoint module with local data
+vi.mock("Frontend/generated/endpoints", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("Frontend/generated/endpoints")>();
+  return {
+    ...actual,
+    AgentInfoService: {
+      getAllAgentInfos: vi.fn(() => ({
+        block: () =>
+          Promise.resolve([
+            {
+              id: "mock-agent-1",
+              definition: {
+                title: "File Processor",
+                agentType: "Map",
+                fileInputRegex: "\\.txt$",
+                targetDirectory: "/tmp/output",
+              },
+              source: "local",
+              scannerId: "scan-001",
+              createdAt: "2025-01-15T10:00:00Z",
+              active: true,
+            },
+            {
+              id: "mock-agent-2",
+              definition: {
+                title: "Data Aggregator",
+                agentType: "Reducer",
+                fileInputRegex: "\\.csv$",
+                targetDirectory: "/tmp/aggregated",
+              },
+              source: "local",
+              scannerId: "scan-002",
+              createdAt: "2025-02-20T14:30:00Z",
+              active: false,
+            },
+          ]),
+      })),
+      refreshAgent: vi.fn(() => ({
+        block: () =>
+          Promise.resolve({
+            id: "mock-agent-1",
+            definition: { title: "File Processor" },
+            createdAt: "2025-01-15T10:00:00Z",
+            active: true,
+          }),
+      })),
+    },
+  };
+});
+
+const meta = {
+  title: "Views/AgentList",
+  component: AgentList,
+  tags: ["autodocs"],
+} satisfies Meta<typeof AgentList>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
+export const Empty: Story = {
+  parameters: {
+    mockReset: true,
+  },
+  play: async () => {
+    // Override mock for this specific story
+    vi.mocked(AgentInfoService.getAllAgentInfos).mockReturnValue({
+      block: () => Promise.resolve([]),
+    });
+  },
+};
+export const WithError: Story = {
+  play: async () => {
+    vi.mocked(AgentInfoService.getAllAgentInfos).mockRejectedValue(
+      new Error("Service unavailable")
+    );
+  },
+};
+```
+
+##### Pattern B: Mock a Specific Endpoint File
+
+When endpoints are split into separate generated files (e.g., `Frontend/generated/endpoints/AgentInfoService.ts`):
+
+```tsx
+// AgentList.stories.tsx
+vi.mock("Frontend/generated/endpoints/AgentInfoService", () => ({
+  AgentInfoService: {
+    getAllAgentInfos: vi.fn(() => ({
+      block: () => Promise.resolve(MOCK_AGENTS),
+    })),
+  },
+}));
+```
+
+##### Pattern C: Shared Mock Data Module
+
+For components with multiple endpoint dependencies, extract mock data to a shared module:
+
+```ts
+// src/main/frontend/mocks/agent-mocks.ts
+import type { AgentInfo } from "Frontend/generated/types";
+
+export const MOCK_AGENTS: AgentInfo[] = [
+  {
+    id: "mock-agent-1",
+    definition: {
+      title: "File Processor",
+      agentType: "Map",
+      fileInputRegex: "\\.txt$",
+      targetDirectory: "/tmp/output",
+    },
+    source: "local",
+    scannerId: "scan-001",
+    createdAt: "2025-01-15T10:00:00Z",
+    active: true,
+  },
+];
+
+export const MOCK_SCANNERS = [
+  {
+    id: "scan-001",
+    name: "Source Scanner",
+    targetDirectory: "/tmp/source",
+    lastRun: "2025-04-01T08:00:00Z",
+  },
+];
+```
+
+```tsx
+// AgentList.stories.tsx
+import { MOCK_AGENTS } from "../../mocks/agent-mocks";
+
+vi.mock("Frontend/generated/endpoints", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("Frontend/generated/endpoints")>();
+  return {
+    ...actual,
+    AgentInfoService: {
+      getAllAgentInfos: vi.fn(() => ({ block: () => Promise.resolve(MOCK_AGENTS) })),
+    },
+  };
+});
+```
+
+##### Pattern D: Mock with Story-Level Overrides
+
+When different stories need different data, override the mock inside a `play` function:
+
+```tsx
+export const WithThreeAgents: Story = {
+  play: async () => {
+    vi.mocked(AgentInfoService.getAllAgentInfos).mockReturnValue({
+      block: () =>
+        Promise.resolve([
+          ...MOCK_AGENTS,
+          { id: "mock-agent-3", definition: { title: "Third Agent" }, active: true },
+        ]),
+    });
+  },
+};
+```
+
+##### Key Rules for `vi.mock()`
+
+1. **`vi.mock()` must be at the top level** of the story file — it does not work inside `play` functions or `useEffect`.
+2. **Use `vi.mocked()`** to access the mock with proper TypeScript typing when calling `.mockReturnValue()` or `.mockRejectedValue()`.
+3. **Use `await importOriginal()`** to preserve other exports from the real module and avoid breaking unrelated functionality.
+4. **Reset mocks between stories** using the `mockReset: true` parameter in the meta — Storybook v10 calls `.mockReset()` on all `vi.fn()` spies when a story unmounts.
+5. **Match the exact import path** — the path in `vi.mock()` must match the `import` statement in the component, including whether it uses `.js` extension or not.
+6. **Preserve the return shape** — Hilla endpoint methods return RxJS-style Observables (`.block()`, `.subscribe()`). Mock both to avoid runtime errors.
+
+##### Why `vi.mock()` over other approaches?
+
+| Approach | Server Required | Setup Complexity | Type Safety | Hot Reload |
+|----------|----------------|------------------|-------------|------------|
+| **`vi.mock()`** (preferred) | ❌ No | Low — inline in story | ✅ Full TypeScript | ✅ Instant |
+| DI / prop injection | ❌ No | Medium — refactor component API | ✅ Full TypeScript | ✅ Instant |
+| MSW (Mock Service Worker) | ❌ No | High — install, init, handlers file | ⚠️ Partial | ✅ Fast |
+| Vite proxy to dev server | ✅ Yes | Medium — config + server running | ✅ Full | ⚠️ Server startup |
+
+`vi.mock()` is the default because:
+- **Zero infrastructure** — no server, no proxy, no extra packages
+- **Full type safety** — mocks are typed via the original module's TypeScript definitions
+- **Story-level granularity** — each story can have its own mock data without touching the component
+- **Instant feedback** — Vite HMR reloads mock changes in milliseconds, no server boot required
 
 ## Consequences
 
@@ -396,9 +784,10 @@ Components that call Hilla endpoints (e.g., `HelloWorldService.sayHello()`) shou
 ### Trade-offs
 
 - **Extra dev dependency** — `storybook`, `@storybook/react-vite`, `@storybook/addon-docs` add ~150 packages to `node_modules`.
-- **Two build systems** — The project already uses Vite (via Vaadin/Hilla). Storybook runs a second Vite instance on port 6006.
+- **Two build systems** — The project already uses Vite (via Vaadin/Hilla). Storybook runs a second Vite instance on port 6006. However, with `vi.mock()` service mocking, Storybook is fully self-contained and does not require the Spring Boot server to run.
 - **Not a replacement for E2E** — Storybook tests components in isolation. Playwright still needed for full-page integration (routing, navigation, backend calls).
 - **Version gap risk** — Storybook v10 is the latest but some community addons may lag behind. We use only official packages (core + `addon-docs`).
+- **Mock drift** — Service mocks in stories can become stale if the generated endpoint API changes without updating the corresponding stories. This is mitigated by keeping mock data close to the component (co-located in the `.stories.tsx` file) and reviewing story failures during endpoint regeneration.
 
 ### Tight Coupling Points
 
@@ -411,7 +800,10 @@ Components that call Hilla endpoints (e.g., `HelloWorldService.sayHello()`) shou
 - Storybook runs on port **6006** by default. The Spring Boot dev server runs on port **8080**. They do not conflict.
 - The `staticDirs` config includes `src/main/frontend/themes/` so Vaadin Lumo CSS custom properties (e.g., `--lumo-success-color`) are available in Storybook previews.
 - Components using `@vaadin/hilla-react-signals` (`useSignal`) work correctly in Storybook because they are pure React hooks with no server dependency.
-- Components that call Hilla endpoints (generated in `Frontend/generated/endpoints.ts`) will fail if called without a running backend. These should be mocked or accept the service as a prop.
+- Components that call Hilla endpoints (generated in `Frontend/generated/endpoints.ts`) should be mocked using `vi.mock()` in the story file — **no running server required**.
+- The `Frontend/generated/endpoints.ts` module is regenerated on every `mvn vaadin:build-frontend` run. Mocks must match the current generated API shape. If the endpoint signature changes, update the corresponding story mocks.
+- For Flow views (Java `@Route` components), Storybook cannot render them — they require the full Vaadin server. Use **BrowserlessTest** for Flow component testing and **Playwright E2E** for full-page integration. See [ADR-002](adr-ui-components.md) and [ADR-003](adr-ui-views.md).
+- **Graceful degradation workaround** — Components that call Hilla endpoints can use `try/catch` with local fallback state updates instead of `vi.mock()`. This is demonstrated by the `Counter` component in the layout drawer. Use this for simple stateful components or demo widgets; prefer `vi.mock()` for complex components with multiple endpoint calls. See the "Service Mocking Workaround" section above.
 
 ## See Also
 
