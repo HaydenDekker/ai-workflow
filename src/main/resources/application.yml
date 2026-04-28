@@ -41,6 +41,15 @@ app:
       polling-interval: 60000
       warn-after-hours: 1
       health-timeout: 5000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics
+  metrics:
+    tags:
+      app: ai-workflow
+
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   

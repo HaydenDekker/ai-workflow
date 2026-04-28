@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +13,17 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.files.FileMetadataStore;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+
+import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+
+import java.util.function.Consumer;
 
 /**
  * Parameterised file scanner adapter for use with {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}.
@@ -34,20 +44,54 @@ public class FileSystemScannerAdapter implements FileScanner {
     private final NativeFileWatcher nativeFileWatcher;
     private volatile boolean disposed = false;
 
+    // Metrics
+    private final Counter filesDiscoveredCounter;
+    private final Counter filesUnchangedCounter;
+    private final AtomicLong fileCount;
+
     /**
      * Creates a new parameterised scanner adapter.
      *
+     * @param agentId             owning agent's ID (used for metric tagging)
      * @param folderPath          absolute path to watch
      * @param delayBetweenReads   poll interval for the watch service
-     * @param fileMetadataStore metadata for change detection
+     * @param fileMetadataStore   metadata for change detection
+     * @param meterRegistry       Micrometer registry for metrics
+     * @param metricsEventPublisher  callback to publish metrics change events
      */
-    public FileSystemScannerAdapter(String folderPath,
+    public FileSystemScannerAdapter(String agentId,
+                                     String folderPath,
                                      Duration delayBetweenReads,
-                                     FileMetadataStore fileMetadataStore) {
+                                     FileMetadataStore fileMetadataStore,
+                                     MeterRegistry meterRegistry,
+                                     Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
         this.folderPath = folderPath;
         this.delayBetweenReads = delayBetweenReads;
         this.fileMetadataStore = fileMetadataStore;
-        this.nativeFileWatcher = new NativeFileWatcher(Path.of(folderPath), delayBetweenReads, fileMetadataStore);
+        String effectiveAgentId = agentId != null ? agentId : folderPath;
+
+        // Create metrics tagged with the real agentId and folder
+        this.filesDiscoveredCounter = meterRegistry.counter(
+                "ai_workflow.scanner.files_discovered", "agentId", effectiveAgentId, "folder", folderPath);
+        this.filesUnchangedCounter = meterRegistry.counter(
+                "ai_workflow.scanner.files_unchanged", "agentId", effectiveAgentId, "folder", folderPath);
+        
+        // Create an AtomicLong-backed gauge that we update after each scan
+        this.fileCount = new AtomicLong(0);
+        Gauge.builder("ai_workflow.scanner.file_count", fileCount, AtomicLong::get)
+                .tag("agentId", effectiveAgentId)
+                .tag("folder", folderPath)
+                .register(meterRegistry);
+
+        // Pass counters, gauge, and event callback to NativeFileWatcher
+        this.nativeFileWatcher = new NativeFileWatcher(
+                Path.of(folderPath), delayBetweenReads, fileMetadataStore,
+                filesDiscoveredCounter, filesUnchangedCounter, fileCount,
+                history -> {
+                    if (metricsEventPublisher != null) {
+                        metricsEventPublisher.accept(ScannerMetricsChangedEvent.fileCountUpdated(effectiveAgentId));
+                    }
+                });
         initSource();
     }
 
@@ -60,6 +104,12 @@ public class FileSystemScannerAdapter implements FileScanner {
             log.info("Setting up scanner for folder: {}", folder);
 
             nativeFileWatcher.start();
+
+            // Update gauge after initial scan completes
+            long currentCount = Files.walk(folder)
+                    .filter(Files::isRegularFile)
+                    .count();
+            fileCount.set(currentCount);
 
             log.info("Scanner initialised for folder: {}", folderPath);
 
@@ -90,6 +140,7 @@ public class FileSystemScannerAdapter implements FileScanner {
 
     /**
      * Scan all files in the target directory and emit new ones through the sink.
+     * This is called during reset-to-full-scan operations.
      */
     private void scanAllFiles() {
         try {
@@ -112,16 +163,24 @@ public class FileSystemScannerAdapter implements FileScanner {
                             FileHistory history = comparator.matches(metadata);
 
                             if (!history.hashMatches()) {
-                                log.debug("Full scan - emitting new file: {}", p);
+                                filesDiscoveredCounter.increment();
+                                log.debug("Full scan - emitting new file: {}", relativePath);
                                 fileMetadataStore.save(metadata);
                                 nativeFileWatcher.emit(history);
                             } else {
-                                log.debug("Full scan - skipping existing file: {}", p);
+                                filesUnchangedCounter.increment();
+                                log.debug("Full scan - skipping existing file: {}", relativePath);
                             }
                         } catch (IOException e) {
                             log.warn("Failed to read file during full scan: {}", p, e);
                         }
                     });
+
+            // Update gauge after scan completes
+            long currentCount = Files.walk(folder)
+                    .filter(Files::isRegularFile)
+                    .count();
+            fileCount.set(currentCount);
         } catch (IOException e) {
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
         }

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.TestConstants;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -57,7 +60,13 @@ public class FileSystemSimplePollerFluxAdapterTest {
 
 	public Flux<FileHistory> createFluxWithNativeWatcher(File folder, FileMetadataStore database) {
 		Duration pollInterval = Duration.ofMillis(500);
-		NativeFileWatcher watcher = new NativeFileWatcher(folder.toPath(), pollInterval, database);
+		SimpleMeterRegistry registry = new SimpleMeterRegistry();
+		AtomicLong fileCount = new AtomicLong(0);
+		NativeFileWatcher watcher = new NativeFileWatcher(
+				folder.toPath(), pollInterval, database,
+				registry.counter("test.discovered"), registry.counter("test.unchanged"),
+				fileCount,
+				history -> {}); // no-op callback for tests
 		watcher.start();
 		return watcher.flux();
 	}

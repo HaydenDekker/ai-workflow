@@ -3,6 +3,8 @@ package com.hdekker.ai_workflow.files;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileMetadataStore;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
+
+import io.micrometer.core.instrument.Counter;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -39,21 +43,39 @@ public class NativeFileWatcher {
 	private volatile boolean running = false;
 	private volatile Thread watchThread;
 
+	// Metrics (passed in from FileSystemScannerAdapter)
+	private final Counter filesDiscoveredCounter;
+	private final Counter filesUnchangedCounter;
+	private final AtomicLong fileCount;
+	private final Consumer<FileHistory> emitCallback;
+
 	/**
 	 * Creates a new file watcher.
 	 *
-	 * @param directory             absolute path to watch
-	 * @param pollInterval          interval for polling (used as fallback)
-	 * @param fileMetadataStore     metadata store for change detection
+	 * @param directory                  absolute path to watch
+	 * @param pollInterval               interval for polling (used as fallback)
+	 * @param fileMetadataStore          metadata store for change detection
+	 * @param filesDiscoveredCounter     counter for newly discovered files
+	 * @param filesUnchangedCounter      counter for unchanged files
+	 * @param fileCount                  AtomicLong-backed gauge for current file count
+	 * @param emitCallback               callback invoked after each file emission
 	 */
 	public NativeFileWatcher(Path directory,
 			Duration pollInterval,
-			FileMetadataStore fileMetadataStore) {
+			FileMetadataStore fileMetadataStore,
+			Counter filesDiscoveredCounter,
+			Counter filesUnchangedCounter,
+			AtomicLong fileCount,
+			Consumer<FileHistory> emitCallback) {
 		this.directory = directory.toAbsolutePath().normalize();
 		this.pollInterval = pollInterval;
 		this.fileMetadataStore = fileMetadataStore;
 		this.fileComparator = new FileComparator(fileMetadataStore);
 		this.sink = Sinks.many().multicast().directBestEffort();
+		this.filesDiscoveredCounter = filesDiscoveredCounter;
+		this.filesUnchangedCounter = filesUnchangedCounter;
+		this.fileCount = fileCount;
+		this.emitCallback = emitCallback;
 	}
 
 	/**
@@ -174,6 +196,8 @@ public class NativeFileWatcher {
 					// Note: We don't emit DELETE events as changes since
 					// the content is no longer available. The file will
 					// be re-created if it appears again.
+					// Update gauge for file removal
+					fileCount.set(countFiles());
 				}
 				default -> log.debug("Unknown event kind: {} for: {}", kind, eventPath);
 			}
@@ -184,6 +208,7 @@ public class NativeFileWatcher {
 
 	/**
 	 * Read a file and emit it through the sink if it's new or changed.
+	 * Called during watch events (CREATE/MODIFY).
 	 */
 	private void emitFile(Path path) {
 		try {
@@ -194,19 +219,54 @@ public class NativeFileWatcher {
 			FileHistory history = fileComparator.matches(metadata);
 
 			if (!history.hashMatches()) {
+				filesDiscoveredCounter.increment();
 				log.debug("New or changed file: {}", relativePath);
 				fileMetadataStore.save(metadata);
 				sink.tryEmitNext(history);
 			} else {
+				filesUnchangedCounter.increment();
 				log.debug("Unchanged file (skipped): {}", relativePath);
 			}
 		} catch (IOException e) {
 			log.warn("Failed to read file for event: {}", path, e);
 		}
+
+		// Update gauge after any file event (creates, modifies)
+		fileCount.set(countFiles());
+
+		// Invoke callback after emission
+		if (emitCallback != null) {
+			try {
+				// Re-read to get a fresh history for the callback
+				String content = Files.readString(path);
+				String hash = FileHash.hash(content);
+				String relativePath = directory.relativize(path).toString().replace("\\", "/");
+				FileMetadata metadata = new FileMetadata(relativePath, content, hash);
+				FileHistory history = fileComparator.matches(metadata);
+				emitCallback.accept(history);
+			} catch (IOException e) {
+				log.warn("Failed to re-read file for callback: {}", path, e);
+			}
+		}
+	}
+
+	/**
+	 * Counts the number of regular files in the watched directory.
+	 * Called on every scan and on each file event to keep the gauge accurate.
+	 */
+	private long countFiles() {
+		try {
+			return Files.walk(directory)
+					.filter(Files::isRegularFile)
+					.count();
+		} catch (IOException e) {
+			return 0L;
+		}
 	}
 
 	/**
 	 * Scan all files in the directory and emit new ones.
+	 * Called during initial startup (start()).
 	 */
 	private void scanAllFiles() throws IOException {
 		Files.walk(directory)
@@ -220,14 +280,21 @@ public class NativeFileWatcher {
 						FileHistory history = fileComparator.matches(metadata);
 
 						if (!history.hashMatches()) {
+							filesDiscoveredCounter.increment();
 							log.debug("Scan - emitting new file: {}", relativePath);
 							fileMetadataStore.save(metadata);
 							sink.tryEmitNext(history);
+						} else {
+							filesUnchangedCounter.increment();
+							log.debug("Scan - skipping existing file: {}", relativePath);
 						}
 					} catch (IOException e) {
 						log.warn("Failed to read file during scan: {}", p, e);
 					}
 				});
+
+		// Update gauge after full scan
+		fileCount.set(countFiles());
 	}
 
 	/**

@@ -20,11 +20,14 @@ import org.springframework.context.ApplicationContext;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 public class ScannerRegistryTest {
 
     private ScannerRegistry registry;
     private FileMetadataDatabase fileMetadataDb;
     private ApplicationContext appContext;
+    private SimpleMeterRegistry meterRegistry;
     private Path tempDir;
 
     @BeforeEach
@@ -34,8 +37,9 @@ public class ScannerRegistryTest {
 
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
+        meterRegistry = new SimpleMeterRegistry();
 
-        registry = new ScannerRegistry(appContext, fileMetadataDb);
+        registry = new ScannerRegistry(appContext, fileMetadataDb, meterRegistry, null);
     }
 
     @Test

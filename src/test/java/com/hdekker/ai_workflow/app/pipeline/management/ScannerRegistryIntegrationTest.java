@@ -34,6 +34,8 @@ import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import reactor.core.publisher.Flux;
 
 /**
@@ -63,6 +65,7 @@ public class ScannerRegistryIntegrationTest {
     private AgentLifecycleUseCase agentManager;
     private FileMetadataDatabase fileMetadataDb;
     private ApplicationContext appContext;
+    private SimpleMeterRegistry meterRegistry;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -73,9 +76,10 @@ public class ScannerRegistryIntegrationTest {
         // Create real (non-mocked) dependencies for scanner integration
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
+        meterRegistry = new SimpleMeterRegistry();
 
         // Create the real scanner registry
-        scannerRegistry = new ScannerRegistry(appContext, fileMetadataDb);
+        scannerRegistry = new ScannerRegistry(appContext, fileMetadataDb, meterRegistry, null);
 
         // Create a mock ChatClient and FileWriter for the agent manager
         String mockResponse = "## Analysis\n\nDocument processed successfully.";

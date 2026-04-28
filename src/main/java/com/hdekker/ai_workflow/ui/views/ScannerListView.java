@@ -1,7 +1,12 @@
 package com.hdekker.ai_workflow.ui.views;
 
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.ui.service.ScannerService;
+import com.hdekker.ai_workflow.ui.service.ScannerMetricsService;
+import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
@@ -20,7 +25,6 @@ import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.theme.lumo.LumoIcon;
 
 import org.slf4j.Logger;
@@ -43,10 +47,9 @@ import java.util.concurrent.TimeUnit;
  * - Status indicators with color-coded dots (IDLE=green, EMITTING_ALL=amber, EMITTING_UPDATES=blue, ERROR=red)
  * - Manual refresh button
  * - Auto-refresh every 30 seconds when view is visible
+ * - Real-time file count updates when files are discovered
  * - Loading indicator during refresh
  * - Delete scanner action per row
- *
- * Uses dummy data via ScannerRegistry.seedDummyData() for Phase 1 UI development.
  */
 @Route("scanners")
 @PageTitle("Scanners")
@@ -59,12 +62,14 @@ public class ScannerListView extends VerticalLayout
 
     private Grid<ScannerInfo> grid;
     private final ScannerService scannerService;
+    private final ScannerMetricsService metricsService;
     private ProgressBar loadingIndicator;
     private ScheduledExecutorService refreshScheduler;
 
     @Autowired
-    public ScannerListView(ScannerService scannerService) {
+    public ScannerListView(ScannerService scannerService, ScannerMetricsService metricsService) {
         this.scannerService = scannerService;
+        this.metricsService = metricsService;
         initLayout();
     }
 
@@ -132,6 +137,18 @@ public class ScannerListView extends VerticalLayout
             .setAutoWidth(true)
             .setSortable(true);
 
+        // Files column: current file count from metrics
+        grid.addColumn(info -> {
+            try {
+                ScannerMetricsSnapshot m = metricsService.getMetrics(info.agentId());
+                return m.fileCount() + " files";
+            } catch (Exception e) {
+                return "—";
+            }
+        })
+            .setHeader("Files")
+            .setAutoWidth(true);
+
         // Actions column: delete button per row (component column)
         grid.addComponentColumn(this::renderActionsColumn)
             .setHeader("Actions")
@@ -145,6 +162,25 @@ public class ScannerListView extends VerticalLayout
         add(loadingIndicator);
         add(separator);
         add(grid);
+
+        // Register refresh callback so background threads can push real-time updates.
+        // When a file is created/modified, the watch service fires an event,
+        // ScannerMetricsPushService receives it and calls this callback.
+        // The callback is wrapped with UI.access() so the grid refresh
+        // runs on the Vaadin UI thread, not the background watch thread.
+        addAttachListener(event -> {
+            com.vaadin.flow.component.UI ui = event.getUI();
+            metricsService.registerRefreshCallback(e -> {
+                log.debug("UI refresh callback triggered: agent={}, type={}",
+                        e.getAgentId(), e.getType());
+                ui.access(() -> grid.getDataProvider().refreshAll());
+            });
+        });
+
+        addDetachListener(event -> {
+            // Clear the callback to avoid stale references
+            metricsService.registerRefreshCallback(e -> {});
+        });
     }
 
     /**

@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -54,6 +56,7 @@ public class FileSystemScannerAdapterTest {
     private Path inputDir;
     private Path outputDir;
     private FileMetadataDatabase fileMetadataDatabase;
+    private SimpleMeterRegistry meterRegistry;
 
     private FileSystemScannerAdapter adapter;
 
@@ -62,6 +65,7 @@ public class FileSystemScannerAdapterTest {
         inputDir = Files.createDirectory(tempDir.resolve("input"));
         outputDir = Files.createDirectory(tempDir.resolve("output"));
         fileMetadataDatabase = mock(FileMetadataDatabase.class);
+        meterRegistry = new SimpleMeterRegistry();
         // Mock save to store files for comparison checks
         doAnswer(invocation -> {
             FileMetadata fm = invocation.getArgument(0);
@@ -80,10 +84,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenAdapterCreated_ThenAdapterExistsWithFlux() {
         log.info("Test: adapter created with valid directory");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         assertThat(adapter).isNotNull();
         assertThat(adapter.getFolderPath()).isEqualTo(inputDir.toString());
@@ -100,10 +105,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenDestroyCalled_ThenAdapterIsDisposed() {
         log.info("Test: adapter destroy works");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         assertThat(adapter.isDisposed()).isFalse();
 
@@ -120,10 +126,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenDestroyCalledTwice_ThenIdempotent() {
         log.info("Test: adapter destroy is idempotent");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         adapter.destroy();
         
@@ -139,10 +146,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenResetToFullScan_ThenScanCompletes() throws Exception {
         log.info("Test: full scan completes without error");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         long startTime = System.currentTimeMillis();
 
@@ -163,10 +171,11 @@ public class FileSystemScannerAdapterTest {
     void givenEmptyDirectory_WhenResetToFullScan_ThenAdapterConsistent() throws Exception {
         log.info("Test: full scan of empty directory completes");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         // Directory is empty - no files to scan
         adapter.resetToFullScan();
@@ -187,10 +196,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenFluxSubscribedMultipleTimes_ThenNoException() throws Exception {
         log.info("Test: flux can be subscribed to multiple times without exception");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         // Subscribe multiple times - should not throw exceptions
         List<Throwable> errors = new CopyOnWriteArrayList<>();
@@ -226,10 +236,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenFluxSubscribedAfterDestroy_ThenFluxCompletes() throws Exception {
         log.info("Test: flux subscription after destroy completes cleanly");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         // Destroy first
         adapter.destroy();
@@ -254,10 +265,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenGetFolderPath_ThenReturnsCorrectPath() {
         log.info("Test: getFolderPath returns the correct path");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         assertThat(adapter.getFolderPath()).isEqualTo(inputDir.toString());
 
@@ -268,10 +280,11 @@ public class FileSystemScannerAdapterTest {
     void givenValidDirectory_WhenIsDisposedInitially_ThenReturnsFalse() {
         log.info("Test: adapter is not disposed initially");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         assertThat(adapter.isDisposed()).isFalse();
 
@@ -286,10 +299,11 @@ public class FileSystemScannerAdapterTest {
         Path testFile = inputDir.resolve("test-full-scan.txt");
         Files.writeString(testFile, "test content for full scan");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         // Collect emitted files
         List<FileHistory> emitted = new CopyOnWriteArrayList<>();
@@ -322,10 +336,11 @@ public class FileSystemScannerAdapterTest {
     void givenWatchService_WhenFileCreated_ThenDetected() throws Exception {
         log.info("Test: watch service detects file creation");
 
-        adapter = new FileSystemScannerAdapter(
+        adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
-                fileMetadataDatabase);
+                fileMetadataDatabase,
+                meterRegistry, null);
 
         // Create a test file after adapter starts
         Path testFile = inputDir.resolve("watch-create.txt");
