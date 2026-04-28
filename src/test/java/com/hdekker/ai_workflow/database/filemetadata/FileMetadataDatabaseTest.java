@@ -4,18 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.hdekker.ai_workflow.config.DatabaseConfig;
-import com.hdekker.ai_workflow.config.DataSourceProperties;
+import com.hdekker.ai_workflow.TestProfiles;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
-@SpringBootTest
-@ContextConfiguration(classes = {DatabaseConfig.class, DataSourceProperties.class})
+/**
+ * Tests {@link FileMetadataEntity} CRUD operations.
+ * Uses {@code @DataJpaTest} with H2 in-memory to avoid the main SQLite DB.
+ */
+@DataJpaTest
+@ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
 @Transactional
 public class FileMetadataDatabaseTest {
 

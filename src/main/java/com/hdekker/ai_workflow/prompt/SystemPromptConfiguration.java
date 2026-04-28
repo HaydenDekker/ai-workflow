@@ -167,8 +167,9 @@ public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles
 
 	}
 	
+	@Autowired
 	SystemPromptConfiguration(PromptConfiguration promptConfiguration,
-			ResourcePatternResolver resourcePatternResolver){
+			ResourcePatternResolver resourcePatternResolver) {
 		this.promptConfiguration = promptConfiguration;
 		this.resourcePatternResolver = resourcePatternResolver;
 		

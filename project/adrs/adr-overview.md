@@ -144,6 +144,27 @@ Explain **how the adapter is tested**:
 - Integration tests (if applicable)
 - POM dependencies for test slices
 
+> **⚠️ `@SpringBootTest` Isolation Rule**
+>
+> When using `@SpringBootTest`, **always** specify `classes =` to load only the beans needed for the test.
+> Loading the full context (`@SpringBootTest` without `classes=`) starts `AgentConfiguration`, which
+> calls `initializeFromYAML()` and persists YAML agents to the database.
+>
+> ```java
+> // ✅ Correct — only loads the beans you need
+> @SpringBootTest(classes = MyTest.TestConfig.class)
+>
+> // ❌ Wrong — loads full context, persists YAML agents to DB
+> @SpringBootTest
+> ```
+>
+> Use a minimal `@TestConfiguration` with `@Bean` methods for the beans your test requires.
+> See the [Testing Strategy ADR](adr-testing-strategy.md) for the full testing pyramid.
+>
+> **Exception**: `@SpringBootTest` without `classes=` is acceptable only when you explicitly want to
+> test the full application context behavior (e.g., startup, auto-configuration). Tag such tests with
+> `@Tag("full-context")` so they can be excluded from fast test runs.
+
 ### 5. Consequences
 
 > **What are the trade-offs and implications?**

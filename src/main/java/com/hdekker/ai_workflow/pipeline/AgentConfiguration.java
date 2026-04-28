@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,9 +23,14 @@ import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 
 /**
  *  To build the configured agents ready for file processing.
- * 
+ *  <p>
+ *  Conditionally loaded via {@code yaml.agents.enabled=true} (default: true).
+ *  Set to {@code false} in tests that need to load {@code SystemPromptConfiguration}
+ *  in isolation without triggering agent persistence to the database.
+ *
  */
 @Configuration
+@ConditionalOnProperty(name = "yaml.agents.enabled", havingValue = "true", matchIfMissing = true)
 public class AgentConfiguration {
 	
 	Logger log = LoggerFactory.getLogger(AgentConfiguration.class);

@@ -376,24 +376,96 @@ public class LlamaCppService {
 }
 ```
 
-### Verifying Connection
+### Testing Strategy
 
-Test your llama.cpp connection:
+Three tiers of testing — from fastest (no LLM) to slowest (real llama.cpp):
 
-```bash
-# Check if server is running
-curl http://localhost:8080/models
+#### Tier 1: Unit Tests — `@ExtendWith(MockitoExtension.class)`
 
-# Test chat endpoint
-curl http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gemma3:4b-it-q8_0",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'
+Test business logic with a mocked `ChatClient`. No Spring context, no HTTP, no LLM required.
 
-# Test from Java (add test dependency)
-@SpringBootTest
+```java
+@ExtendWith(MockitoExtension.class)
+class LlamaCppServiceTest {
+    
+    @Mock
+    private ChatClient chatClient;
+    
+    @Mock
+    private ChatClient.ChatClientRequestSpec requestSpec;
+    
+    @InjectMocks
+    private LlamaCppService service;
+    
+    @Test
+    void generateResponse_delegatesToChatClient() {
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user("Hello")).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(new CallResponse("Hi there"));
+        
+        String result = service.generateResponse("Hello");
+        
+        assertThat(result).isEqualTo("Hi there");
+    }
+}
+```
+
+#### Tier 2: Configuration Tests — `@SpringBootTest(classes = TestConfig.class)`
+
+Test that the `LlamaCppChatConfig` beans wire correctly **without** starting a full application context.
+
+```java
+@SpringBootTest(classes = LlamaCppChatConfigTest.TestConfig.class)
+class LlamaCppChatConfigTest {
+    
+    @Autowired
+    private ChatClient chatClient;
+    
+    @Test
+    void chatClient_isNonNull() {
+        assertThat(chatClient).isNotNull();
+    }
+    
+    @Configuration
+    static class TestConfig {
+        // Minimal config: provide only the beans needed
+        @Bean
+        public OpenAiApi chatApi() {
+            return OpenAiApi.builder()
+                    .baseUrl("http://localhost:8080")
+                    .apiKey(new SimpleApiKey("not-needed"))
+                    .completionsPath("/v1/chat/completions")
+                    .build();
+        }
+        
+        @Bean
+        public ChatModel chatModel(OpenAiApi api) {
+            return OpenAiChatModel.builder()
+                    .openAiApi(api)
+                    .defaultOptions(OpenAiChatOptions.builder()
+                            .model("gemma3:4b-it-q8_0")
+                            .build())
+                    .build();
+        }
+        
+        @Bean
+        public ChatClient chatClient(ChatModel chatModel) {
+            return ChatClient.builder(chatModel).build();
+        }
+    }
+}
+```
+
+> **Why not `@SpringBootTest` without `classes=`?**
+> Loading the full context starts `AgentConfiguration`, which persists YAML agents to the database. Always use `classes =` to load only the beans you need. See [ADR Overview](adr-overview.md) for the `@SpringBootTest` isolation rule.
+
+#### Tier 3: Integration Tests — `@Tag("integration")` + Real llama.cpp
+
+Tests that require a real llama.cpp server. Tagged with `@Tag("integration")` so they can be skipped in CI when no LLM is available.
+
+```java
+@Tag("integration")
+@SpringBootTest(classes = LlamaCppIntegrationTest.TestConfig.class)
 class LlamaCppIntegrationTest {
     
     @Autowired
@@ -408,7 +480,57 @@ class LlamaCppIntegrationTest {
         
         assertThat(response).isNotBlank();
     }
+    
+    @Configuration
+    static class TestConfig {
+        @Bean
+        public OpenAiApi chatApi() {
+            return OpenAiApi.builder()
+                    .baseUrl("http://localhost:8080")
+                    .apiKey(new SimpleApiKey("not-needed"))
+                    .completionsPath("/v1/chat/completions")
+                    .build();
+        }
+        
+        @Bean
+        public ChatModel chatModel(OpenAiApi api) {
+            return OpenAiChatModel.builder()
+                    .openAiApi(api)
+                    .defaultOptions(OpenAiChatOptions.builder()
+                            .model("gemma3:4b-it-q8_0")
+                            .build())
+                    .build();
+        }
+        
+        @Bean
+        public ChatClient chatClient(ChatModel chatModel) {
+            return ChatClient.builder(chatModel).build();
+        }
+    }
 }
+```
+
+Run integration tests selectively:
+```bash
+./mvnw test                              # Unit + config tests only (no llama.cpp needed)
+./mvnw verify -Dit.test=LlamaCppIntegrationTest  # Integration tests (requires llama.cpp)
+```
+
+### Verifying Connection
+
+Test your llama.cpp connection (requires a running server):
+
+```bash
+# Check if server is running
+curl http://localhost:8080/models
+
+# Test chat endpoint
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma3:4b-it-q8_0",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
 ```
 
 ### GGUF Model Formats
