@@ -105,11 +105,14 @@ public class AgentPersistenceServiceTest {
 	}
 
 	@Test
-	public void givenMultipleAgents_whenListAll_thenReturnAllOrdered() {
+	public void givenMultipleAgents_whenListAll_thenReturnAllOrdered() throws InterruptedException {
 		// Arrange
 		AgentDefinition def1 = new AgentDefinition(".*\\.txt", "Agent 1", "Body 1", "Map", "Out 1", "out1", "/tmp/dir1");
 		AgentDefinition def2 = new AgentDefinition(".*\\.md", "Agent 2", "Body 2", "Split", "Out 2", "out2", "/tmp/dir2");
 		persistenceService.save("list-1", def1, "YAML");
+		// Ensure distinct createdAt timestamps to avoid non-deterministic ordering
+		// when H2 assigns the same millisecond timestamp to both saves.
+		Thread.sleep(10);
 		persistenceService.save("list-2", def2, "DYNAMIC");
 
 		// Act
