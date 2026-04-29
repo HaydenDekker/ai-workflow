@@ -13,3 +13,6 @@ app:
 
 prompt-config:
   predefinedPromptFilePath: /test/prompts
+
+ai-scanner:
+  emission-delay-seconds: 0

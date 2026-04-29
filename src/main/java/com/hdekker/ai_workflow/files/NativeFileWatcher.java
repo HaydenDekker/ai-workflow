@@ -3,6 +3,7 @@ package com.hdekker.ai_workflow.files;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -25,6 +26,16 @@ import reactor.core.publisher.Sinks;
  * <p>
  * Lifecycle is managed externally: call {@link #start()} to begin watching
  * and {@link #stop()} to clean up resources.
+ * <p>
+ * Emission behaviour:
+ * <ul>
+ *   <li>Consecutive emissions are throttled by at least {@code emissionDelay} seconds.</li>
+ *   <li>Events arriving during the delay window are coalesced (only the latest file state is emitted).</li>
+ *   <li>If an error occurs during scanning or event processing, the {@code onError} callback is invoked.</li>
+ * </ul>
+ * <p>
+ * Lifecycle is managed externally: call {@link #start()} to begin watching
+ * and {@link #stop()} to clean up resources.
  */
 public class NativeFileWatcher {
 
@@ -32,6 +43,7 @@ public class NativeFileWatcher {
 
 	private final Path directory;
 	private final Duration pollInterval;
+	private final Duration emissionDelay;
 	private final FileMetadataStore fileMetadataStore;
 	private final FileComparator fileComparator;
 
@@ -40,14 +52,63 @@ public class NativeFileWatcher {
 	private volatile boolean running = false;
 	private volatile Thread watchThread;
 
+	// Emission throttle state
+	private volatile LocalDateTime lastEmissionTime;
+	private volatile FileHistory latestBufferedHistory;
+
 	// Functional callbacks for metrics (replaced Micrometer types)
 	private final Consumer<String> onDiscovery;
 	private final Consumer<String> onUnchanged;
 	private final Consumer<String> onFileCount;
 	private final Consumer<FileHistory> emitCallback;
 
+	// Error reporting callback (takes agentId + error message)
+	private final String agentId;
+	private final Consumer<String> onError;
+
 	/**
 	 * Creates a new file watcher.
+	 *
+	 * @param directory                  absolute path to watch
+	 * @param pollInterval               interval for polling (used as fallback)
+	 * @param emissionDelay              minimum interval between consecutive file emissions
+	 * @param fileMetadataStore          metadata store for change detection
+	 * @param onDiscovery                callback invoked when a new file is discovered
+	 * @param onUnchanged                callback invoked when a file is unchanged
+	 * @param onFileCount                callback invoked when file count changes
+	 * @param emitCallback               callback invoked after each file emission
+	 * @param agentId                    owning agent ID (for error reporting)
+	 * @param onError                    callback invoked when an error occurs
+	 */
+	public NativeFileWatcher(Path directory,
+			Duration pollInterval,
+			Duration emissionDelay,
+			FileMetadataStore fileMetadataStore,
+			Consumer<String> onDiscovery,
+			Consumer<String> onUnchanged,
+			Consumer<String> onFileCount,
+			Consumer<FileHistory> emitCallback,
+			String agentId,
+			Consumer<String> onError) {
+		this.directory = directory.toAbsolutePath().normalize();
+		this.pollInterval = pollInterval;
+		this.emissionDelay = emissionDelay;
+		this.fileMetadataStore = fileMetadataStore;
+		this.fileComparator = new FileComparator(fileMetadataStore);
+		this.sink = Sinks.many().multicast().directBestEffort();
+		this.onDiscovery = onDiscovery;
+		this.onUnchanged = onUnchanged;
+		this.onFileCount = onFileCount;
+		this.emitCallback = emitCallback;
+		this.agentId = agentId;
+		this.onError = onError;
+		this.lastEmissionTime = LocalDateTime.now();
+	}
+
+	/**
+	 * Backward-compatible constructor for tests.
+	 * <p>
+	 * Uses zero emission delay and no error callback.
 	 *
 	 * @param directory                  absolute path to watch
 	 * @param pollInterval               interval for polling (used as fallback)
@@ -64,15 +125,8 @@ public class NativeFileWatcher {
 			Consumer<String> onUnchanged,
 			Consumer<String> onFileCount,
 			Consumer<FileHistory> emitCallback) {
-		this.directory = directory.toAbsolutePath().normalize();
-		this.pollInterval = pollInterval;
-		this.fileMetadataStore = fileMetadataStore;
-		this.fileComparator = new FileComparator(fileMetadataStore);
-		this.sink = Sinks.many().multicast().directBestEffort();
-		this.onDiscovery = onDiscovery;
-		this.onUnchanged = onUnchanged;
-		this.onFileCount = onFileCount;
-		this.emitCallback = emitCallback;
+		this(directory, pollInterval, Duration.ZERO, fileMetadataStore,
+			onDiscovery, onUnchanged, onFileCount, emitCallback, null, null);
 	}
 
 	/**
@@ -105,6 +159,9 @@ public class NativeFileWatcher {
 		} catch (IOException e) {
 			log.error("Failed to start watcher for: {}", directory, e);
 			running = false;
+			if (onError != null) {
+				onError.accept("Failed to start watcher: " + e.getMessage());
+			}
 		}
 	}
 
@@ -202,20 +259,30 @@ public class NativeFileWatcher {
 			}
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
+		} catch (Exception e) {
+			log.error("Error processing event {} for path {}: {}", kind, eventPath, e.getMessage());
+			if (onError != null) {
+				onError.accept("Error processing event " + kind + " for " + eventPath + ": " + e.getMessage());
+			}
 		}
 	}
 
 	/**
 	 * Read a file and emit it through the sink if it's new or changed.
 	 * Called during watch events (CREATE/MODIFY).
+	 * <p>
+	 * Applies emission delay throttling: if the delay has not elapsed since
+	 * the last emission, the file history is buffered and the next emission
+	 * will use the latest buffered state.
 	 */
 	private void emitFile(Path path) {
+		FileHistory history = null;
 		try {
 			String content = Files.readString(path);
 			String hash = FileHash.hash(content);
 			String relativePath = directory.relativize(path).toString().replace("\\", "/");
 			FileMetadata metadata = new FileMetadata(relativePath, content, hash);
-			FileHistory history = fileComparator.matches(metadata);
+			history = fileComparator.matches(metadata);
 
 			if (!history.hashMatches()) {
 				if (onDiscovery != null) {
@@ -223,7 +290,6 @@ public class NativeFileWatcher {
 				}
 				log.debug("New or changed file: {}", relativePath);
 				fileMetadataStore.save(metadata);
-				sink.tryEmitNext(history);
 			} else {
 				if (onUnchanged != null) {
 					onUnchanged.accept(directory.toString());
@@ -232,6 +298,9 @@ public class NativeFileWatcher {
 			}
 		} catch (IOException e) {
 			log.warn("Failed to read file for event: {}", path, e);
+			if (onError != null) {
+				onError.accept("Failed to read file: " + e.getMessage());
+			}
 		}
 
 		// Update file count after any file event (creates, modifies)
@@ -239,19 +308,59 @@ public class NativeFileWatcher {
 			onFileCount.accept(directory.toString());
 		}
 
-		// Invoke callback after emission
-		if (emitCallback != null) {
-			try {
-				// Re-read to get a fresh history for the callback
-				String content = Files.readString(path);
-				String hash = FileHash.hash(content);
-				String relativePath = directory.relativize(path).toString().replace("\\", "/");
-				FileMetadata metadata = new FileMetadata(relativePath, content, hash);
-				FileHistory history = fileComparator.matches(metadata);
-				emitCallback.accept(history);
-			} catch (IOException e) {
-				log.warn("Failed to re-read file for callback: {}", path, e);
-			}
+		// Only emit if the file actually changed (hash mismatch)
+		if (history != null && !history.hashMatches() && emitCallback != null) {
+			// Apply emission delay throttling
+			tryEmitWithDelay(history);
+		}
+	}
+
+	/**
+	 * Attempt to emit a file history through the sink, respecting the emission delay.
+	 * <p>
+	 * If the delay has not elapsed since the last emission, the history is buffered
+	 * and will be emitted when the delay elapses (or on the next call).
+	 *
+	 * @param history the file history to emit
+	 */
+	private void tryEmitWithDelay(FileHistory history) {
+		if (history == null) {
+			return;
+		}
+
+		LocalDateTime now = LocalDateTime.now();
+		Duration elapsed = Duration.between(lastEmissionTime, now);
+
+		// Coalesce: always update the buffered history
+		latestBufferedHistory = history;
+
+		if (emissionDelay == null || emissionDelay.isZero() || emissionDelay.isNegative()) {
+			// No delay configured — emit immediately
+			sink.tryEmitNext(history);
+			lastEmissionTime = now;
+		} else if (elapsed.getSeconds() >= emissionDelay.getSeconds()) {
+			// Delay has elapsed — emit and record time
+			sink.tryEmitNext(history);
+			lastEmissionTime = now;
+		}
+		// else: delay not elapsed, history is buffered for later emission
+	}
+
+	/**
+	 * Flush any buffered history if the emission delay has elapsed.
+	 */
+	void flushBufferedEmission() {
+		if (latestBufferedHistory == null) {
+			return;
+		}
+
+		LocalDateTime now = LocalDateTime.now();
+		Duration elapsed = Duration.between(lastEmissionTime, now);
+
+		if (elapsed.getSeconds() >= emissionDelay.getSeconds()) {
+			sink.tryEmitNext(latestBufferedHistory);
+			lastEmissionTime = now;
+			latestBufferedHistory = null;
 		}
 	}
 
@@ -290,7 +399,8 @@ public class NativeFileWatcher {
 							}
 							log.debug("Scan - emitting new file: {}", relativePath);
 							fileMetadataStore.save(metadata);
-							sink.tryEmitNext(history);
+							// Apply emission delay throttling during scan
+							tryEmitWithDelay(history);
 						} else {
 							if (onUnchanged != null) {
 								onUnchanged.accept(directory.toString());
@@ -299,6 +409,9 @@ public class NativeFileWatcher {
 						}
 					} catch (IOException e) {
 						log.warn("Failed to read file during scan: {}", p, e);
+						if (onError != null) {
+							onError.accept("Failed to read file during scan: " + e.getMessage());
+						}
 					}
 				});
 
@@ -365,8 +478,24 @@ public class NativeFileWatcher {
 
 	/**
 	 * Emit a file history change directly. Used by the adapter for full scans.
+	 * <p>
+	 * Also respects the emission delay throttle.
 	 */
 	public void emit(FileHistory history) {
-		sink.tryEmitNext(history);
+		tryEmitWithDelay(history);
+	}
+
+	/**
+	 * Get the agent ID associated with this watcher.
+	 */
+	public String getAgentId() {
+		return agentId;
+	}
+
+	/**
+	 * Get the last emission time (for testing).
+	 */
+	LocalDateTime getLastEmissionTime() {
+		return lastEmissionTime;
 	}
 }

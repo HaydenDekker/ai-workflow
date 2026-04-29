@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,23 +55,33 @@ public class ScannerObserverUseCase {
         final long fileCount;
         final long totalDiscovered;
         final long unchanged;
+        final LocalDateTime lastEmissionTimestamp;
 
-        AgentMetrics(long fileCount, long totalDiscovered, long unchanged) {
+        AgentMetrics(long fileCount, long totalDiscovered, long unchanged, LocalDateTime lastEmissionTimestamp) {
             this.fileCount = fileCount;
             this.totalDiscovered = totalDiscovered;
             this.unchanged = unchanged;
+            this.lastEmissionTimestamp = lastEmissionTimestamp;
+        }
+
+        AgentMetrics(long fileCount, long totalDiscovered, long unchanged) {
+            this(fileCount, totalDiscovered, unchanged, null);
         }
 
         AgentMetrics withFileCount(long newCount) {
-            return new AgentMetrics(newCount, totalDiscovered, unchanged);
+            return new AgentMetrics(newCount, totalDiscovered, unchanged, lastEmissionTimestamp);
         }
 
         AgentMetrics withDiscovered() {
-            return new AgentMetrics(fileCount, totalDiscovered + 1, unchanged);
+            return new AgentMetrics(fileCount, totalDiscovered + 1, unchanged, lastEmissionTimestamp);
         }
 
         AgentMetrics withUnchanged() {
-            return new AgentMetrics(fileCount, totalDiscovered, unchanged + 1);
+            return new AgentMetrics(fileCount, totalDiscovered, unchanged + 1, lastEmissionTimestamp);
+        }
+
+        AgentMetrics withLastEmission(LocalDateTime timestamp) {
+            return new AgentMetrics(fileCount, totalDiscovered, unchanged, timestamp);
         }
     }
 
@@ -117,6 +129,54 @@ public class ScannerObserverUseCase {
             return existing.withFileCount(count);
         });
         pushToUI(ScannerMetricsChangedEvent.fileCountUpdated(agentId));
+    }
+
+    /**
+     * Record a file emission event for the given agent.
+     * <p>
+     * Updates the last emission timestamp, which is used by the idle checker
+     * to determine when a scanner should transition to IDLE.
+     *
+     * @param agentId the owning agent's ID
+     */
+    public void recordEmission(String agentId) {
+        LocalDateTime now = LocalDateTime.now();
+        metricsStore.compute(agentId, (key, existing) -> {
+            if (existing == null) {
+                return new AgentMetrics(0, 0, 0, now);
+            }
+            return existing.withLastEmission(now);
+        });
+        pushToUI(ScannerMetricsChangedEvent.fileCountUpdated(agentId));
+    }
+
+    /**
+     * Check whether the given agent's scanner is idle.
+     * <p>
+     * A scanner is considered idle if no emission has occurred for
+     * at least 30 seconds.
+     *
+     * @param agentId the owning agent's ID
+     * @return true if the scanner is idle, false otherwise
+     */
+    public boolean isIdle(String agentId) {
+        AgentMetrics metrics = metricsStore.get(agentId);
+        if (metrics == null || metrics.lastEmissionTimestamp == null) {
+            return true;
+        }
+        return Duration.between(metrics.lastEmissionTimestamp, LocalDateTime.now())
+                .getSeconds() >= 30;
+    }
+
+    /**
+     * Get the last emission timestamp for the given agent.
+     *
+     * @param agentId the owning agent's ID
+     * @return the last emission timestamp, or null if none
+     */
+    public LocalDateTime getLastEmissionTimestamp(String agentId) {
+        AgentMetrics metrics = metricsStore.get(agentId);
+        return metrics != null ? metrics.lastEmissionTimestamp : null;
     }
 
     /**

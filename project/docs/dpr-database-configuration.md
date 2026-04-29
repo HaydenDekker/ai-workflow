@@ -1,12 +1,21 @@
 # DPR: SQLite Database Configuration Pattern
 
+**Related ADR**: [ADR-007: Multi-Database Architecture](../adrs/adr-007-multi-database.md)
+
 ## Purpose
 
 This Design Pattern Record (DPR) documents the process for adding new SQLite databases and tables to the application using Spring Boot, JPA, and Hibernate.
 
-## Background
+## Architecture Decision Summary
 
-The application uses SQLite databases with JPA/Hibernate for persistence. The architecture supports multiple independent databases, each with its own data source, entity manager, and transaction manager.
+The application uses **separate SQLite databases** for agent data and memory data, each with independent:
+- `DataSource` (HikariCP connection pool)
+- `EntityManagerFactory`
+- `TransactionManager`
+- Entity package scan
+- Repository package scan
+
+The agent database is marked `@Primary`; the memory database is secondary. Cross-database transactions require manual coordination. For the full decision rationale and alternatives, see [ADR-007](../adrs/adr-007-multi-database.md).
 
 ---
 
@@ -338,6 +347,62 @@ public class ExampleEntityDatabaseTest {
         assertThat(retrieved.getName()).isEqualTo("Test Name");
     }
 }
+```
+
+---
+
+## Testing with Multiple Databases
+
+### Test Classification
+
+| Test Type | Annotation | Scope | Database | Use Case |
+|-----------|-----------|-------|----------|----------|
+| Unit Test | `@ExtendWith(MockitoExtension.class)` | Isolated | None | Business logic, mocked repositories |
+| Data JPA Test | `@DataJpaTest` | Repository layer | H2 in-memory | Entity mapping, repository queries |
+| Integration Test | `@SpringBootTest` | Full context | SQLite (production) | End-to-end workflows |
+
+### Database Choice for Tests
+
+- **H2 for Repository Tests**: `@DataJpaTest` uses H2 in-memory by default
+  - Fast execution (no file I/O)
+  - Automatic cleanup between tests
+  - Compatible with standard JPA operations
+  - Does not load custom multi-DB configuration
+
+- **SQLite for Integration Tests**: Full application context tests
+  - Production-parity database
+  - Tests multi-DB configuration
+  - Tests actual file-based persistence
+  - Tag with `@Tag("integration")` for selective execution
+
+### Configuration Strategy
+
+- Production: Custom multi-DB config excludes `HibernateJpaAutoConfiguration`
+- Tests (`@DataJpaTest`): Does not load main application context, uses auto-configured H2
+- Integration Tests (`@SpringBootTest`): Use production SQLite configuration
+
+### Test Tagging Convention
+
+```java
+// Unit test (mocked)
+@ExtendWith(MockitoExtension.class)
+public class ServiceTest { ... }
+
+// Repository test (H2, fast)
+@DataJpaTest
+public class RepositoryTest { ... }
+
+// Integration test (SQLite, full context)
+@Tag("integration")
+@SpringBootTest
+public class WorkflowIntegrationTest { ... }
+```
+
+Run integration tests separately:
+```bash
+./mvnw verify                          # All tests
+./mvnw test                            # Unit + Data JPA tests only
+./mvnw verify -Dit.test=*IntegrationTest  # Integration tests only
 ```
 
 ---

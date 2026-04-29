@@ -3,15 +3,23 @@ package com.hdekker.ai_workflow.ui.events;
 /**
  * Fired when scanner metrics change (file discovered, file count updated, etc).
  * Used to push real-time updates to the ScannerListView UI.
+ * <p>
+ * Event types: "discovered", "unchanged", "file_count", "error", "recovered", "idle".
  */
 public class ScannerMetricsChangedEvent {
 
     private final String agentId;
-    private final String type;  // "discovered", "unchanged", "file_count"
+    private final String type;  // "discovered", "unchanged", "file_count", "error", "recovered", "idle"
+    private final String errorMessage;  // non-null only when type is "error"
 
     public ScannerMetricsChangedEvent(String agentId, String type) {
+        this(agentId, type, null);
+    }
+
+    public ScannerMetricsChangedEvent(String agentId, String type, String errorMessage) {
         this.agentId = agentId;
         this.type = type;
+        this.errorMessage = errorMessage;
     }
 
     public String getAgentId() {
@@ -20,6 +28,13 @@ public class ScannerMetricsChangedEvent {
 
     public String getType() {
         return type;
+    }
+
+    /**
+     * Get the error message, if this event represents an error state.
+     */
+    public String getErrorMessage() {
+        return errorMessage;
     }
 
     /**
@@ -41,6 +56,27 @@ public class ScannerMetricsChangedEvent {
      */
     public static ScannerMetricsChangedEvent fileCountUpdated(String agentId) {
         return new ScannerMetricsChangedEvent(agentId, "file_count");
+    }
+
+    /**
+     * Create an event for a scanner error.
+     */
+    public static ScannerMetricsChangedEvent errorOccurred(String agentId, String message) {
+        return new ScannerMetricsChangedEvent(agentId, "error", message);
+    }
+
+    /**
+     * Create an event for a scanner recovery from error.
+     */
+    public static ScannerMetricsChangedEvent recoveredFromError(String agentId) {
+        return new ScannerMetricsChangedEvent(agentId, "recovered");
+    }
+
+    /**
+     * Create an event for a scanner becoming idle.
+     */
+    public static ScannerMetricsChangedEvent idleReached(String agentId) {
+        return new ScannerMetricsChangedEvent(agentId, "idle");
     }
 
     /**

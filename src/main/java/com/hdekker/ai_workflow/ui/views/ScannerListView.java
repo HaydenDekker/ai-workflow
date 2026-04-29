@@ -184,12 +184,15 @@ public class ScannerListView extends VerticalLayout
 
     /**
      * Render a status indicator: colored dot + status text as a Vaadin Div component.
+     * <p>
+     * If the status is ERROR and an error message is present, the dot is wrapped
+     * in a tooltip showing the error.
      */
     private Div renderStatusComponent(ScannerInfo info) {
         String status = info.status() != null ? info.status() : "UNKNOWN";
         String color;
         switch (status) {
-            case "EMITTING_ALL" -> color = "#f5a623";  // amber
+            case "EMITTING_INITIAL" -> color = "#f5a623";  // amber
             case "EMITTING_UPDATES" -> color = "#4a90d9";  // blue
             case "ERROR" -> color = "#e74c3c";  // red
             default -> color = "#27ae60";  // IDLE = green
@@ -202,6 +205,12 @@ public class ScannerListView extends VerticalLayout
         dot.getElement().getStyle().set("display", "inline-block");
         dot.getElement().getStyle().set("margin-right", "6px");
         Span text = new Span(status);
+
+        // Add tooltip for ERROR status with error message
+        if ("ERROR".equals(status) && info.errorMessage() != null && !info.errorMessage().isBlank()) {
+            dot.getElement().setAttribute("title", info.errorMessage());
+        }
+
         StatusWrapper wrapper = new StatusWrapper(dot, text);
         return wrapper;
     }

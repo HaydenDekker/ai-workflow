@@ -50,6 +50,12 @@ management:
     tags:
       app: ai-workflow
 
+ai-scanner:
+  # Minimum seconds between consecutive file emissions.
+  # Gives the downstream LLM pipeline time to process each file
+  # before the next one arrives. Set to 0 for fast-scanning agents.
+  emission-delay-seconds: 20
+
 scanner:
   url: file:${EXTERNAL_CONFIG_DIR}
   

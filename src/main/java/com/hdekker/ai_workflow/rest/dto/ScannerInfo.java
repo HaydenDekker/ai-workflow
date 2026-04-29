@@ -9,9 +9,10 @@ import java.time.LocalDateTime;
  * @param id               unique scanner identifier
  * @param agentId          owner agent — never null after creation
  * @param targetDirectory  absolute path the scanner watches
- * @param status           current state: IDLE, EMITTING_ALL, EMITTING_UPDATES, ERROR
+ * @param status           current state: IDLE, EMITTING_INITIAL, EMITTING_UPDATES, ERROR
  * @param createdAt        when the scanner was created
  * @param lastEmittedAt    timestamp of last file emission (null if none yet)
+ * @param errorMessage     error message when status is ERROR (null otherwise)
  */
 public record ScannerInfo(
     String id,
@@ -19,5 +20,30 @@ public record ScannerInfo(
     String targetDirectory,
     String status,
     LocalDateTime createdAt,
-    LocalDateTime lastEmittedAt
-) {}
+    LocalDateTime lastEmittedAt,
+    String errorMessage
+) {
+    /**
+     * Backward-compatible constructor for tests.
+     *
+     * @param id              unique scanner identifier
+     * @param agentId         owner agent
+     * @param targetDirectory absolute path the scanner watches
+     * @param status          current state
+     * @param createdAt       when the scanner was created
+     * @param lastEmittedAt   timestamp of last file emission
+     */
+    public ScannerInfo(String id, String agentId, String targetDirectory,
+                       String status, LocalDateTime createdAt, LocalDateTime lastEmittedAt) {
+        this(id, agentId, targetDirectory, status, createdAt, lastEmittedAt, "");
+    }
+
+    /**
+     * Canonical constructor body.
+     */
+    public ScannerInfo {
+        if (errorMessage == null) {
+            errorMessage = "";
+        }
+    }
+}
