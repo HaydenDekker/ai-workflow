@@ -11,7 +11,7 @@
 
 | Phase | Status | Date | Notes |
 |-------|--------|------|-------|
-| **Phase 0** | ⬜ Not started | — | — |
+| **Phase 0** | ✅ Complete | 2026-04-29 | `project/docs/design-principles.md` created with master index, 7 design principles, naming conventions, and quick navigation tables.
 | **Phase 1.1** | ✅ Complete | 2026-04-28 | `adr-testing-strategy.md` → `dpr-testing-strategy.md` + `adr-001-testing-strategy.md`. Old ADR removed. |
 | **Phase 1.2** | ⬜ Not started | — | — |
 | **Phase 1.3** | ⬜ Not started | — | — |
