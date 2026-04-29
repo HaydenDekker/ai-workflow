@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,15 +18,14 @@ import org.springframework.context.ApplicationContext;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
-
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 public class ScannerRegistryTest {
 
     private ScannerRegistry registry;
     private FileMetadataDatabase fileMetadataDb;
     private ApplicationContext appContext;
-    private SimpleMeterRegistry meterRegistry;
+    private ScannerObserverUseCase observer;
     private Path tempDir;
 
     @BeforeEach
@@ -37,9 +35,9 @@ public class ScannerRegistryTest {
 
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
-        meterRegistry = new SimpleMeterRegistry();
+        observer = new ScannerObserverUseCase();
 
-        registry = new ScannerRegistry(appContext, fileMetadataDb, meterRegistry, null);
+        registry = new ScannerRegistry(appContext, fileMetadataDb, observer, null);
     }
 
     @Test

@@ -24,12 +24,11 @@ public class AgentEntity {
 
 	private String source; // "YAML" or "DYNAMIC"
 
-	@Column(name = "scanner_id")
-	private String scannerId; // FK to scanner.id
-
 	private LocalDateTime createdAt;
 
 	private LocalDateTime lastStartedAt;
+
+	private String scannerId;
 
 	private boolean active = true;
 
@@ -68,14 +67,6 @@ public class AgentEntity {
 		this.source = source;
 	}
 
-	public String getScannerId() {
-		return scannerId;
-	}
-
-	public void setScannerId(String scannerId) {
-		this.scannerId = scannerId;
-	}
-
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
@@ -90,6 +81,14 @@ public class AgentEntity {
 
 	public void setLastStartedAt(LocalDateTime lastStartedAt) {
 		this.lastStartedAt = lastStartedAt;
+	}
+
+	public String getScannerId() {
+		return scannerId;
+	}
+
+	public void setScannerId(String scannerId) {
+		this.scannerId = scannerId;
 	}
 
 	public boolean isActive() {

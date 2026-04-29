@@ -19,8 +19,7 @@ import com.hdekker.ai_workflow.files.FileSystemScannerAdapter;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-
-import io.micrometer.core.instrument.MeterRegistry;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
 
@@ -72,7 +71,7 @@ public class ScannerRegistry implements org.springframework.beans.factory.Dispos
     private final ConcurrentHashMap<String, ScannerMetadata> scanners = new ConcurrentHashMap<>();
     private final ApplicationContext applicationContext;
     private final FileMetadataDatabase fileMetadataDatabase;
-    private final MeterRegistry meterRegistry;
+    private final ScannerObserverUseCase observer;
     private final Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
 
     /**
@@ -80,17 +79,17 @@ public class ScannerRegistry implements org.springframework.beans.factory.Dispos
      *
      * @param applicationContext            Spring application context
      * @param fileMetadataDatabase          Database for file metadata change detection
-     * @param meterRegistry                 Micrometer registry for scanner metrics
+     * @param observer                      scanner observer use case for metrics tracking
      * @param metricsEventPublisher         Callback to publish metrics change events
      */
     public ScannerRegistry(
             ApplicationContext applicationContext,
             FileMetadataDatabase fileMetadataDatabase,
-            MeterRegistry meterRegistry,
+            ScannerObserverUseCase observer,
             Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
         this.applicationContext = applicationContext;
         this.fileMetadataDatabase = fileMetadataDatabase;
-        this.meterRegistry = meterRegistry;
+        this.observer = observer;
         this.metricsEventPublisher = metricsEventPublisher;
     }
 
@@ -128,13 +127,13 @@ public class ScannerRegistry implements org.springframework.beans.factory.Dispos
 
         Duration delay = Duration.ofSeconds(delaySeconds);
 
-        // Create the scanner adapter (pass agentId for metric tagging + event publisher)
+        // Create the scanner adapter (pass agentId for metric tagging + observer + event publisher)
         FileSystemScannerAdapter scanner = new FileSystemScannerAdapter(
                 agentId,
                 targetDirectory,
                 delay,
                 fileMetadataDatabase,
-                meterRegistry,
+                observer,
                 metricsEventPublisher);
 
         ScannerMetadata metadata = new ScannerMetadata(

@@ -27,8 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
-
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
@@ -56,7 +55,7 @@ public class FileSystemScannerAdapterTest {
     private Path inputDir;
     private Path outputDir;
     private FileMetadataDatabase fileMetadataDatabase;
-    private SimpleMeterRegistry meterRegistry;
+    private ScannerObserverUseCase observer;
 
     private FileSystemScannerAdapter adapter;
 
@@ -65,7 +64,7 @@ public class FileSystemScannerAdapterTest {
         inputDir = Files.createDirectory(tempDir.resolve("input"));
         outputDir = Files.createDirectory(tempDir.resolve("output"));
         fileMetadataDatabase = mock(FileMetadataDatabase.class);
-        meterRegistry = new SimpleMeterRegistry();
+        observer = new ScannerObserverUseCase();
         // Mock save to store files for comparison checks
         doAnswer(invocation -> {
             FileMetadata fm = invocation.getArgument(0);
@@ -88,7 +87,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         assertThat(adapter).isNotNull();
         assertThat(adapter.getFolderPath()).isEqualTo(inputDir.toString());
@@ -109,7 +108,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         assertThat(adapter.isDisposed()).isFalse();
 
@@ -130,7 +129,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         adapter.destroy();
         
@@ -150,7 +149,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         long startTime = System.currentTimeMillis();
 
@@ -175,7 +174,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Directory is empty - no files to scan
         adapter.resetToFullScan();
@@ -200,7 +199,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Subscribe multiple times - should not throw exceptions
         List<Throwable> errors = new CopyOnWriteArrayList<>();
@@ -240,7 +239,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Destroy first
         adapter.destroy();
@@ -269,7 +268,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         assertThat(adapter.getFolderPath()).isEqualTo(inputDir.toString());
 
@@ -284,7 +283,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         assertThat(adapter.isDisposed()).isFalse();
 
@@ -303,7 +302,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Collect emitted files
         List<FileHistory> emitted = new CopyOnWriteArrayList<>();
@@ -340,7 +339,7 @@ public class FileSystemScannerAdapterTest {
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Create a test file after adapter starts
         Path testFile = inputDir.resolve("watch-create.txt");

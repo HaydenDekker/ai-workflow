@@ -4,8 +4,7 @@ import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.ui.service.ScannerService;
-import com.hdekker.ai_workflow.ui.service.ScannerMetricsService;
-import com.vaadin.flow.component.AttachEvent;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -25,7 +24,6 @@ import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoIcon;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -62,14 +61,15 @@ public class ScannerListView extends VerticalLayout
 
     private Grid<ScannerInfo> grid;
     private final ScannerService scannerService;
-    private final ScannerMetricsService metricsService;
+    private final ScannerObserverUseCase observer;
     private ProgressBar loadingIndicator;
     private ScheduledExecutorService refreshScheduler;
+    private Consumer<ScannerMetricsChangedEvent> refreshCallback;
 
     @Autowired
-    public ScannerListView(ScannerService scannerService, ScannerMetricsService metricsService) {
+    public ScannerListView(ScannerService scannerService, ScannerObserverUseCase observer) {
         this.scannerService = scannerService;
-        this.metricsService = metricsService;
+        this.observer = observer;
         initLayout();
     }
 
@@ -140,7 +140,7 @@ public class ScannerListView extends VerticalLayout
         // Files column: current file count from metrics
         grid.addColumn(info -> {
             try {
-                ScannerMetricsSnapshot m = metricsService.getMetrics(info.agentId());
+                ScannerMetricsSnapshot m = observer.getMetrics(info.agentId());
                 return m.fileCount() + " files";
             } catch (Exception e) {
                 return "—";
@@ -170,16 +170,20 @@ public class ScannerListView extends VerticalLayout
         // runs on the Vaadin UI thread, not the background watch thread.
         addAttachListener(event -> {
             com.vaadin.flow.component.UI ui = event.getUI();
-            metricsService.registerRefreshCallback(e -> {
+            refreshCallback = e -> {
                 log.debug("UI refresh callback triggered: agent={}, type={}",
                         e.getAgentId(), e.getType());
                 ui.access(() -> grid.getDataProvider().refreshAll());
-            });
+            };
+            observer.registerRefreshCallback(refreshCallback);
         });
 
         addDetachListener(event -> {
             // Clear the callback to avoid stale references
-            metricsService.registerRefreshCallback(e -> {});
+            if (refreshCallback != null) {
+                observer.unregisterRefreshCallback(refreshCallback);
+                refreshCallback = null;
+            }
         });
     }
 

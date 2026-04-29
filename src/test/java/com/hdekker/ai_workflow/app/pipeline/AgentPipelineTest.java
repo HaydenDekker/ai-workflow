@@ -22,8 +22,7 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import org.mockito.Mockito;
 import org.springframework.ai.chat.client.ChatClient;
@@ -73,11 +72,12 @@ public class AgentPipelineTest {
      */
     private SetupResult setupPipeline(Path inputDir, Path outputDir) throws Exception {
         FileMetadataDatabase db = createSmartDb();
+        ScannerObserverUseCase observer = new ScannerObserverUseCase();
         FileSystemScannerAdapter scanner = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
                 db,
-                new SimpleMeterRegistry(), null);
+                observer, null);
 
         CopyOnWriteArrayList<String> prompts = new CopyOnWriteArrayList<>();
         CopyOnWriteArrayList<PromptResponse> responses = new CopyOnWriteArrayList<>();
@@ -243,11 +243,12 @@ public class AgentPipelineTest {
         Path outputDir = Files.createDirectory(tempDir.resolve("output"));
 
         FileMetadataDatabase modDb = createSmartDb();
+        ScannerObserverUseCase modObserver = new ScannerObserverUseCase();
         FileSystemScannerAdapter modScanner = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
                 modDb,
-                new SimpleMeterRegistry(), null);
+                modObserver, null);
 
         CopyOnWriteArrayList<String> modPrompts = new CopyOnWriteArrayList<>();
         AtomicReference<CountDownLatch> modLatchRef = new AtomicReference<>(new CountDownLatch(1));
@@ -330,11 +331,12 @@ public class AgentPipelineTest {
         Path outputDir = Files.createDirectory(tempDir.resolve("output"));
 
         FileMetadataDatabase multiDb = createSmartDb();
+        ScannerObserverUseCase multiObserver = new ScannerObserverUseCase();
         FileSystemScannerAdapter multiScanner = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
                 multiDb,
-                new SimpleMeterRegistry(), null);
+                multiObserver, null);
 
         CopyOnWriteArrayList<String> multiPrompts = new CopyOnWriteArrayList<>();
         CountDownLatch multiLatch = new CountDownLatch(3); // Wait for 3 files

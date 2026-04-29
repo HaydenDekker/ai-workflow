@@ -10,9 +10,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -20,8 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.TestConstants;
-
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -60,15 +59,25 @@ public class FileSystemSimplePollerFluxAdapterTest {
 
 	public Flux<FileHistory> createFluxWithNativeWatcher(File folder, FileMetadataStore database) {
 		Duration pollInterval = Duration.ofMillis(500);
-		SimpleMeterRegistry registry = new SimpleMeterRegistry();
-		AtomicLong fileCount = new AtomicLong(0);
+		ScannerObserverUseCase observer = new ScannerObserverUseCase();
 		NativeFileWatcher watcher = new NativeFileWatcher(
 				folder.toPath(), pollInterval, database,
-				registry.counter("test.discovered"), registry.counter("test.unchanged"),
-				fileCount,
+				agentId -> observer.recordDiscovery(agentId),
+				agentId -> observer.recordUnchanged(agentId),
+				agentId -> observer.updateFileCount(agentId, countFiles(folder)),
 				history -> {}); // no-op callback for tests
 		watcher.start();
 		return watcher.flux();
+	}
+
+	private long countFiles(File folder) {
+		try {
+			return java.nio.file.Files.walk(folder.toPath())
+					.filter(java.nio.file.Files::isRegularFile)
+					.count();
+		} catch (Exception e) {
+			return 0L;
+		}
 	}
 
 	@Test

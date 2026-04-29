@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,19 +22,16 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
-
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 /**
- * Unit tests for {@link FileSystemScannerAdapter} metrics instrumentation.
+ * Unit tests for {@link FileSystemScannerAdapter} metrics instrumentation via {@link ScannerObserverUseCase}.
  * <p>
  * Verifies that:
- * 1. files_discovered counter increments on file discovery
- * 2. files_unchanged counter increments on unchanged files
- * 3. file_count gauge updates after scan completes
+ * 1. recordDiscovery is called on file discovery
+ * 2. recordUnchanged is called on unchanged files
+ * 3. updateFileCount is called after scan completes
  */
 public class FileSystemScannerAdapterMetricsTest {
 
@@ -44,14 +42,14 @@ public class FileSystemScannerAdapterMetricsTest {
 
     private Path inputDir;
     private FileMetadataDatabase fileMetadataDatabase;
-    private SimpleMeterRegistry meterRegistry;
+    private ScannerObserverUseCase observer;
     private FileSystemScannerAdapter adapter;
 
     @BeforeEach
     void setUp() throws Exception {
         inputDir = Files.createDirectory(tempDir.resolve("input"));
         fileMetadataDatabase = mock(FileMetadataDatabase.class);
-        meterRegistry = new SimpleMeterRegistry();
+        observer = new ScannerObserverUseCase();
         // Store metadata in a map for FileComparator to find during reset scans
         java.util.Map<String, FileMetadata> metadataStore = new java.util.concurrent.ConcurrentHashMap<>();
         doAnswer(invocation -> {
@@ -73,31 +71,26 @@ public class FileSystemScannerAdapterMetricsTest {
     }
 
     @Test
-    void givenEmptyDirectory_WhenAdapterCreated_ThenGaugeStartsAtZero() throws Exception {
-        log.info("Test: gauge starts at zero for empty directory");
+    void givenEmptyDirectory_WhenAdapterCreated_ThenFileCountIsZero() throws Exception {
+        log.info("Test: file count is zero for empty directory");
 
         adapter = new FileSystemScannerAdapter("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
-        // Gauge should be 0 for empty directory
-        double fileCount = meterRegistry.find("ai_workflow.scanner.file_count")
-                .tag("agentId", "test-agent")
-                .gauges()
-                .stream()
-                .mapToDouble(Gauge::value)
-                .findFirst()
-                .orElse(0.0);
+        // Metrics should be zero for empty directory
+        var snapshot = observer.getMetrics("test-agent");
 
-        assertThat(fileCount).isZero();
-        log.info("PASSED: gauge starts at zero");
+        assertThat(snapshot.fileCount()).isZero();
+        assertThat(snapshot.totalDiscovered()).isZero();
+        log.info("PASSED: file count starts at zero");
     }
 
     @Test
-    void givenFileInDirectory_WhenAdapterCreated_ThenDiscoveredCounterIncrements() throws Exception {
-        log.info("Test: discovered counter increments on file discovery");
+    void givenFileInDirectory_WhenAdapterCreated_ThenDiscoveredCountIncrements() throws Exception {
+        log.info("Test: discovered count increments on file discovery");
 
         // Create a test file
         Path testFile = inputDir.resolve("test-metrics.txt");
@@ -107,27 +100,21 @@ public class FileSystemScannerAdapterMetricsTest {
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Wait for initial scan to complete
         Thread.sleep(1000);
 
-        // Discovered counter should be 1
-        double discovered = meterRegistry.find("ai_workflow.scanner.files_discovered")
-                .tag("agentId", "test-agent")
-                .counters()
-                .stream()
-                .mapToDouble(Counter::count)
-                .findFirst()
-                .orElse(0.0);
+        // Discovered count should be 1
+        var snapshot = observer.getMetrics("test-agent");
 
-        assertThat(discovered).isEqualTo(1.0);
-        log.info("PASSED: discovered counter incremented to {}", (long) discovered);
+        assertThat(snapshot.totalDiscovered()).isEqualTo(1);
+        log.info("PASSED: discovered count incremented to {}", snapshot.totalDiscovered());
     }
 
     @Test
-    void givenFileInDirectory_WhenFullScan_ThenUnchangedCounterIncrements() throws Exception {
-        log.info("Test: unchanged counter increments on full scan");
+    void givenFileInDirectory_WhenFullScan_ThenUnchangedCountIncrements() throws Exception {
+        log.info("Test: unchanged count increments on full scan");
 
         // Create a test file
         Path testFile = inputDir.resolve("test-unchanged.txt");
@@ -137,7 +124,7 @@ public class FileSystemScannerAdapterMetricsTest {
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Wait for initial scan
         Thread.sleep(1000);
@@ -146,22 +133,16 @@ public class FileSystemScannerAdapterMetricsTest {
         adapter.resetToFullScan();
         Thread.sleep(500);
 
-        // Unchanged counter should be 1
-        double unchanged = meterRegistry.find("ai_workflow.scanner.files_unchanged")
-                .tag("agentId", "test-agent")
-                .counters()
-                .stream()
-                .mapToDouble(Counter::count)
-                .findFirst()
-                .orElse(0.0);
+        // Unchanged count should be at least 1
+        var snapshot = observer.getMetrics("test-agent");
 
-        assertThat(unchanged).isGreaterThanOrEqualTo(1.0);
-        log.info("PASSED: unchanged counter incremented to {}", (long) unchanged);
+        assertThat(snapshot.unchanged()).isGreaterThanOrEqualTo(1);
+        log.info("PASSED: unchanged count incremented to {}", snapshot.unchanged());
     }
 
     @Test
-    void givenFileInDirectory_WhenAdapterCreated_ThenGaugeUpdatesToCorrectCount() throws Exception {
-        log.info("Test: gauge reflects correct file count");
+    void givenFileInDirectory_WhenAdapterCreated_ThenFileCountUpdates() throws Exception {
+        log.info("Test: file count reflects correct count");
 
         // Create multiple test files
         Files.writeString(inputDir.resolve("file1.txt"), "content 1");
@@ -172,27 +153,21 @@ public class FileSystemScannerAdapterMetricsTest {
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Wait for initial scan to complete
         Thread.sleep(1000);
 
-        // Gauge should reflect 3 files
-        double fileCount = meterRegistry.find("ai_workflow.scanner.file_count")
-                .tag("agentId", "test-agent")
-                .gauges()
-                .stream()
-                .mapToDouble(Gauge::value)
-                .findFirst()
-                .orElse(0.0);
+        // File count should reflect 3 files
+        var snapshot = observer.getMetrics("test-agent");
 
-        assertThat(fileCount).isEqualTo(3.0);
-        log.info("PASSED: gauge updated to {}", (long) fileCount);
+        assertThat(snapshot.fileCount()).isEqualTo(3);
+        log.info("PASSED: file count updated to {}", snapshot.fileCount());
     }
 
     @Test
     void givenMultipleFiles_WhenNewFileAddedAndScanned_ThenDiscoveredIncrements() throws Exception {
-        log.info("Test: discovered counter increments for each new file");
+        log.info("Test: discovered count increments for each new file");
 
         // Create initial files
         Files.writeString(inputDir.resolve("initial.txt"), "initial content");
@@ -201,40 +176,28 @@ public class FileSystemScannerAdapterMetricsTest {
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Wait for initial scan
         Thread.sleep(1000);
 
-        double initialDiscovered = meterRegistry.find("ai_workflow.scanner.files_discovered")
-                .tag("agentId", "test-agent")
-                .counters()
-                .stream()
-                .mapToDouble(Counter::count)
-                .findFirst()
-                .orElse(0.0);
+        long initialDiscovered = observer.getMetrics("test-agent").totalDiscovered();
 
         // Add a new file and trigger full scan
         Files.writeString(inputDir.resolve("new.txt"), "new content");
         adapter.resetToFullScan();
         Thread.sleep(500);
 
-        double finalDiscovered = meterRegistry.find("ai_workflow.scanner.files_discovered")
-                .tag("agentId", "test-agent")
-                .counters()
-                .stream()
-                .mapToDouble(Counter::count)
-                .findFirst()
-                .orElse(0.0);
+        long finalDiscovered = observer.getMetrics("test-agent").totalDiscovered();
 
         assertThat(finalDiscovered).isGreaterThan(initialDiscovered);
-        log.info("PASSED: discovered counter went from {} to {}", 
-                (long) initialDiscovered, (long) finalDiscovered);
+        log.info("PASSED: discovered count went from {} to {}", 
+                initialDiscovered, finalDiscovered);
     }
 
     @Test
-    void givenMultipleFiles_WhenFileCountGaugeUpdated_ThenReflectsAllFiles() throws Exception {
-        log.info("Test: gauge reflects all files after multiple operations");
+    void givenMultipleFiles_WhenFileCountUpdated_ThenReflectsAllFiles() throws Exception {
+        log.info("Test: file count reflects all files after multiple operations");
 
         // Create initial files
         Files.writeString(inputDir.resolve("file-a.txt"), "content a");
@@ -244,7 +207,7 @@ public class FileSystemScannerAdapterMetricsTest {
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
-                meterRegistry, null);
+                observer, null);
 
         // Wait for initial scan
         Thread.sleep(1000);
@@ -256,16 +219,34 @@ public class FileSystemScannerAdapterMetricsTest {
         adapter.resetToFullScan();
         Thread.sleep(500);
 
-        // Gauge should reflect 3 files
-        double fileCount = meterRegistry.find("ai_workflow.scanner.file_count")
-                .tag("agentId", "test-agent")
-                .gauges()
-                .stream()
-                .mapToDouble(Gauge::value)
-                .findFirst()
-                .orElse(0.0);
+        // File count should reflect 3 files
+        var snapshot = observer.getMetrics("test-agent");
 
-        assertThat(fileCount).isEqualTo(3.0);
-        log.info("PASSED: gauge reflects all {} files", (long) fileCount);
+        assertThat(snapshot.fileCount()).isEqualTo(3);
+        log.info("PASSED: file count reflects all {} files", snapshot.fileCount());
+    }
+
+    @Test
+    void givenAdapterCreated_WhenMetricsEventPublished_ThenEventReceived() throws Exception {
+        log.info("Test: metrics events are published correctly");
+
+        CopyOnWriteArrayList<ScannerMetricsChangedEvent> events = new CopyOnWriteArrayList<>();
+        observer.registerRefreshCallback(events::add);
+
+        // Create a test file
+        Files.writeString(inputDir.resolve("test-event.txt"), "test content");
+
+        adapter = new FileSystemScannerAdapter("test-agent",
+                inputDir.toString(),
+                Duration.ofSeconds(1),
+                fileMetadataDatabase,
+                observer, null);
+
+        // Wait for initial scan
+        Thread.sleep(1000);
+
+        // Should have received events (file_count, discovered, etc.)
+        assertThat(events).isNotEmpty();
+        log.info("PASSED: received {} metrics events", events.size());
     }
 }

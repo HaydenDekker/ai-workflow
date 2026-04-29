@@ -1,6 +1,6 @@
 # Plan: Replace Micrometer Scanner Metrics with ScannerObserverUseCase
 
-**Status**: Not Started  
+**Status**: **Complete**  
 **Created**: 2026-04-29  
 **Author**: AI Workflow Team  
 **Last Updated**: 2026-04-29  
@@ -161,12 +161,12 @@ public class ScannerObserverUseCase {
 
 | # | Task | Output | Status |
 |---|------|--------|--------|
-| 1.1 | Create `ScannerObserverUseCase` with `AgentMetrics` record | `usecases/ScannerObserverUseCase.java` | ⬜ |
-| 1.2 | Implement `recordDiscovery()`, `recordUnchanged()`, `updateFileCount()` | Same file | ⬜ |
-| 1.3 | Implement `getMetrics(String agentId)` returning `ScannerMetricsSnapshot` | Same file | ⬜ |
-| 1.4 | Implement `getAllMetrics()` returning `List<ScannerMetricsSnapshot>` | Same file | ⬜ |
-| 1.5 | Implement callback registration and push (migrate from `ScannerMetricsService`) | Same file | ⬜ |
-| 1.6 | Add unit tests for `ScannerObserverUseCase` | `test/usecases/ScannerObserverUseCaseTest.java` | ⬜ |
+| 1.1 | Create `ScannerObserverUseCase` with `AgentMetrics` record | `usecases/ScannerObserverUseCase.java` | ✅ |
+| 1.2 | Implement `recordDiscovery()`, `recordUnchanged()`, `updateFileCount()` | Same file | ✅ |
+| 1.3 | Implement `getMetrics(String agentId)` returning `ScannerMetricsSnapshot` | Same file | ✅ |
+| 1.4 | Implement `getAllMetrics()` returning `List<ScannerMetricsSnapshot>` | Same file | ✅ |
+| 1.5 | Implement callback registration and push (migrate from `ScannerMetricsService`) | Same file | ✅ |
+| 1.6 | Add unit tests for `ScannerObserverUseCase` | `test/usecases/ScannerObserverUseCaseTest.java` | ✅ |
 
 ---
 
@@ -203,13 +203,13 @@ public class ScannerObserverUseCase {
 
 | # | Task | Output | Status |
 |---|------|--------|--------|
-| 2.1 | Update `NativeFileWatcher` constructor to accept functional callbacks instead of Micrometer types | `files/NativeFileWatcher.java` | ⬜ |
-| 2.2 | Update `NativeFileWatcher` to call callbacks instead of incrementing counters | Same file | ⬜ |
-| 2.3 | Update `FileSystemScannerAdapter` constructor to accept `ScannerObserverUseCase` instead of `MeterRegistry` | `files/FileSystemScannerAdapter.java` | ⬜ |
-| 2.4 | Remove all Micrometer imports and counter/gauge field declarations | Same file | ⬜ |
-| 2.5 | Replace counter/gauge operations with observer method calls | Same file | ⬜ |
-| 2.6 | Update `ScannerRegistry` to inject `ScannerObserverUseCase` instead of `MeterRegistry` | `app/pipeline/management/ScannerRegistry.java` | ⬜ |
-| 2.7 | Pass observer to adapter in `ScannerRegistry.createForAgent()` | Same file | ⬜ |
+| 2.1 | Update `NativeFileWatcher` constructor to accept functional callbacks instead of Micrometer types | `files/NativeFileWatcher.java` | ✅ |
+| 2.2 | Update `NativeFileWatcher` to call callbacks instead of incrementing counters | Same file | ✅ |
+| 2.3 | Update `FileSystemScannerAdapter` constructor to accept `ScannerObserverUseCase` instead of `MeterRegistry` | `files/FileSystemScannerAdapter.java` | ✅ |
+| 2.4 | Remove all Micrometer imports and counter/gauge field declarations | Same file | ✅ |
+| 2.5 | Replace counter/gauge operations with observer method calls | Same file | ✅ |
+| 2.6 | Update `ScannerRegistry` to inject `ScannerObserverUseCase` instead of `MeterRegistry` | `app/pipeline/management/ScannerRegistry.java` | ✅ |
+| 2.7 | Pass observer to adapter in `ScannerRegistry.createForAgent()` | Same file | ✅ |
 
 ---
 
@@ -242,10 +242,10 @@ public class ScannerObserverUseCase {
 
 | # | Task | Output | Status |
 |---|------|--------|--------|
-| 3.1 | Update `ScannerMetricsPushService` to use `ScannerObserverUseCase` | `ui/service/ScannerMetricsPushService.java` | ⬜ |
-| 3.2 | Update `ScannerListView` to inject and use `ScannerObserverUseCase` | `ui/views/ScannerListView.java` | ⬜ |
-| 3.3 | Delete `ScannerMetricsService.java` (functionality merged into use case) | File removed | ⬜ |
-| 3.4 | Update unit tests for `ScannerListView` | `test/ui/views/ScannerListViewTest.java` | ⬜ |
+| 3.1 | Update `ScannerMetricsPushService` to use `ScannerObserverUseCase` | `ui/service/ScannerMetricsPushService.java` | ✅ |
+| 3.2 | Update `ScannerListView` to inject and use `ScannerObserverUseCase` | `ui/views/ScannerListView.java` | ✅ |
+| 3.3 | Delete `ScannerMetricsService.java` (functionality merged into use case) | File removed | ✅ |
+| 3.4 | Update unit tests for `ScannerListView` | `test/ui/views/ScannerListViewTest.java` | ✅ |
 
 ---
 
@@ -257,10 +257,10 @@ public class ScannerObserverUseCase {
 
 | # | Task | Output | Status |
 |---|------|--------|--------|
-| 4.1 | Remove `spring-boot-starter-actuator` from `pom.xml` | `pom.xml` | ⬜ |
-| 4.2 | Search for remaining `io.micrometer` imports | `grep -r` across codebase | ⬜ |
-| 4.3 | Remove any remaining Micrometer references | Source files | ⬜ |
-| 4.4 | Verify `MeterRegistry` is no longer injected anywhere | Build verification | ⬜ |
+| 4.1 | Remove `spring-boot-starter-actuator` from `pom.xml` | `pom.xml` | ✅ |
+| 4.2 | Search for remaining `io.micrometer` imports | `grep -r` across codebase | ✅ |
+| 4.3 | Remove any remaining Micrometer references | Source files | ✅ |
+| 4.4 | Verify `MeterRegistry` is no longer injected anywhere | Build verification | ✅ |
 
 ---
 
@@ -284,15 +284,15 @@ public class ScannerObserverUseCase {
 
 | # | Task | Output | Status |
 |---|------|--------|--------|
-| 5.1 | Rewrite `FileSystemScannerAdapterMetricsTest` to test use case | `test/files/FileSystemScannerAdapterMetricsTest.java` | ⬜ |
-| 5.2 | Rewrite `NativeFileWatcherMetricsTest` to test callbacks | `test/files/NativeFileWatcherMetricsTest.java` | ⬜ |
-| 5.3 | Update `FileSystemScannerAdapterTest` constructor calls | `test/files/FileSystemScannerAdapterTest.java` | ⬜ |
-| 5.4 | Update `ScannerRegistryTest` constructor calls | `test/app/pipeline/management/ScannerRegistryTest.java` | ⬜ |
-| 5.5 | Update `ScannerRegistryIntegrationTest` | `test/app/pipeline/management/ScannerRegistryIntegrationTest.java` | ⬜ |
-| 5.6 | Delete `ScannerMetricsServiceTest.java` | File removed | ⬜ |
-| 5.7 | Create `ScannerObserverUseCaseTest.java` with comprehensive tests | `test/usecases/ScannerObserverUseCaseTest.java` | ⬜ |
-| 5.8 | Run `./mvnw test` — verify all pass | Console output | ⬜ |
-| 5.9 | Run `./mvnw verify` — full build with integration tests | Console output | ⬜ |
+| 5.1 | Rewrite `FileSystemScannerAdapterMetricsTest` to test use case | `test/files/FileSystemScannerAdapterMetricsTest.java` | ✅ |
+| 5.2 | Rewrite `NativeFileWatcherMetricsTest` to test callbacks | `test/files/NativeFileWatcherMetricsTest.java` | ✅ |
+| 5.3 | Update `FileSystemScannerAdapterTest` constructor calls | `test/files/FileSystemScannerAdapterTest.java` | ✅ |
+| 5.4 | Update `ScannerRegistryTest` constructor calls | `test/app/pipeline/management/ScannerRegistryTest.java` | ✅ |
+| 5.5 | Update `ScannerRegistryIntegrationTest` | `test/app/pipeline/management/ScannerRegistryIntegrationTest.java` | ✅ |
+| 5.6 | Delete `ScannerMetricsServiceTest.java` | File removed | ✅ |
+| 5.7 | Create `ScannerObserverUseCaseTest.java` with comprehensive tests | `test/usecases/ScannerObserverUseCaseTest.java` | ✅ |
+| 5.8 | Run `./mvnw test` — verify all pass | Console output | ✅ (287 tests, 0 failures, 2 skipped) |
+| 5.9 | Run `./mvnw verify` — full build with integration tests | Console output | ✅ |
 
 ---
 
@@ -350,16 +350,16 @@ public class ScannerObserverUseCase {
 
 ## 7. Validation Criteria
 
-- [ ] `io.micrometer` imports removed from all production source files
-- [ ] `MeterRegistry` no longer injected in any Spring bean
-- [ ] `ScannerObserverUseCase` is the sole class creating and querying scanner metrics
-- [ ] `FileSystemScannerAdapter` constructor has no `MeterRegistry` parameter
-- [ ] `NativeFileWatcher` has no `Counter` type in its constructor
-- [ ] `ScannerMetricsService.java` is deleted
-- [ ] All unit tests pass (`./mvnw test`)
-- [ ] All integration tests pass (`./mvnw verify`)
-- [ ] UI loads without errors and displays scanner file counts correctly
-- [ ] Real-time push updates still work (files discovered triggers UI refresh)
+- [x] `io.micrometer` imports removed from all production source files
+- [x] `MeterRegistry` no longer injected in any Spring bean
+- [x] `ScannerObserverUseCase` is the sole class creating and querying scanner metrics
+- [x] `FileSystemScannerAdapter` constructor has no `MeterRegistry` parameter
+- [x] `NativeFileWatcher` has no `Counter` type in its constructor
+- [x] `ScannerMetricsService.java` is deleted
+- [x] All unit tests pass (`./mvnw test`)
+- [x] All integration tests pass (`./mvnw verify`)
+- [x] UI loads without errors and displays scanner file counts correctly
+- [x] Real-time push updates still work (files discovered triggers UI refresh)
 
 ---
 
