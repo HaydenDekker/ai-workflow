@@ -28,7 +28,7 @@ public class AgentEntity {
 
 	private LocalDateTime lastStartedAt;
 
-	private String scannerId;
+
 
 	private boolean active = true;
 
@@ -81,14 +81,6 @@ public class AgentEntity {
 
 	public void setLastStartedAt(LocalDateTime lastStartedAt) {
 		this.lastStartedAt = lastStartedAt;
-	}
-
-	public String getScannerId() {
-		return scannerId;
-	}
-
-	public void setScannerId(String scannerId) {
-		this.scannerId = scannerId;
 	}
 
 	public boolean isActive() {

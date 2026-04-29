@@ -107,7 +107,7 @@ public class AgentLifecycleUseCase {
                 log.warn("Agent {} has no valid targetDirectory: {}. Initialization halted.", id, result.reason());
                 // Persist to DB but skip scanner/flux/subscription
                 if (persistenceService != null) {
-                    persistenceService.save(id, agent, "YAML", null);
+                    persistenceService.save(id, agent, "YAML");
                 }
                 return;
             }
@@ -116,22 +116,20 @@ public class AgentLifecycleUseCase {
             Flux<PromptResponse> flux = buildFlux(agent, targetDir);
             Disposable subscription = flux.subscribe();
 
-            String scannerId = null;
             if (scannerRegistry != null) {
-                ScannerInfo scannerInfo = scannerRegistry.createForAgent(id, targetDir, 5);
-                scannerId = scannerInfo.id();
+                scannerRegistry.createForAgent(id, targetDir, 5);
             }
 
             AgentRegistryEntry entry = new AgentRegistryEntry(id, agent, flux, LocalDateTime.now(), "YAML",
-                    subscription, scannerId);
+                    subscription);
             agentRegistry.put(id, entry);
 
             // Persist to DB if persistence service is available
             if (persistenceService != null) {
-                persistenceService.save(id, agent, "YAML", scannerId);
+                persistenceService.save(id, agent, "YAML");
             }
 
-            log.info("Initialized YAML agent: {} (scannerId: {})", id, scannerId);
+            log.info("Initialized YAML agent: {}", id);
         });
     }
 
@@ -139,10 +137,6 @@ public class AgentLifecycleUseCase {
      * Restore agents from the database on startup.
      * Active agents get flux/subscription AND a new scanner created in the ScannerRegistry.
      * Disabled agents stay dormant (no scanner created).
-     * <p>
-     * Scanners are recreated on restore because the previous {@code FileSystemScannerAdapter}
-     * instances were ephemeral (Spring singleton scope destroyed on restart). The scannerId
-     * stored in the DB is the old ID — we create a fresh scanner and update the entity.
      */
     public void restoreFromDatabase() {
         if (persistenceService == null) {
@@ -168,23 +162,19 @@ public class AgentLifecycleUseCase {
 
                     String targetDir = def.targetDirectory();
                     // Create a new scanner for this restored agent (one-to-one)
-                    String scannerId = null;
                     if (scannerRegistry != null) {
-                        ScannerInfo scannerInfo = scannerRegistry.createForAgent(entity.getId(), targetDir, 5);
-                        scannerId = scannerInfo.id();
-                        // Update the entity in DB with the new scannerId
-                        persistenceService.save(entity.getId(), def, entity.getSource(), scannerId);
+                        scannerRegistry.createForAgent(entity.getId(), targetDir, 5);
                     }
 
                     Flux<PromptResponse> flux = buildFlux(def, targetDir);
                     Disposable subscription = flux.subscribe();
 
                     AgentRegistryEntry entry = new AgentRegistryEntry(entity.getId(), def, flux, entity.getCreatedAt(),
-                            entity.getSource(), subscription, scannerId);
+                            entity.getSource(), subscription);
                     agentRegistry.put(entity.getId(), entry);
                     restoredCount++;
-                    log.info("Restored active agent from DB: {} (source: {}, scannerId: {})",
-                            entity.getId(), entity.getSource(), scannerId);
+                    log.info("Restored active agent from DB: {} (source: {})",
+                            entity.getId(), entity.getSource());
                 }
             } catch (Exception e) {
                 log.error("Failed to restore agent from DB: {}", entity.getId(), e);
@@ -202,11 +192,11 @@ public class AgentLifecycleUseCase {
                 Optional<AgentDefinition> definitionOpt = persistenceService.getDefinition(entity.getId());
                 if (definitionOpt.isPresent()) {
                     DormantAgentEntry dormantEntry = new DormantAgentEntry(entity.getId(), definitionOpt.get(),
-                            entity.getCreatedAt(), entity.getSource(), entity.getScannerId());
+                            entity.getCreatedAt(), entity.getSource());
                     dormantAgents.put(entity.getId(), dormantEntry);
                     dormantCount++;
-                    log.info("Loaded dormant agent from DB: {} (source: {}, scannerId: {})",
-                            entity.getId(), entity.getSource(), entity.getScannerId());
+                    log.info("Loaded dormant agent from DB: {} (source: {})",
+                            entity.getId(), entity.getSource());
                 }
             } catch (Exception e) {
                 log.error("Failed to load dormant agent from DB: {}", entity.getId(), e);
@@ -247,19 +237,17 @@ public class AgentLifecycleUseCase {
      *
      * @param def              the agent definition
      * @param targetDirectory  the directory to scan (must be absolute path)
-     * @return the created agent info with scannerId
+     * @return the created agent info
      */
     public AgentInfo addDynamicAgent(AgentDefinition def, String targetDirectory) {
         String id = UUID.randomUUID().toString();
 
         // 1. Create scanner for this agent (one-to-one, immediate)
-        String scannerId = null;
         if (scannerRegistry != null) {
             try {
-                ScannerInfo scannerInfo = scannerRegistry.createForAgent(id, targetDirectory, 5);
-                scannerId = scannerInfo.id();
-                log.info("Created scanner {} for agent {} (target={}, dir={})",
-                        scannerId, id, targetDirectory, targetDirectory);
+                scannerRegistry.createForAgent(id, targetDirectory, 5);
+                log.info("Created scanner for agent {} (target={}, dir={})",
+                        id, targetDirectory, targetDirectory);
             } catch (Exception e) {
                 log.warn("Failed to create scanner for agent {}, continuing without scanner", id, e);
             }
@@ -271,17 +259,17 @@ public class AgentLifecycleUseCase {
 
         // 3. Track in registry
         AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux,
-                LocalDateTime.now(), "DYNAMIC", subscription, scannerId);
+                LocalDateTime.now(), "DYNAMIC", subscription);
         agentRegistry.put(id, entry);
 
-        // 4. Persist agent with scannerId
+        // 4. Persist agent
         if (persistenceService != null) {
-            persistenceService.save(id, def, "DYNAMIC", scannerId);
+            persistenceService.save(id, def, "DYNAMIC");
         }
 
-        log.info("Added dynamic agent: {} (scannerId: {})", id, scannerId);
+        log.info("Added dynamic agent: {}", id);
 
-        return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC", scannerId);
+        return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC");
     }
 
     /**
@@ -314,12 +302,12 @@ public class AgentLifecycleUseCase {
             entry.subscription().dispose();
 
             // One-to-one: destroy scanner when agent is removed
-            if (entry.scannerId() != null && scannerRegistry != null) {
+            if (scannerRegistry != null) {
                 try {
-                    scannerRegistry.destroyForAgent(entry.scannerId());
-                    log.info("Destroyed scanner {} for removed agent {}", entry.scannerId(), id);
+                    scannerRegistry.destroyForAgent(id);
+                    log.info("Destroyed scanner for removed agent {}", id);
                 } catch (Exception e) {
-                    log.warn("Failed to destroy scanner {} for agent {}", entry.scannerId(), id, e);
+                    log.warn("Failed to destroy scanner for agent {}", id, e);
                 }
             }
 
@@ -329,12 +317,12 @@ public class AgentLifecycleUseCase {
             DormantAgentEntry dormantEntry = dormantAgents.remove(id);
             if (dormantEntry != null) {
                 // Also clean up scanner for dormant agent
-                if (dormantEntry.scannerId() != null && scannerRegistry != null) {
+                if (scannerRegistry != null) {
                     try {
-                        scannerRegistry.destroyForAgent(dormantEntry.scannerId());
-                        log.info("Destroyed scanner {} for removed dormant agent {}", dormantEntry.scannerId(), id);
+                        scannerRegistry.destroyForAgent(id);
+                        log.info("Destroyed scanner for removed dormant agent {}", id);
                     } catch (Exception e) {
-                        log.warn("Failed to destroy scanner {} for dormant agent {}", dormantEntry.scannerId(), id, e);
+                        log.warn("Failed to destroy scanner for dormant agent {}", id, e);
                     }
                 }
                 log.info("Removed dormant agent: {}", id);
@@ -386,11 +374,11 @@ public class AgentLifecycleUseCase {
         Disposable subscription = flux.subscribe();
 
         AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux, dormantEntry.createdAt(),
-                dormantEntry.source(), subscription, dormantEntry.scannerId());
+                dormantEntry.source(), subscription);
         agentRegistry.put(id, entry);
 
-        log.info("Enabled agent: {} (scannerId: {})", id, dormantEntry.scannerId());
-        return new AgentInfo(id, def, entry.createdAt(), true, entry.source(), dormantEntry.scannerId());
+        log.info("Enabled agent: {}", id);
+        return new AgentInfo(id, def, entry.createdAt(), true, entry.source());
     }
 
     /**
@@ -414,10 +402,10 @@ public class AgentLifecycleUseCase {
 
         // Store in dormant registry
         DormantAgentEntry dormantEntry = new DormantAgentEntry(id, entry.agentDefinition(), entry.createdAt(),
-                entry.source(), entry.scannerId());
+                entry.source());
         dormantAgents.put(id, dormantEntry);
 
-        log.info("Disabled agent: {} (scannerId: {})", id, entry.scannerId());
+        log.info("Disabled agent: {}", id);
     }
 
     /**
@@ -442,7 +430,7 @@ public class AgentLifecycleUseCase {
         String targetDir = updatedDefinition.targetDirectory();
         AgentInfo agentInfo = addDynamicAgent(updatedDefinition, targetDir);
 
-        log.info("Updated agent: {} (scannerId: {})", id, agentInfo.scannerId());
+        log.info("Updated agent: {}", id);
         return agentInfo;
     }
 
@@ -464,11 +452,10 @@ public class AgentLifecycleUseCase {
         entry.subscription().dispose();
 
         // Reset scanner to emit all files
-        String scannerId = entry.scannerId();
-        if (scannerId != null && scannerRegistry != null) {
+        if (scannerRegistry != null) {
             try {
-                scannerRegistry.refreshAgent(scannerId);
-                log.info("Reset scanner {} to full-scan mode for agent {}", scannerId, agentId);
+                scannerRegistry.refreshAgent(agentId);
+                log.info("Reset scanner to full-scan mode for agent {}", agentId);
             } catch (Exception e) {
                 log.warn("Failed to refresh scanner for agent {}", agentId, e);
             }
@@ -487,11 +474,11 @@ public class AgentLifecycleUseCase {
         Disposable subscription = flux.subscribe();
 
         AgentRegistryEntry newEntry = new AgentRegistryEntry(agentId, def, flux,
-                entry.createdAt(), entry.source(), subscription, scannerId);
+                entry.createdAt(), entry.source(), subscription);
         agentRegistry.put(agentId, newEntry);
 
-        log.info("Refreshed agent: {} (scannerId: {})", agentId, scannerId);
-        return new AgentInfo(agentId, def, newEntry.createdAt(), true, newEntry.source(), scannerId);
+        log.info("Refreshed agent: {}", agentId);
+        return new AgentInfo(agentId, def, newEntry.createdAt(), true, newEntry.source());
     }
 
     /**
@@ -503,13 +490,13 @@ public class AgentLifecycleUseCase {
         // Active agents
         for (AgentRegistryEntry entry : agentRegistry.values()) {
             result.add(new AgentInfo(entry.id(), entry.agentDefinition(), entry.createdAt(), true,
-                    entry.source(), entry.scannerId()));
+                    entry.source()));
         }
 
         // Dormant agents
         for (DormantAgentEntry entry : dormantAgents.values()) {
             result.add(new AgentInfo(entry.id(), entry.agentDefinition(), entry.createdAt(), false,
-                    entry.source(), entry.scannerId()));
+                    entry.source()));
         }
 
         return result;
@@ -522,13 +509,13 @@ public class AgentLifecycleUseCase {
         AgentRegistryEntry activeEntry = agentRegistry.get(id);
         if (activeEntry != null) {
             return new AgentInfo(activeEntry.id(), activeEntry.agentDefinition(), activeEntry.createdAt(), true,
-                    activeEntry.source(), activeEntry.scannerId());
+                    activeEntry.source());
         }
 
         DormantAgentEntry dormantEntry = dormantAgents.get(id);
         if (dormantEntry != null) {
             return new AgentInfo(dormantEntry.id(), dormantEntry.agentDefinition(), dormantEntry.createdAt(), false,
-                    dormantEntry.source(), dormantEntry.scannerId());
+                    dormantEntry.source());
         }
 
         return null;
@@ -572,10 +559,10 @@ public class AgentLifecycleUseCase {
     }
 
     private record AgentRegistryEntry(String id, AgentDefinition agentDefinition, Flux<PromptResponse> flux,
-            LocalDateTime createdAt, String source, Disposable subscription, String scannerId) {
+            LocalDateTime createdAt, String source, Disposable subscription) {
     }
 
     private record DormantAgentEntry(String id, AgentDefinition agentDefinition, LocalDateTime createdAt,
-            String source, String scannerId) {
+            String source) {
     }
 }

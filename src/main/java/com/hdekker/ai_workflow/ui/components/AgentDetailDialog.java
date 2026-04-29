@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * 
  * <p>Uses Vaadin {@code Dialog} with {@code FormLayout} for form validation.
  * Displays all editable agent fields plus read-only metadata (created date, active status,
- * source, scanner ID). Provides Save and Delete action buttons.</p>
+ * source). Provides Save and Delete action buttons.</p>
  * 
  * <p>Validation rules match {@link AgentCreationDialog}:</p>
  * <ul>
@@ -61,7 +61,6 @@ public class AgentDetailDialog extends Dialog {
     private final TextField createdAtField;
     private final TextField activeField;
     private final TextField sourceField;
-    private final TextField scannerIdField;
 
     private final Button cancelButton;
     private final Button saveButton;
@@ -123,10 +122,6 @@ public class AgentDetailDialog extends Dialog {
         sourceField.setReadOnly(true);
         sourceField.addClassName("readonly-field");
 
-        scannerIdField = new TextField("Scanner");
-        scannerIdField.setReadOnly(true);
-        scannerIdField.addClassName("readonly-field");
-
         // Initialize buttons
         cancelButton = new Button("Cancel", event -> close());
         cancelButton.addClassName("dialog-cancel-btn");
@@ -156,7 +151,7 @@ public class AgentDetailDialog extends Dialog {
         metadataLayout.setClassName("agent-detail-metadata");
         metadataLayout.setSpacing(true);
         metadataLayout.setPadding(false);
-        metadataLayout.add(createdAtField, activeField, sourceField, scannerIdField);
+        metadataLayout.add(createdAtField, activeField, sourceField);
 
         // Build header with agent ID
         Div headerTitle = new Div();
@@ -199,7 +194,6 @@ public class AgentDetailDialog extends Dialog {
             }
             activeField.setValue(Boolean.toString(existingAgent.active()));
             sourceField.setValue(existingAgent.source() != null ? existingAgent.source() : "N/A");
-            scannerIdField.setValue(existingAgent.scannerId() != null ? existingAgent.scannerId() : "N/A");
         }
 
         super.open();

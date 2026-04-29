@@ -128,7 +128,6 @@ public class AgentLifecycleUseCaseTest {
         assertThat(info.definition().agentType()).isEqualTo(agent.agentType());
         assertThat(info.source()).isEqualTo("DYNAMIC");
         assertThat(info.active()).isTrue();
-        assertThat(info.scannerId()).isNotNull();
 
         List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(1);
@@ -165,11 +164,6 @@ public class AgentLifecycleUseCaseTest {
 
         List<String> ids = agents.stream().map(AgentInfo::id).toList();
         assertThat(ids).contains(info1.id(), info2.id());
-
-        // Verify each agent has a scanner ID
-        for (AgentInfo agentInfo : agents) {
-            assertThat(agentInfo.scannerId()).isNotNull();
-        }
     }
 
     @Test
@@ -197,7 +191,6 @@ public class AgentLifecycleUseCaseTest {
         AgentInfo refreshed = manager.refreshAgent(info.id());
         assertThat(refreshed).isNotNull();
         assertThat(refreshed.id()).isEqualTo(info.id());
-        assertThat(refreshed.scannerId()).isEqualTo(info.scannerId());
 
         assertThat(manager.listAgents()).hasSize(1);
     }
@@ -245,7 +238,7 @@ public class AgentLifecycleUseCaseTest {
         assertThat(updatedInfo.definition().agentType()).isEqualTo("Reduction");
         assertThat(updatedInfo.definition().body()).isEqualTo("Updated body");
         assertThat(updatedInfo.definition().targetDirectory()).isEqualTo("/tmp/test-dir-updated");
-        assertThat(updatedInfo.scannerId()).isNotNull();
+
 
         List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(1);

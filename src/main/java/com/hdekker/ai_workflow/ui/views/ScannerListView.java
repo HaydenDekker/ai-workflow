@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * Route: /scanners
  *
  * Features:
- * - Grid columns: Agent ID, Target Directory, Status, Created, Last Emitted, Actions
+ * - Grid columns: Agent ID, Target Directory, Status, Created, Last Emitted, Files, Actions
  * - Status indicators with color-coded dots (IDLE=green, EMITTING_ALL=amber, EMITTING_UPDATES=blue, ERROR=red)
  * - Manual refresh button
  * - Auto-refresh every 30 seconds when view is visible
@@ -105,11 +105,6 @@ public class ScannerListView extends VerticalLayout
         grid.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_COLUMN_BORDERS);
 
         // Configure columns
-        grid.addColumn(ScannerInfo::id)
-            .setHeader("Scanner ID")
-            .setAutoWidth(true)
-            .setSortable(true);
-
         grid.addColumn(ScannerInfo::agentId)
             .setHeader("Agent")
             .setAutoWidth(true)

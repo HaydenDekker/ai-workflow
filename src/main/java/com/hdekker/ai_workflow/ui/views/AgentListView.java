@@ -141,13 +141,6 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(agent -> agent.scannerId() != null 
-                ? agent.scannerId().substring(0, Math.min(8, agent.scannerId().length())) + "..." 
-                : "N/A")
-            .setHeader("Scanner")
-            .setAutoWidth(true)
-            .setSortable(true);
-            
         grid.addColumn(AgentInfo::createdAt)
             .setHeader("Created")
             .setAutoWidth(true)

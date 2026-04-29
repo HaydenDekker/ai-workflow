@@ -72,7 +72,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
                 id,
                 new AgentDefinition(regex, title, "Body", "Map", "Output", "out/${name}.md",
                         System.getProperty("java.io.tmpdir")),
-                LocalDateTime.now(), true, "TEST", "scanner-" + id);
+                LocalDateTime.now(), true, "TEST");
     }
 
     private static AgentInfo createTestAgent() {

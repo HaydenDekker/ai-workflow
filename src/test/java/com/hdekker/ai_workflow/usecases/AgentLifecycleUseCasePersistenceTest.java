@@ -90,8 +90,8 @@ public class AgentLifecycleUseCasePersistenceTest {
 	public void givenDynamicAgentAdded_whenPersistenceEnabled_thenPersistServiceCalled() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class), any()))
-				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC", "scanner-test-1"));
+		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
+				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC"));
 
 		// Act
 		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
@@ -100,11 +100,10 @@ public class AgentLifecycleUseCasePersistenceTest {
 		assertThat(info).isNotNull();
 		assertThat(info.active()).isTrue();
 		assertThat(info.source()).isEqualTo("DYNAMIC");
-		assertThat(info.scannerId()).isNotNull();
 
 		// Verify persistence was called
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class), any()))
-				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC", "scanner-test-1"));
+		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
+				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC"));
 	}
 
 	@Test
@@ -163,8 +162,8 @@ public class AgentLifecycleUseCasePersistenceTest {
 	public void givenYAMLAgent_whenDisabled_thenMovesToDormant() {
 		// Arrange
 		AgentDefinition yamlAgent = TestData.basicPrompt();
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class), any()))
-				.thenReturn(createAgentEntity(yamlAgent.title(), yamlAgent, "YAML", null));
+		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
+				.thenReturn(createAgentEntity(yamlAgent.title(), yamlAgent, "YAML"));
 
 		manager.initializeFromYAML(List.of(yamlAgent));
 
@@ -316,7 +315,7 @@ public class AgentLifecycleUseCasePersistenceTest {
 		assertThat(retrieved).isNull();
 	}
 
-	private AgentEntity createAgentEntity(String id, AgentDefinition def, String source, String scannerId) {
+	private AgentEntity createAgentEntity(String id, AgentDefinition def, String source) {
 		AgentEntity entity = new AgentEntity();
 		entity.setId(id);
 		try {
@@ -332,7 +331,6 @@ public class AgentLifecycleUseCasePersistenceTest {
 		}
 		entity.setTitle(def.title());
 		entity.setSource(source);
-		entity.setScannerId(scannerId);
 		entity.setCreatedAt(java.time.LocalDateTime.now());
 		entity.setActive(true);
 		return entity;

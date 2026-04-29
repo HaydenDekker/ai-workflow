@@ -39,7 +39,7 @@ class AgentCreationDialogTest extends BrowserlessTest {
     private static final AgentDefinition STUB_DEF = new AgentDefinition(
             ".*", "stub", "stub", "Map", "stub", "output/${name}.md", "/tmp/stub");
     private static final AgentInfo STUB_INFO = new AgentInfo(
-            "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST", "scanner-stub");
+            "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST");
 
     @BeforeEach
     void setup() {

@@ -130,10 +130,10 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         assertThat(manager.getActiveAgentCount()).isEqualTo(1);
         assertThat(manager.getDormantAgentCount()).isEqualTo(0);
 
-        // Verify the agent is listed with a scannerId
+        // Verify the agent is listed
         List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(1);
-        assertThat(agents.get(0).scannerId()).isNotNull();
+        assertThat(agents.get(0).active()).isTrue();
     }
 
     @Test
@@ -175,7 +175,7 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     }
 
     @Test
-    public void givenRestoredAgent_ExpectListAgentsShowsScannerId() {
+    public void givenRestoredAgent_ExpectListAgentsShowsInfo() {
         // Arrange
         AgentEntity activeEntity = createActiveEntity("list-test-1", "List Test Agent", "DYNAMIC", "/tmp/list-dir");
         when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
@@ -189,7 +189,6 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         // Assert
         assertThat(agents).hasSize(1);
         assertThat(agents.get(0).id()).isEqualTo("list-test-1");
-        assertThat(agents.get(0).scannerId()).isNotNull();
         assertThat(agents.get(0).active()).isTrue();
         assertThat(agents.get(0).source()).isEqualTo("DYNAMIC");
     }
@@ -246,7 +245,6 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
         when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
         when(mockPersistenceService.getDefinition("restored-1")).thenReturn(Optional.of(createMatchingDefinition("restored-1", "/tmp/restored")));
-        when(mockPersistenceService.save(anyString(), any(), anyString(), anyString())).thenReturn(null);
         doNothing().when(mockPersistenceService).deleteById(anyString());
 
         // Act — restore then add a new dynamic agent
@@ -258,12 +256,10 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         assertThat(createdScanners).hasSize(2);
         // Verify the restored agent has a scanner
         assertThat(manager.listAgents().stream().filter(a -> a.id().equals("restored-1")).findFirst())
-                .isPresent()
-                .hasValueSatisfying(a -> assertThat(a.scannerId()).isNotNull());
+                .isPresent();
         // Verify the newly added dynamic agent has a scanner
         assertThat(manager.listAgents().stream().filter(a -> !a.id().equals("restored-1")).findFirst())
-                .isPresent()
-                .hasValueSatisfying(a -> assertThat(a.scannerId()).isNotNull());
+                .isPresent();
         assertThat(manager.listAgents()).hasSize(2);
     }
 
@@ -278,7 +274,6 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
                         + "\"targetDirectory\":\"" + (targetDirectory != null ? targetDirectory : "") + "\"}");
         entity.setTitle(title);
         entity.setSource(source);
-        entity.setScannerId(null); // scannerId will be set during restore
         entity.setCreatedAt(java.time.LocalDateTime.now());
         entity.setActive(true);
         return entity;
@@ -294,8 +289,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
                 targetDirectory);
     }
 
-    private AgentEntity createDormantEntity(String id, String title, String source, String scannerId) {
-        AgentEntity entity = createActiveEntity(id, title, source, scannerId);
+    private AgentEntity createDormantEntity(String id, String title, String source, String targetDirectory) {
+        AgentEntity entity = createActiveEntity(id, title, source, targetDirectory);
         entity.setActive(false);
         return entity;
     }

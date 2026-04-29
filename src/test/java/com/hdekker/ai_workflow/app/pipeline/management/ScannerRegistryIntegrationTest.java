@@ -116,10 +116,9 @@ public class ScannerRegistryIntegrationTest {
         // Act: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
 
-        // Assert: agent created with scannerId
+        // Assert: agent created
         assertThat(agentInfo).isNotNull();
-        assertThat(agentInfo.scannerId()).isNotNull();
-        assertThat(agentInfo.scannerId()).isEqualTo(agentInfo.id());
+        assertThat(agentInfo.id()).isNotNull();
 
         // Assert: scanner is listed in registry
         // Note: status is EMITTING_UPDATES because getScannerFlux() updates it
@@ -129,7 +128,7 @@ public class ScannerRegistryIntegrationTest {
         assertThat(scanners.get(0).targetDirectory()).isEqualTo(targetDir);
         assertThat(scanners.get(0).status()).isEqualTo("EMITTING_UPDATES");
 
-        log.info("PASSED: agent {} has scanner {}, listed in registry", agentInfo.id(), agentInfo.scannerId());
+        log.info("PASSED: agent {} has scanner, listed in registry", agentInfo.id());
     }
 
     @Test
@@ -141,8 +140,7 @@ public class ScannerRegistryIntegrationTest {
 
         // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
-        String scannerId = agentInfo.scannerId();
-        assertThat(scannerId).isNotNull();
+        String scannerId = agentInfo.id();
 
         // Assert: scanner exists
         assertThat(scannerRegistry.listAll()).hasSize(1);
@@ -166,23 +164,20 @@ public class ScannerRegistryIntegrationTest {
 
         // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
-        String originalScannerId = agentInfo.scannerId();
-        assertThat(originalScannerId).isNotNull();
 
         // Act: refresh agent
         AgentInfo refreshed = agentManager.refreshAgent(agentInfo.id());
 
-        // Assert: agent still exists with same scanner
+        // Assert: agent still exists
         assertThat(refreshed).isNotNull();
         assertThat(refreshed.id()).isEqualTo(agentInfo.id());
-        assertThat(refreshed.scannerId()).isEqualTo(originalScannerId);
         assertThat(agentManager.listAgents()).hasSize(1);
 
         // Assert: scanner still exists
         List<ScannerInfo> scanners = scannerRegistry.listAll();
         assertThat(scanners).hasSize(1);
 
-        log.info("PASSED: agent refreshed, scanner {} still active", originalScannerId);
+        log.info("PASSED: agent refreshed, scanner {} still active", agentInfo.id());
     }
 
     @Test
@@ -202,10 +197,8 @@ public class ScannerRegistryIntegrationTest {
         List<ScannerInfo> scanners = scannerRegistry.listAll();
         assertThat(scanners).hasSize(2);
 
-        // Assert: each agent has a unique scanner
-        assertThat(info1.scannerId()).isNotNull();
-        assertThat(info2.scannerId()).isNotNull();
-        assertThat(info1.scannerId()).isNotEqualTo(info2.scannerId());
+        // Assert: each agent has a unique ID
+        assertThat(info1.id()).isNotEqualTo(info2.id());
 
         // Assert: each scanner belongs to the correct agent
         for (ScannerInfo scanner : scanners) {
@@ -256,10 +249,9 @@ public class ScannerRegistryIntegrationTest {
 
         // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
-        String scannerId = agentInfo.scannerId();
 
         // Act: get scanner flux
-        Flux<FileHistory> flux = scannerRegistry.getScannerFlux(scannerId);
+        Flux<FileHistory> flux = scannerRegistry.getScannerFlux(agentInfo.id());
 
         // Assert: flux is not null (may be empty if no files)
         assertThat(flux).isNotNull();
@@ -276,13 +268,12 @@ public class ScannerRegistryIntegrationTest {
 
         // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
-        String scannerId = agentInfo.scannerId();
 
         // Act: refresh agent
         agentManager.refreshAgent(agentInfo.id());
 
         // Assert: flux still accessible
-        Flux<FileHistory> flux = scannerRegistry.getScannerFlux(scannerId);
+        Flux<FileHistory> flux = scannerRegistry.getScannerFlux(agentInfo.id());
         assertThat(flux).isNotNull();
 
         log.info("PASSED: scanner flux still accessible after refresh for agent {}", agentInfo.id());
@@ -295,13 +286,11 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-INVALID-DIR-TEST");
         String nonExistentDir = tempDir.resolve("does-not-exist").toString();
 
-        // Act & Assert: addDynamicAgent should not throw, but scannerId may be null
+        // Act & Assert: addDynamicAgent should not throw
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, nonExistentDir);
 
         // The agent is still added (scanner creation failure is logged but not fatal)
         assertThat(agentInfo).isNotNull();
-        // Scanner creation fails silently in addDynamicAgent (catches exception)
-        assertThat(agentInfo.scannerId()).isNull();
 
         // No scanners should be registered
         assertThat(scannerRegistry.listAll()).hasSize(0);
@@ -318,15 +307,13 @@ public class ScannerRegistryIntegrationTest {
 
         // Step 1: Create
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
-        String scannerId = agentInfo.scannerId();
-        assertThat(scannerId).isNotNull();
+        String scannerId = agentInfo.id();
         assertThat(scannerRegistry.listAll()).hasSize(1);
         log.info("Step 1 complete: agent created with scanner {}", scannerId);
 
         // Step 2: Refresh
         AgentInfo refreshed = agentManager.refreshAgent(agentInfo.id());
         assertThat(refreshed).isNotNull();
-        assertThat(refreshed.scannerId()).isEqualTo(scannerId);
         assertThat(scannerRegistry.listAll()).hasSize(1);
         log.info("Step 2 complete: agent refreshed, scanner {} still active", scannerId);
 

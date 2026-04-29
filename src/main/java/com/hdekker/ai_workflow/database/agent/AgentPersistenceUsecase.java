@@ -39,18 +39,6 @@ public class AgentPersistenceUsecase {
 	 * @param source      the source ("YAML" or "DYNAMIC")
 	 */
 	public AgentEntity save(String id, AgentDefinition definition, String source) {
-		return save(id, definition, source, null);
-	}
-
-	/**
-	 * Save an agent (create or update) with an associated scanner ID.
-	 *
-	 * @param id          the agent ID
-	 * @param definition  the agent definition
-	 * @param source      the source ("YAML" or "DYNAMIC")
-	 * @param scannerId   the associated scanner ID (may be null for YAML agents without dedicated scanners)
-	 */
-	public AgentEntity save(String id, AgentDefinition definition, String source, String scannerId) {
 		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
 		entity.setId(id);
 		try {
@@ -60,7 +48,6 @@ public class AgentPersistenceUsecase {
 		}
 		entity.setTitle(definition.title());
 		entity.setSource(source);
-		entity.setScannerId(scannerId);
 		if (entity.getCreatedAt() == null) {
 			entity.setCreatedAt(LocalDateTime.now());
 		}
