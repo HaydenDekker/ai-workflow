@@ -470,4 +470,4 @@ Does the test require Spring?
 ## See Also
 
 - [adr-001-testing-strategy](../adrs/adr-001-testing-strategy.md) — Why we adopted a six-tier testing pyramid
-- [ADR Overview](../adrs/adr-overview.md) — ADR format and structure (includes testing strategy section 5f)
+- [Design Principles](../docs/design-principles.md) — ADR format and structure (includes testing strategy section 5f)

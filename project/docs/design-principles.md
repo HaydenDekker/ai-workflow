@@ -142,12 +142,6 @@ A DPR should follow this structure:
 | [DPR: Database Configuration](dpr-database-configuration.md) | How to add new SQLite databases and tables — step-by-step tutorial | ADR-007 |
 | [DPR: Scanner Observability](dpr-scanner-observability.md) | Scanner health monitoring and status tracking | — |
 
-### Moved Documents
-
-| Document | Location | Subject |
-|----------|----------|---------|
-| [Hilla Setup Guide](hilla-setup-guide.md) | `docs/hilla-setup-guide.md` | Hilla configuration and file router basics (moved from `adrs/`) |
-
 ---
 
 ## Design Principles
@@ -294,8 +288,6 @@ ADRs are numbered sequentially starting from 001. When splitting an ADR into mul
 - [ADR-001: Testing Strategy](../adrs/adr-001-testing-strategy.md) — Six-tier testing pyramid decision
 - [DPR: Testing Strategy](dpr-testing-strategy.md) — How to implement each test tier
 - [DPR: Database Configuration](dpr-database-configuration.md) — How to add new SQLite databases
-- [Hilla Setup Guide](hilla-setup-guide.md) — Hilla configuration basics
-
 ---
 
 ## Project Structure
@@ -321,7 +313,6 @@ project/
 │   ├── dpr-agent-scanner-relationship.md  # How agents subscribe to scanners
 │   ├── dpr-database-configuration.md      # How to add new SQLite databases
 │   ├── dpr-scanner-observability.md       # How scanner observability works
-│   └── hilla-setup-guide.md               # Hilla setup (moved from adrs/)
 └── plans/
     ├── design-principles-update.md        # This migration plan
     ├── scanner-observer-usecase.md        # Scanner observer usecase plan

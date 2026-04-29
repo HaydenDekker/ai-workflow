@@ -457,7 +457,7 @@ class LlamaCppChatConfigTest {
 ```
 
 > **Why not `@SpringBootTest` without `classes=`?**
-> Loading the full context starts `AgentConfiguration`, which persists YAML agents to the database. Always use `classes =` to load only the beans you need. See [ADR Overview](adr-overview.md) for the `@SpringBootTest` isolation rule.
+> Loading the full context starts `AgentConfiguration`, which persists YAML agents to the database. Always use `classes =` to load only the beans you need. See [DPR: Testing Strategy](../docs/dpr-testing-strategy.md) for the `@SpringBootTest` isolation rule.
 
 #### Tier 3: Integration Tests — `@Tag("integration")` + Real llama.cpp
 

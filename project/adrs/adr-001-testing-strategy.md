@@ -58,5 +58,5 @@ To migrate existing tests to this strategy:
 
 ## See Also
 
-- [ADR Overview](adr-overview.md) — ADR format and structure (includes testing strategy section 5f)
+- [Design Principles](../docs/design-principles.md) — ADR format and structure (includes testing strategy section 5f)
 - [DPR: Testing Strategy](../docs/dpr-testing-strategy.md) — Detailed implementation for each tier
