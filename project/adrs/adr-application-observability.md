@@ -411,8 +411,7 @@ CREATE TABLE llm_status (
 
 ## References
 
-- Implementation Plan: `plans/llm-observability.md`
-- Existing Scanner Architecture: `docs/adr-dynamic-scanners.md`
+- Existing Scanner Architecture: `docs/dpr-scanner-concept.md`, `docs/dpr-agent-scanner-relationship.md`
 - Spring AI Documentation: https://docs.spring.io/spring-ai/reference/
 - Ollama API Documentation: https://github.com/ollama/ollama/blob/main/docs/api.md
 - Vaadin Components: https://vaadin.com/docs/latest/components

@@ -1,7 +1,5 @@
 # DPR: File History Model
 
-**Related ADR**: [ADR-006: Dynamic Multi-Scanner Architecture](../adrs/adr-006-dynamic-scanners.md)
-
 ---
 
 ## Purpose
@@ -198,4 +196,4 @@ public class FileMetadataEntity {
 
 - [DPR: Scanner Concept](dpr-scanner-concept.md) — How scanners detect and rate-limit file events
 - [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) — How agents subscribe to scanner flux
-- [ADR-006: Dynamic Multi-Scanner Architecture](../adrs/adr-006-dynamic-scanners.md) — Why dynamic multi-scanners were chosen
+- [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) — How agents subscribe to scanner flux

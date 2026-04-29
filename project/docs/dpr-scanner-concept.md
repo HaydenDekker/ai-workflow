@@ -1,7 +1,5 @@
 # DPR: Scanner Concept
 
-**Related ADR**: [ADR-006: Dynamic Multi-Scanner Architecture](../adrs/adr-006-dynamic-scanners.md)
-
 ---
 
 ## Purpose
@@ -191,4 +189,4 @@ FileScanner scanner = factory.createScanner("/project/src", "scanner-2", Duratio
 
 - [DPR: File History Model](dpr-file-history-model.md) — How file events are modeled and hashed
 - [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) — How agents subscribe to scanners
-- [ADR-006: Dynamic Multi-Scanner Architecture](../adrs/adr-006-dynamic-scanners.md) — Why this architecture was chosen
+- [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) — How agents subscribe to scanners

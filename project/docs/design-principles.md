@@ -15,7 +15,7 @@ This document is the **central index** for all architectural decisions and desig
 - **Looking for *why* a decision was made?** → Find it in an **ADR** (`project/adrs/adr-NNN-*.md`)
 - **Looking for *how* something works?** → Find it in a **DPR** (`project/docs/dpr-*.md`)
 - **Need to understand the overall structure?** → This document ties everything together
-- **New to the project?** → Start with [ADR Overview](../adrs/adr-overview.md), then skim the Design Principles below
+- **New to the project?** → Start here, then skim the Design Principles below
 
 ### Document Types
 
@@ -26,6 +26,92 @@ This document is the **central index** for all architectural decisions and desig
 | **Plan** | `project/plans/` | Implementation plans for multi-phase work | "Scanner observer usecase plan" |
 
 ---
+
+### How to Add an ADR or DPR
+
+#### What Is an ADR?
+
+An **Architecture Decision Record** documents a significant technical decision made during **vertical integration**. Each ADR captures a choice about an **adapter** — either adapter-*driven* (the application calls out to an external service) or adapter-*driving* (external clients call into the application) — and explains how that adapter connects to the domain application layer.
+
+ADR format is inspired by Michael Nygard's original concept ("I decided this" / "Here's why") and is adapted for a Spring Boot, Hexagonal / Ports & Adapters architecture.
+
+#### When to Create an ADR
+
+Create an ADR when you:
+
+- **Introduce a new external integration** — e.g., a vector store, LLM provider, database, REST API, file system scanner.
+- **Adopt a new architectural pattern** — e.g., dynamic multi-scanner, queue-based LLM processing, multi-database.
+- **Make a breaking change to an existing adapter** — e.g., switching from synchronous to reactive LLM calls.
+- **Define how an adapter interfaces with the domain layer** — e.g., port interfaces, DTO contracts, configuration contracts.
+
+> **Rule of thumb:** If the decision affects *how the application layer communicates with the outside world*, it belongs in an ADR.
+
+#### ADR Structure
+
+Every ADR should follow this structure. Sections marked with `[Optional]` may be omitted when not applicable.
+
+1. **Title** — `ADR-NNN: <Descriptive Title>`, e.g., "REST Adapters", "Qdrant Vector Store Integration". Placed in `project/adrs/` as `adr-<slug>.md`.
+2. **Date** — YYYY-MM-DD, when the decision was finalized.
+3. **Context** — The problem space and constraints. What is the current situation? What requirements or pain points exist? What non-functional requirements? What external services are involved? Keep it focused — avoid describing the solution.
+4. **Decision** — What was decided and how to implement it.
+   - **4a. Architecture Overview** — ASCII diagram showing how the adapter fits into the architecture, data flow, and responsibility boundaries.
+   - **4b. Typical Component Structure** — Package / file layout.
+   - **4c. Code Examples** — Key snippets (port interface, adapter implementation, client wrapper, configuration). Keep minimal — show the pattern, not every method.
+   - **4d. Configuration** — `application.yml` / `application.properties` properties, `@ConfigurationProperties` class, `@Configuration` beans.
+   - **4e. Dependencies** — Maven dependencies required, BOM entries, version properties.
+   - **4f. Testing Strategy** — Driving adapter tests (`@WebMvcTest`), driven adapter tests (`@RestClientTest`), unit tests, integration tests. See [ADR-001: Testing Strategy](../adrs/adr-001-testing-strategy.md) for the full testing pyramid.
+     > **⚠️ `@SpringBootTest` Isolation Rule**: Always specify `classes =` to load only the beans needed. Loading the full context starts `AgentConfiguration`, which calls `initializeFromYAML()` and persists YAML agents to the database. Use a minimal `@TestConfiguration` with `@Bean` methods. Acceptable only when you explicitly want to test full application context behavior — tag such tests with `@Tag("full-context")`.
+5. **How-To Guides** [Optional] — Practical instructions for extending the decision (add new feature, swap provider, configure for another project, operational runbooks).
+6. **References** [Optional] — External documentation and sources.
+
+#### What Is a DPR?
+
+A **Design Pattern Record** documents *how* a concept works — implementation details, code examples, tutorials. It complements its parent ADR by filling in the "how" that the ADR's "why" leaves open.
+
+#### When to Create a DPR
+
+Create a DPR when you:
+
+- **Explain how a concept works** — e.g., file scanning, memory extraction, scanner health monitoring.
+- **Provide implementation guidance** — e.g., step-by-step tutorials, code examples, best practices.
+- **Document recurring patterns** — e.g., event handling, flux sharing, regex parsing.
+- **Support a parent ADR** — DPRs should reference their parent ADR for context.
+- **After a new feature has been added to the application and tested** — document how it works for future developers.
+
+#### DPR Structure
+
+A DPR should follow this structure:
+
+1. **Title** — `DPR: <Descriptive Title>`, placed in `project/docs/` as `dpr-<slug>.md`.
+2. **Overview** — Brief summary of what the concept is and how it works.
+3. **How It Works** — Detailed explanation with diagrams, code examples, and walkthroughs.
+4. **Key Components** — Classes, interfaces, configuration involved.
+5. **Usage Examples** — How to use the concept in practice.
+6. **Related Documents** — Links to parent ADR, related DPRs, and source code.
+
+#### Cross-Reference Rules
+
+- **ADRs and DPRs must never reference plans** — plans are intermediary artifacts only.
+  - ADRs and DPRs document *decisions* and *designs* — they capture the "why" and "how" of lasting architectural choices.
+  - Plans document *implementation steps* — they are transient, evolving artifacts that become obsolete once implemented.
+  - Never link to, reference, or mention files in `project/plans/` from any ADR or DPR.
+  - If an ADR or DPR needs to mention related work, link to other ADRs, DPRs, or source code — never to plans.
+  - Plans may reference ADRs/DPRs for context, but not vice versa.
+- **Why**: Plans change as implementation progresses. ADRs and DPRs are durable records. Cross-referencing plans causes stale links, confusion, and maintenance overhead when plans are deleted or rewritten.
+- ADRs may reference DPRs for implementation detail.
+- DPRs should reference their parent ADR for context.
+
+#### Quick Reference: Driving vs. Driven Adapters
+
+| Aspect | Driving Adapter | Driven Adapter |
+|--------|----------------|----------------|
+| **Direction** | Inbound (external → app) | Outbound (app → external) |
+| **Role** | Drives the application | Is driven by the application |
+| **Spring Pattern** | `@RestController` | `@Service` / `@Configuration` |
+| **Test Slice** | `@WebMvcTest` | `@RestClientTest` / unit tests |
+| **Mock Tool** | `MockMvc` | `MockRestServiceServer` |
+| **Package** | `rest/` | `llm/`, `vectorstore/`, etc. |
+| **Focus** | HTTP contract, DTO mapping | HTTP interaction, business logic |
 
 ## Quick Navigation
 
@@ -38,22 +124,21 @@ This document is the **central index** for all architectural decisions and desig
 | [ADR-003](../adrs/adr-ui-components.md) | Vaadin/Hilla UI Components | Why Vaadin + Hilla was chosen over React SPA or Thymeleaf |
 | [ADR-004](../adrs/adr-ui-views.md) | Flow/Hilla Routing | Why a hybrid navigation approach for Flow + Hilla coexistence |
 | [ADR-005](../adrs/adr-ui-hilla-component-development.md) | Storybook | Why Storybook was chosen for Hilla/React component development |
-| [ADR-006](../adrs/adr-006-dynamic-scanners.md) | Dynamic Multi-Scanner | Why dynamic multi-scanner architecture over static configuration |
+
 | [ADR-007](../adrs/adr-007-multi-database.md) | Multi-Database | Why separate SQLite databases for agent vs. memory data |
 | [ADR-008](../adrs/adr-application-memory-extraction.md) | Memory Extraction | Why LLM-based multi-level memory extraction |
 | [ADR-009](../adrs/adr-qdrant-vector-store.md) | Qdrant Vector Store | Why Spring AI VectorStore abstraction with Qdrant backend |
 | [ADR-010](../adrs/adr-chat-model-setup-for-llama-cpp.md) | llama.cpp | Why OpenAI-compatible abstraction for local LLM models |
 | [ADR-011](../adrs/adr-011-micrometer.md) | Observability | Why health-first monitoring with Micrometer/Prometheus |
-| [ADR Overview](../adrs/adr-overview.md) | ADR Format Guide | When to create an ADR, structure, and naming conventions |
 
 ### Design Pattern Records (DPRs)
 
 | DPR | Title | Parent ADR |
 |-----|-------|------------|
 | [DPR: Testing Strategy](dpr-testing-strategy.md) | Six-tier testing pyramid with code examples, commands, and isolation rules | ADR-001 |
-| [DPR: Scanner Concept](dpr-scanner-concept.md) | How scanners watch directories, rate-limit events, and share flux | ADR-006 |
-| [DPR: File History Model](dpr-file-history-model.md) | FileHistory event model, SHA-256 hashing, and metadata storage | ADR-006 |
-| [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) | How agents subscribe to scanners, ScannerRegistry/Factory APIs, RegexParser | ADR-006 |
+| [DPR: Scanner Concept](dpr-scanner-concept.md) | How scanners watch directories, rate-limit events, and share flux | — |
+| [DPR: File History Model](dpr-file-history-model.md) | FileHistory event model, SHA-256 hashing, and metadata storage | — |
+| [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) | How agents subscribe to scanners, ScannerRegistry/Factory APIs, RegexParser | — |
 | [DPR: Database Configuration](dpr-database-configuration.md) | How to add new SQLite databases and tables — step-by-step tutorial | ADR-007 |
 | [DPR: Scanner Observability](dpr-scanner-observability.md) | Scanner health monitoring and status tracking | — |
 
@@ -91,7 +176,7 @@ The application follows the Ports & Adapters (Hexagonal) pattern:
 - **Ports** (interface abstractions) define how the application layer communicates outward
 - **Use cases** live in `usecase/` and depend only on ports, never on adapter implementations
 
-> **See**: [ADR-002: REST Adapters](../adrs/adr-rest-adapters.md), [ADR Overview](../adrs/adr-overview.md#quick-reference-driving-vs-driven-adapters)
+> **See**: [ADR-002: REST Adapters](../adrs/adr-rest-adapters.md)
 
 ---
 
@@ -196,7 +281,6 @@ ADRs are numbered sequentially starting from 001. When splitting an ADR into mul
 | 003 | Vaadin/Hilla UI Components |
 | 004 | Flow/Hilla Routing |
 | 005 | Storybook |
-| 006 | Dynamic Multi-Scanner |
 | 007 | Multi-Database |
 | 008 | Memory Extraction |
 | 009 | Qdrant Vector Store |
@@ -207,7 +291,6 @@ ADRs are numbered sequentially starting from 001. When splitting an ADR into mul
 
 ## See Also
 
-- [ADR Overview](../adrs/adr-overview.md) — Full ADR format guide, when to create an ADR, structure
 - [ADR-001: Testing Strategy](../adrs/adr-001-testing-strategy.md) — Six-tier testing pyramid decision
 - [DPR: Testing Strategy](dpr-testing-strategy.md) — How to implement each test tier
 - [DPR: Database Configuration](dpr-database-configuration.md) — How to add new SQLite databases
@@ -220,13 +303,12 @@ ADRs are numbered sequentially starting from 001. When splitting an ADR into mul
 ```
 project/
 ├── adrs/
-│   ├── adr-overview.md                    # ADR format guide (unchanged)
+│   ├── adr-overview.md                    # ⛔ DEPRECATED — content moved to design-principles.md
 │   ├── adr-001-testing-strategy.md        # Why six-tier testing pyramid
 │   ├── adr-002-rest-adapters.md           # Why REST adapter pattern
 │   ├── adr-003-vaadin-hilla-ui.md         # Why Vaadin + Hilla
 │   ├── adr-004-flow-hilla-routing.md      # Why hybrid Flow/Hilla routing
 │   ├── adr-005-storybook.md               # Why Storybook for component dev
-│   ├── adr-006-dynamic-scanners.md        # Why dynamic multi-scanner
 │   ├── adr-007-multi-database.md          # Why multi-database
 │   ├── adr-008-memory-extraction.md       # Why LLM-based memory extraction
 │   ├── adr-009-qdrant-vector-store.md     # Why Spring AI VectorStore + Qdrant

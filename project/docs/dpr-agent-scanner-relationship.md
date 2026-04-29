@@ -1,7 +1,5 @@
 # DPR: Agent-Scanner Relationship
 
-**Related ADR**: [ADR-006: Dynamic Multi-Scanner Architecture](../adrs/adr-006-dynamic-scanners.md)
-
 ---
 
 ## Purpose
@@ -340,4 +338,4 @@ If an agent is removed (destroying its scanner) and then re-added, a **new scann
 
 - [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, rate limiting, architecture
 - [DPR: File History Model](dpr-file-history-model.md) — FileHistory event model, hashing
-- [ADR-006: Dynamic Multi-Scanner Architecture](../adrs/adr-006-dynamic-scanners.md) — Why dynamic multi-scanners were chosen
+- [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, rate limiting, architecture

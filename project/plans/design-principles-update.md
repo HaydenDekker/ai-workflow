@@ -53,7 +53,7 @@ The end state is a clear separation:
 | 2 | `adr-ui-components.md` | Vaadin/Hilla components | ⚠️ Contains design notes (Service Access Boundary, Reactor Gotcha, CSS theming) |
 | 3 | `adr-ui-views.md` | Flow/Hilla routing | ⚠️ Repeats Service Access Boundary from ADR-002 |
 | 4 | `adr-ui-hilla-component-development.md` | Storybook for components | ⚠️ 80% is design note/tutorial, not ADR |
-| — | `adr-dynamic-scanners.md` | Multi-scanner architecture | 🔴 Major — Scanner concept, rate limiting, regex parsing all mixed in |
+| — | `adr-dynamic-scanners.md` | Filesystem monitoring | ⚠️ Scanner content migrated to DPRs; ADR removed 2026-04-29
 | — | `adr-testing-strategy.md` | Testing pyramid | ⚠️ Borderline — testing principles document, not a decision |
 | — | `adr-multi-db-support.md` | Multi-database config | ⚠️ Contains "How to Add a Third Database" tutorial |
 | — | `adr-application-memory-extraction.md` | Memory extraction architecture | ⚠️ Tight coupling notes, prompt template details, extraction level handler |
@@ -266,19 +266,19 @@ These ADRs are the foundation — they affect every developer's daily work. Clea
 
 ## 6. Phase 2: Scanner + Infrastructure ADRs
 
-These are the highest-priority ADRs to clean up because `adr-dynamic-scanners.md` is the most contaminated with design notes.
+These are the highest-priority ADRs to clean up.
 
 ### Phase 2.1: `adr-dynamic-scanners.md` → DPR Migration (Priority: Highest)
 
-**Scope**: The scanner concept — what scanners are, how they work, rate limiting, regex parsing — must be extracted into a DPR.
+> **Status: COMPLETE** — `adr-dynamic-scanners.md` (ADR-006) has been **removed** on 2026-04-29. Its content was migrated to DPRs. The migration tasks below are marked as complete.
 
-**DPRs to create**:
+**DPRs created**:
 
-1. `docs/dpr-scanner-concept.md` — What scanners are and how they work
+1. `docs/dpr-scanner-concept.md` — What scanners are, how they work, rate limiting, lifecycle
 2. `docs/dpr-file-history-model.md` — The `FileHistory` event model, hashing, comparison
 3. `docs/dpr-agent-scanner-relationship.md` — How agents subscribe to scanners, lifecycle management
 
-**Content to migrate to DPRs:**
+**Migrated content**:
 
 From `adr-dynamic-scanners.md` → `dpr-scanner-concept.md`:
 - Scanner concept overview: "A scanner watches a single directory"
@@ -301,23 +301,17 @@ From `adr-dynamic-scanners.md` → `dpr-agent-scanner-relationship.md`:
 - Regex format specification (named groups, examples)
 - Dynamic lifecycle: create on first subscribe, destroy on last unsubscribe
 
-**Content to keep in ADR** (rename to `adr-005-dynamic-scanners.md`):
-- Why dynamic multi-scanner was chosen over static configuration
-- The decision for one-scanner-per-folder with subscription sharing
-- Decision to fail fast on inaccessible folders
-- Decision for immediate scanner cleanup (no delay)
-- Alternatives considered (static config, agent-specific scanners, global scanner with explicit assignment, database-backed config)
-- Consequences (benefits, trade-offs, coupling points)
+**ADR-006 removed entirely** — no renamed ADR kept. All decision rationale absorbed into DPRs.
 
 **Tasks**
 
-| # | Task | Output |
-|---|------|--------|
-| 2.1.1 | Draft `dpr-scanner-concept.md` | `project/docs/dpr-scanner-concept.md` |
-| 2.1.2 | Draft `dpr-file-history-model.md` | `project/docs/dpr-file-history-model.md` |
-| 2.1.3 | Draft `dpr-agent-scanner-relationship.md` | `project/docs/dpr-agent-scanner-relationship.md` |
-| 2.1.4 | Trim `adr-dynamic-scanners.md` to decision + alternatives + consequences | `project/adrs/adr-005-dynamic-scanners.md` |
-| 2.1.5 | Add cross-references in all four files | All files |
+| # | Task | Output | Status |
+|---|------|--------|--------|
+| 2.1.1 | Create `dpr-scanner-concept.md` | `project/docs/dpr-scanner-concept.md` | ✅ |
+| 2.1.2 | Create `dpr-file-history-model.md` | `project/docs/dpr-file-history-model.md` | ✅ |
+| 2.1.3 | Create `dpr-agent-scanner-relationship.md` | `project/docs/dpr-agent-scanner-relationship.md` | ✅ |
+| 2.1.4 | Remove `adr-006-dynamic-scanners.md` | File deleted | ✅ |
+| 2.1.5 | Update cross-references in all files | All files | ✅ |
 
 ### Phase 2.2: `adr-multi-db-support.md` → DPR Migration
 
@@ -357,7 +351,7 @@ From `adr-dynamic-scanners.md` → `dpr-agent-scanner-relationship.md`:
 | DPR: File History Model | `project/docs/dpr-file-history-model.md` |
 | DPR: Agent-Scanner Relationship | `project/docs/dpr-agent-scanner-relationship.md` |
 | DPR: Database Configuration (updated) | `project/docs/dpr-database-configuration.md` |
-| ADR: Dynamic Scanners (trimmed) | `project/adrs/adr-005-dynamic-scanners.md` |
+| ADR: Dynamic Multi-Scanner | **Removed** (content migrated to DPRs, ADR deleted) |
 | ADR: Multi-Database (trimmed) | `project/adrs/adr-006-multi-database.md` |
 
 ---
@@ -510,7 +504,7 @@ Rename all remaining ADRs to numbered format:
 | `adr-ui-components.md` | `adr-002-vaadin-hilla-ui.md` |
 | `adr-ui-views.md` | `adr-003-flow-hilla-routing.md` |
 | `adr-ui-hilla-component-development.md` | `adr-004-storybook.md` |
-| `adr-dynamic-scanners.md` | `adr-005-dynamic-scanners.md` |
+| `adr-dynamic-scanners.md` | **Removed** (migrated to DPRs) |
 | `adr-testing-strategy.md` | `adr-001-testing-strategy.md` |
 | `adr-multi-db-support.md` | `adr-006-multi-database.md` |
 | `adr-application-memory-extraction.md` | `adr-007-memory-extraction.md` |
@@ -526,7 +520,7 @@ Rename all remaining ADRs to numbered format:
 | `adr-ui-components.md` | `adr-003-vaadin-hilla-ui.md` |
 | `adr-ui-views.md` | `adr-004-flow-hilla-routing.md` |
 | `adr-ui-hilla-component-development.md` | `adr-005-storybook.md` |
-| `adr-dynamic-scanners.md` | `adr-006-dynamic-scanners.md` |
+| `adr-dynamic-scanners.md` | **Removed** (migrated to DPRs) |
 | `adr-testing-strategy.md` | `adr-001-testing-strategy.md` |
 | `adr-multi-db-support.md` | `adr-007-multi-database.md` |
 | `adr-application-memory-extraction.md` | `adr-008-memory-extraction.md` |
@@ -597,7 +591,7 @@ project/adrs/
 ├── adr-003-vaadin-hilla-ui.md           # Why Vaadin + Hilla
 ├── adr-004-flow-hilla-routing.md        # Why hybrid Flow/Hilla routing
 ├── adr-005-storybook.md                 # Why Storybook for component dev
-├── adr-006-dynamic-scanners.md          # Why dynamic multi-scanner
+├── adr-filesystem-monitoring.md         # Why filesystem monitoring via WatchService + Reactor
 ├── adr-007-multi-database.md            # Why multi-database
 ├── adr-008-memory-extraction.md         # Why LLM-based memory extraction
 ├── adr-009-qdrant-vector-store.md       # Why Spring AI VectorStore + Qdrant
@@ -615,9 +609,9 @@ project/docs/
 ├── dpr-service-access-boundary.md       # NEW (from adr-ui-components.md)
 ├── dpr-reactive-safety.md               # NEW (from adr-ui-components.md)
 ├── dpr-storybook-workflow.md            # NEW (from adr-ui-hilla-component-development.md)
-├── dpr-scanner-concept.md               # NEW (from adr-dynamic-scanners.md)
-├── dpr-file-history-model.md            # NEW (from adr-dynamic-scanners.md)
-├── dpr-agent-scanner-relationship.md    # NEW (from adr-dynamic-scanners.md)
+├── dpr-scanner-concept.md               # NEW (scanner content migrated from removed ADR-006)
+├── dpr-file-history-model.md            # NEW (scanner content migrated from removed ADR-006)
+├── dpr-agent-scanner-relationship.md    # NEW (scanner content migrated from removed ADR-006)
 ├── dpr-memory-extraction-pipeline.md    # NEW (from adr-application-memory-extraction.md)
 ├── dpr-state-tracking.md                # NEW (from adr-application-memory-extraction.md)
 ├── dpr-vector-store-usage.md            # NEW (from adr-qdrant-vector-store.md)
@@ -674,7 +668,7 @@ Phase 1.2: adr-ui-components.md → dpr-service-access-boundary.md + dpr-reactiv
 Phase 1.3: adr-ui-hilla-component-development.md → dpr-storybook-workflow.md
 Phase 1.4: adr-hilla-setup-guide.md → docs/hilla-setup-guide.md (move, no rename)
     ↓
-Phase 2.1: adr-dynamic-scanners.md → dpr-scanner-concept.md + dpr-file-history-model.md + dpr-agent-scanner-relationship.md
+Phase 2.1: adr-dynamic-scanners.md → **DONE** (ADR removed, content in DPRs: dpr-scanner-concept, dpr-file-history-model, dpr-agent-scanner-relationship)
 Phase 2.2: adr-multi-db-support.md → update dpr-database-configuration.md
     ↓
 Phase 3.1: adr-application-memory-extraction.md → dpr-memory-extraction-pipeline.md + dpr-state-tracking.md

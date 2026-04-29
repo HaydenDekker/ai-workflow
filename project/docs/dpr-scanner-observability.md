@@ -1,6 +1,6 @@
 # DPR: Scanner Observability
 
-> **Parent ADR**: [adr-dynamic-scanners](../adrs/adr-dynamic-scanners.md) — *Why dynamic multi-scanner architecture with agent subscriptions*
+> **Context**: This document describes the observability layer built on top of the dynamic multi-scanner architecture.
 
 ---
 
@@ -513,8 +513,6 @@ The gauge is updated on **every file event** (CREATE/MODIFY), not just during fu
 
 | Document | Type | Description |
 |----------|------|-------------|
-| [adr-dynamic-scanners](../adrs/adr-dynamic-scanners.md) | ADR | Why dynamic multi-scanner architecture was chosen |
-| [scanners_metrics.md](../plans/scanners_metrics.md) | Plan | Implementation plan for scanner metrics |
 | dpr-testing-strategy | DPR | Testing pyramid and patterns used in scanner tests |
 
 ---
