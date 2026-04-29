@@ -59,6 +59,14 @@ public class ScannerMetricsChangedEvent {
     }
 
     /**
+     * Create an event for a file emission (file actually sent through the sink).
+     * Triggers UI refresh so the status column shows EMITTING_UPDATES.
+     */
+    public static ScannerMetricsChangedEvent fileEmitted(String agentId) {
+        return new ScannerMetricsChangedEvent(agentId, "emitted");
+    }
+
+    /**
      * Create an event for a scanner error.
      */
     public static ScannerMetricsChangedEvent errorOccurred(String agentId, String message) {
@@ -77,6 +85,16 @@ public class ScannerMetricsChangedEvent {
      */
     public static ScannerMetricsChangedEvent idleReached(String agentId) {
         return new ScannerMetricsChangedEvent(agentId, "idle");
+    }
+
+    /**
+     * Create an event for a scanner status change (e.g. IDLE -> EMITTING_UPDATES).
+     *
+     * @param agentId the owning agent's ID
+     * @param status  the new status string
+     */
+    public static ScannerMetricsChangedEvent statusChanged(String agentId, String status) {
+        return new ScannerMetricsChangedEvent(agentId, "status_change", status);
     }
 
     /**

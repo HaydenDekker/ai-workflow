@@ -50,6 +50,7 @@ import java.util.function.Consumer;
  *   <li>IDLE — no file system event for 30 seconds; watching, waiting for events</li>
  *   <li>EMITTING_INITIAL — performing a full scan (all existing files emitted)</li>
  *   <li>EMITTING_UPDATES — file system event detected (CREATE, MODIFY, DELETE)</li>
+ *   <li>FILTERED — hash filter rejected a file (unchanged / already known)</li>
  *   <li>ERROR — scanner encountered an unrecoverable error; manual recovery required</li>
  * </ul>
  * <p>
@@ -72,6 +73,8 @@ public class ScannerRegistry implements DisposableBean {
     public static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
     /** Status string: no event for 30 seconds, idle watching. */
     public static final String STATUS_IDLE = "IDLE";
+    /** Status string: hash filter rejected a file (unchanged / already known). */
+    public static final String STATUS_FILTERED = "FILTERED";
     /** Status string: scanner encountered an error. */
     public static final String STATUS_ERROR = "ERROR";
 
@@ -211,6 +214,14 @@ public class ScannerRegistry implements DisposableBean {
                 newStatus -> {
                     updateStatus(agentIdForAdapter, newStatus);
                     log.debug("Scanner {} status changed to {}", agentIdForAdapter, newStatus);
+                },
+                aId -> {
+                    // A file was emitted — update idle timer so the scanner stays active
+                    recordEmission(aId);
+                    // Briefly transition to EMITTING_UPDATES if currently IDLE
+                    updateStatus(aId, STATUS_EMITTING_UPDATES);
+                    // Publish metrics event so the UI refreshes the status column
+                    pushMetricsEvent(ScannerMetricsChangedEvent.fileEmitted(aId));
                 });
 
         ScannerMetadata metadata = new ScannerMetadata(
@@ -385,6 +396,7 @@ public class ScannerRegistry implements DisposableBean {
             ScannerMetadata updated = meta.withStatus(status);
             scanners.put(key, updated);
             log.debug("Updated scanner {} status to {}", scannerId, status);
+            pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(meta.agentId(), status));
         }
     }
 
