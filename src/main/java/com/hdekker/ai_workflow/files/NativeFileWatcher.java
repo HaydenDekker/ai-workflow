@@ -56,6 +56,11 @@ public class NativeFileWatcher {
 	private volatile LocalDateTime lastEmissionTime;
 	private volatile FileHistory latestBufferedHistory;
 
+	// Tracks whether any files were buffered during the initial scan.
+	// Used by the adapter to determine whether to transition to
+	// EMITTING_UPDATES or stay IDLE after startup.
+	private volatile boolean scanBufferedAnyFile = false;
+
 	// Functional callbacks for metrics (replaced Micrometer types)
 	private final Consumer<String> onDiscovery;
 	private final Consumer<String> onUnchanged;
@@ -344,6 +349,10 @@ public class NativeFileWatcher {
 			lastEmissionTime = now;
 		}
 		// else: delay not elapsed, history is buffered for later emission
+		// Always update lastEmissionTime when buffering to prevent immediate re-emission
+		// of the same file on the next buffered history check.
+		lastEmissionTime = now;
+		scanBufferedAnyFile = true;
 	}
 
 	/**
@@ -361,6 +370,7 @@ public class NativeFileWatcher {
 			sink.tryEmitNext(latestBufferedHistory);
 			lastEmissionTime = now;
 			latestBufferedHistory = null;
+			scanBufferedAnyFile = false;
 		}
 	}
 
@@ -497,5 +507,17 @@ public class NativeFileWatcher {
 	 */
 	LocalDateTime getLastEmissionTime() {
 		return lastEmissionTime;
+	}
+
+	/**
+	 * Check whether any files were buffered during the initial scan.
+	 * <p>
+	 * Used by the adapter to determine whether to transition to
+	 * {@code EMITTING_UPDATES} or stay {@code IDLE} after startup.
+	 *
+	 * @return true if at least one file was buffered during the initial scan
+	 */
+	boolean scanBufferedAnyFile() {
+		return scanBufferedAnyFile;
 	}
 }

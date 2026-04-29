@@ -207,17 +207,27 @@ public class ScannerRegistry implements DisposableBean {
                 fileMetadataDatabase,
                 observer,
                 metricsEventPublisher,
-                errMsg -> transitionToError(agentIdForAdapter, errMsg));
+                errMsg -> transitionToError(agentIdForAdapter, errMsg),
+                newStatus -> {
+                    updateStatus(agentIdForAdapter, newStatus);
+                    log.debug("Scanner {} status changed to {}", agentIdForAdapter, newStatus);
+                });
 
         ScannerMetadata metadata = new ScannerMetadata(
-                scanner, agentId, targetDirectory, STATUS_EMITTING_INITIAL,
+                scanner, agentId, targetDirectory, STATUS_IDLE,
                 LocalDateTime.now(), null, null);
 
+        // Put in map BEFORE initSource() so callbacks can find it
         scanners.put(agentId, metadata);
         log.info("Created scanner {} for agent {} (target={}, delay={}s)",
                 metadata, agentId, targetDirectory, delaySeconds);
 
-        return toScannerInfo(metadata);
+        // Now initialise — status transitions (IDLE → EMITTING_INITIAL → EMITTING_UPDATES)
+        // happen synchronously after the hash filter processes all files
+        scanner.initSource(agentId);
+
+        // Return the current state after initSource() has run
+        return toScannerInfo(scanners.get(agentId));
     }
 
     /**
@@ -282,18 +292,10 @@ public class ScannerRegistry implements DisposableBean {
             return;
         }
 
-        // Reset scanner to full-scan mode
+        // Reset scanner to full-scan mode.
+        // Status transitions (EMITTING_INITIAL → EMITTING_UPDATES) happen inside
+        // resetToFullScan() after the hash filter has processed all files.
         meta.scanner().resetToFullScan();
-
-        // Update status
-        String key = scanners.entrySet().stream()
-                .filter(e -> e.getValue().equals(meta))
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(scannerId);
-
-        ScannerMetadata updated = meta.withStatus(STATUS_EMITTING_INITIAL);
-        scanners.put(key, updated);
         log.info("Refreshed scanner {} for agent {} to full-scan mode", scannerId, meta.agentId());
     }
 
@@ -320,9 +322,6 @@ public class ScannerRegistry implements DisposableBean {
             log.warn("No scanner found for flux lookup: {}", scannerId);
             return Flux.empty();
         }
-
-        // Update status to EMITTING_UPDATES after initial full scan
-        updateStatus(scannerId, STATUS_EMITTING_UPDATES);
 
         return meta.scanner().flux();
     }

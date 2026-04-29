@@ -121,12 +121,12 @@ public class ScannerRegistryIntegrationTest {
         assertThat(agentInfo.id()).isNotNull();
 
         // Assert: scanner is listed in registry
-        // Note: status is EMITTING_UPDATES because getScannerFlux() updates it
+        // Empty directory → no files buffered → stays IDLE (correct behavior after hash filter)
         List<ScannerInfo> scanners = scannerRegistry.listAll();
         assertThat(scanners).hasSize(1);
         assertThat(scanners.get(0).agentId()).isEqualTo(agentInfo.id());
         assertThat(scanners.get(0).targetDirectory()).isEqualTo(targetDir);
-        assertThat(scanners.get(0).status()).isEqualTo("EMITTING_UPDATES");
+        assertThat(scanners.get(0).status()).isEqualTo("IDLE");
 
         log.info("PASSED: agent {} has scanner, listed in registry", agentInfo.id());
     }

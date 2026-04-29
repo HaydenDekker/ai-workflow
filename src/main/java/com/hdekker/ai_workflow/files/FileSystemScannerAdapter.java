@@ -42,6 +42,7 @@ public class FileSystemScannerAdapter implements FileScanner {
     private final ScannerObserverUseCase observer;
     private volatile boolean disposed = false;
     private final Consumer<String> onErrorCallback;
+    private final Consumer<String> onStatusChanged;
 
     /**
      * Creates a new parameterised scanner adapter.
@@ -54,6 +55,7 @@ public class FileSystemScannerAdapter implements FileScanner {
      * @param observer            scanner observer use case for metrics tracking
      * @param metricsEventPublisher  callback to publish metrics change events
      * @param onErrorCallback     callback invoked when the scanner encounters an error
+     * @param onStatusChanged     callback invoked when scanner status changes
      */
     public FileSystemScannerAdapter(String agentId,
                                      String folderPath,
@@ -62,7 +64,8 @@ public class FileSystemScannerAdapter implements FileScanner {
                                      FileMetadataStore fileMetadataStore,
                                      ScannerObserverUseCase observer,
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher,
-                                     Consumer<String> onErrorCallback) {
+                                     Consumer<String> onErrorCallback,
+                                     Consumer<String> onStatusChanged) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
         this.delayBetweenReads = delayBetweenReads;
@@ -70,6 +73,7 @@ public class FileSystemScannerAdapter implements FileScanner {
         this.fileMetadataStore = fileMetadataStore;
         this.observer = observer;
         this.onErrorCallback = onErrorCallback;
+        this.onStatusChanged = onStatusChanged;
         final String agentIdForCallbacks = this.effectiveAgentId;
 
         // Pass callbacks to NativeFileWatcher instead of Micrometer types
@@ -84,13 +88,12 @@ public class FileSystemScannerAdapter implements FileScanner {
                     }
                 },
                 agentIdForCallbacks, onErrorCallback);
-        initSource(this.effectiveAgentId);
     }
 
     /**
      * Backward-compatible constructor for tests.
      * <p>
-     * Uses zero emission delay and no error callback.
+     * Uses zero emission delay and no error or status callbacks.
      *
      * @param agentId             owning agent's ID (used for metric tagging)
      * @param folderPath          absolute path to watch
@@ -106,22 +109,51 @@ public class FileSystemScannerAdapter implements FileScanner {
                                      ScannerObserverUseCase observer,
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
         this(agentId, folderPath, delayBetweenReads, Duration.ZERO,
-                fileMetadataStore, observer, metricsEventPublisher, null);
+                fileMetadataStore, observer, metricsEventPublisher, null, null);
+        // Tests using this constructor need the watcher to run.
+        // No status callback, so no status transitions occur.
+        initSource(this.effectiveAgentId);
     }
 
     /**
      * Initialise the native file watcher for watching the target directory.
+     * <p>
+     * Status transitions happen here so they occur after the hash filter
+     * in {@code scanAllFiles()} has processed all existing files:
+     * IDLE → EMITTING_INITIAL (before scan) → EMITTING_UPDATES (after scan).
+     * <p>
+     * Called by {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}
+     * after the scanner is registered in the map so callbacks can find it.
      */
-    private void initSource(String effectiveAgentId) {
+    public void initSource(String effectiveAgentId) {
         try {
             Path folder = Path.of(folderPath).toAbsolutePath();
             log.info("Setting up scanner for folder: {}", folder);
 
+            // Transition to EMITTING_INITIAL before the initial full scan
+            // (hash filter runs inside nativeFileWatcher.start() → scanAllFiles())
+            notifyStatusChange(STATUS_EMITTING_INITIAL);
+
             nativeFileWatcher.start();
+
+            // Flush any buffered files so they are emitted immediately if the
+            // emission delay has elapsed. This ensures the file count is accurate
+            // and the status reflects actual emission activity.
+            nativeFileWatcher.flushBufferedEmission();
 
             // Update file count after initial scan completes
             long currentCount = countFiles();
             observer.updateFileCount(effectiveAgentId, currentCount);
+
+            // Transition to EMITTING_UPDATES only if files were buffered (meaning
+            // the hash filter found at least one changed/new file). If nothing
+            // was buffered, all files are already known — stay IDLE.
+            if (nativeFileWatcher.scanBufferedAnyFile()) {
+                notifyStatusChange(STATUS_EMITTING_UPDATES);
+            } else {
+                notifyStatusChange(STATUS_IDLE);
+                log.info("Scanner initialised for folder: {} – no new files, staying IDLE", folderPath);
+            }
 
             log.info("Scanner initialised for folder: {}", folderPath);
 
@@ -133,6 +165,22 @@ public class FileSystemScannerAdapter implements FileScanner {
             }
         }
     }
+
+    /**
+     * Notify the registry of a status change.
+     */
+    private void notifyStatusChange(String status) {
+        if (onStatusChanged != null) {
+            onStatusChanged.accept(status);
+        }
+    }
+
+    /**
+     * Backward-compatible status constants used by the adapter.
+     */
+    private static final String STATUS_EMITTING_INITIAL = "EMITTING_INITIAL";
+    private static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
+    private static final String STATUS_IDLE = "IDLE";
 
     /**
      * Returns the flux of file changes. Subscribers receive incremental updates
@@ -147,10 +195,15 @@ public class FileSystemScannerAdapter implements FileScanner {
      * Reset the scanner to full-scan mode.
      * Emits all files from the target directory through the existing flux.
      * The watch service continues to emit incremental changes.
+     * <p>
+     * Status transitions: EMITTING_INITIAL (before scan, hash filter runs)
+     * → EMITTING_UPDATES (after scan completes).
      */
     public void resetToFullScan() {
         log.info("Resetting scanner to full scan at: {}", folderPath);
+        notifyStatusChange(STATUS_EMITTING_INITIAL);
         scanAllFiles();
+        notifyStatusChange(STATUS_EMITTING_UPDATES);
         log.info("Full scan complete for: {}", folderPath);
     }
 

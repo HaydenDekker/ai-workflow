@@ -50,7 +50,7 @@ public class ScannerRegistryTest {
         assertThat(info).isNotNull();
         assertThat(info.agentId()).isEqualTo(agentId);
         assertThat(info.targetDirectory()).isEqualTo(targetDir);
-        assertThat(info.status()).isEqualTo("EMITTING_INITIAL");
+        assertThat(info.status()).isEqualTo("IDLE");
         assertThat(info.createdAt()).isNotNull();
     }
 
@@ -121,7 +121,8 @@ public class ScannerRegistryTest {
         String targetDir = tempDir.toString();
 
         ScannerInfo created = registry.createForAgent(agentId, targetDir, 5);
-        assertThat(created.status()).isEqualTo("EMITTING_INITIAL");
+        // Empty directory → no files buffered → stays IDLE
+        assertThat(created.status()).isEqualTo("IDLE");
 
         // Refresh should update the status
         registry.refreshAgent(agentId);
