@@ -5,6 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -43,6 +46,9 @@ public class FileSystemScannerAdapter implements FileScanner {
     private volatile boolean disposed = false;
     private final Consumer<String> onErrorCallback;
     private final Consumer<String> onStatusChanged;
+    private final Consumer<String> onEmission; // called when a file is emitted (updates idle timer)
+    private final ScheduledExecutorService filteredResetScheduler;
+    private volatile java.util.concurrent.ScheduledFuture<?> filteredResetTask;
 
     /**
      * Creates a new parameterised scanner adapter.
@@ -56,6 +62,7 @@ public class FileSystemScannerAdapter implements FileScanner {
      * @param metricsEventPublisher  callback to publish metrics change events
      * @param onErrorCallback     callback invoked when the scanner encounters an error
      * @param onStatusChanged     callback invoked when scanner status changes
+     * @param onEmission          callback invoked when a file is emitted (updates idle timer)
      */
     public FileSystemScannerAdapter(String agentId,
                                      String folderPath,
@@ -65,7 +72,8 @@ public class FileSystemScannerAdapter implements FileScanner {
                                      ScannerObserverUseCase observer,
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher,
                                      Consumer<String> onErrorCallback,
-                                     Consumer<String> onStatusChanged) {
+                                     Consumer<String> onStatusChanged,
+                                     Consumer<String> onEmission) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
         this.delayBetweenReads = delayBetweenReads;
@@ -74,7 +82,15 @@ public class FileSystemScannerAdapter implements FileScanner {
         this.observer = observer;
         this.onErrorCallback = onErrorCallback;
         this.onStatusChanged = onStatusChanged;
+        this.onEmission = onEmission;
         final String agentIdForCallbacks = this.effectiveAgentId;
+
+        // Scheduled executor for resetting FILTERED status back to IDLE
+        this.filteredResetScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "filtered-reset");
+            t.setDaemon(true);
+            return t;
+        });
 
         // Pass callbacks to NativeFileWatcher instead of Micrometer types
         this.nativeFileWatcher = new NativeFileWatcher(
@@ -85,6 +101,26 @@ public class FileSystemScannerAdapter implements FileScanner {
                 history -> {
                     if (metricsEventPublisher != null) {
                         metricsEventPublisher.accept(ScannerMetricsChangedEvent.fileCountUpdated(agentIdForCallbacks));
+                    }
+                },
+                aId -> {
+                    // Hash filter rejected a file — briefly set FILTERED status
+                    if (onStatusChanged != null) {
+                        // Cancel any pending reset task
+                        if (filteredResetTask != null) {
+                            filteredResetTask.cancel(false);
+                        }
+                        onStatusChanged.accept(STATUS_FILTERED);
+                        // Schedule reset to IDLE after 2 seconds
+                        final String agentIdForReset = agentIdForCallbacks;
+                        filteredResetTask = filteredResetScheduler.schedule(
+                                () -> onStatusChanged.accept(STATUS_IDLE), 2, TimeUnit.SECONDS);
+                    }
+                },
+                aId -> {
+                    // A file was emitted — update idle timer so the scanner stays active
+                    if (onEmission != null) {
+                        onEmission.accept(agentIdForCallbacks);
                     }
                 },
                 agentIdForCallbacks, onErrorCallback);
@@ -109,7 +145,7 @@ public class FileSystemScannerAdapter implements FileScanner {
                                      ScannerObserverUseCase observer,
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
         this(agentId, folderPath, delayBetweenReads, Duration.ZERO,
-                fileMetadataStore, observer, metricsEventPublisher, null, null);
+                fileMetadataStore, observer, metricsEventPublisher, null, null, null);
         // Tests using this constructor need the watcher to run.
         // No status callback, so no status transitions occur.
         initSource(this.effectiveAgentId);
@@ -181,6 +217,7 @@ public class FileSystemScannerAdapter implements FileScanner {
     private static final String STATUS_EMITTING_INITIAL = "EMITTING_INITIAL";
     private static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
     private static final String STATUS_IDLE = "IDLE";
+    private static final String STATUS_FILTERED = "FILTERED";
 
     /**
      * Returns the flux of file changes. Subscribers receive incremental updates
@@ -241,6 +278,16 @@ public class FileSystemScannerAdapter implements FileScanner {
                                 nativeFileWatcher.emit(history);
                             } else {
                                 observer.recordUnchanged(effectiveAgentId);
+                                // Trigger filtered status for hash-rejected file
+                                if (onStatusChanged != null) {
+                                    if (filteredResetTask != null) {
+                                        filteredResetTask.cancel(false);
+                                    }
+                                    onStatusChanged.accept(STATUS_FILTERED);
+                                    final String agentIdForReset = effectiveAgentId;
+                                    filteredResetTask = filteredResetScheduler.schedule(
+                                            () -> onStatusChanged.accept(STATUS_IDLE), 2, TimeUnit.SECONDS);
+                                }
                                 log.debug("Full scan - skipping existing file: {}", relativePath);
                             }
                         } catch (IOException e) {
@@ -269,6 +316,11 @@ public class FileSystemScannerAdapter implements FileScanner {
         }
         disposed = true;
         nativeFileWatcher.stop();
+        // Cancel any pending FILTERED reset task
+        if (filteredResetTask != null) {
+            filteredResetTask.cancel(false);
+        }
+        filteredResetScheduler.shutdownNow();
         log.info("Scanner destroyed for folder: {}", folderPath);
     }
 

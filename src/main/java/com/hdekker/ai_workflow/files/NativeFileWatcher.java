@@ -66,6 +66,8 @@ public class NativeFileWatcher {
 	private final Consumer<String> onUnchanged;
 	private final Consumer<String> onFileCount;
 	private final Consumer<FileHistory> emitCallback;
+	private final Consumer<String> onFiltered; // called when hash filter rejects a file
+	private final Consumer<String> onEmit; // called when a file is emitted (updates idle timer)
 
 	// Error reporting callback (takes agentId + error message)
 	private final String agentId;
@@ -82,6 +84,8 @@ public class NativeFileWatcher {
 	 * @param onUnchanged                callback invoked when a file is unchanged
 	 * @param onFileCount                callback invoked when file count changes
 	 * @param emitCallback               callback invoked after each file emission
+	 * @param onFiltered                 callback invoked when hash filter rejects a file
+	 * @param onEmit                     callback invoked when a file is emitted (updates idle timer)
 	 * @param agentId                    owning agent ID (for error reporting)
 	 * @param onError                    callback invoked when an error occurs
 	 */
@@ -93,6 +97,8 @@ public class NativeFileWatcher {
 			Consumer<String> onUnchanged,
 			Consumer<String> onFileCount,
 			Consumer<FileHistory> emitCallback,
+			Consumer<String> onFiltered,
+			Consumer<String> onEmit,
 			String agentId,
 			Consumer<String> onError) {
 		this.directory = directory.toAbsolutePath().normalize();
@@ -105,6 +111,8 @@ public class NativeFileWatcher {
 		this.onUnchanged = onUnchanged;
 		this.onFileCount = onFileCount;
 		this.emitCallback = emitCallback;
+		this.onFiltered = onFiltered;
+		this.onEmit = onEmit;
 		this.agentId = agentId;
 		this.onError = onError;
 		this.lastEmissionTime = LocalDateTime.now();
@@ -131,7 +139,7 @@ public class NativeFileWatcher {
 			Consumer<String> onFileCount,
 			Consumer<FileHistory> emitCallback) {
 		this(directory, pollInterval, Duration.ZERO, fileMetadataStore,
-			onDiscovery, onUnchanged, onFileCount, emitCallback, null, null);
+			onDiscovery, onUnchanged, onFileCount, emitCallback, null, null, null, null);
 	}
 
 	/**
@@ -299,6 +307,10 @@ public class NativeFileWatcher {
 				if (onUnchanged != null) {
 					onUnchanged.accept(directory.toString());
 				}
+				// Notify registry that a file was filtered by the hash check
+				if (onFiltered != null) {
+					onFiltered.accept(directory.toString());
+				}
 				log.debug("Unchanged file (skipped): {}", relativePath);
 			}
 		} catch (IOException e) {
@@ -315,8 +327,16 @@ public class NativeFileWatcher {
 
 		// Only emit if the file actually changed (hash mismatch)
 		if (history != null && !history.hashMatches() && emitCallback != null) {
-			// Apply emission delay throttling
-			tryEmitWithDelay(history);
+			// Apply emission delay throttling — only fire onEmit if actually emitted
+			boolean emitted = tryEmitWithDelay(history);
+			if (emitted) {
+				// Notify registry that a file was emitted — updates idle timer
+				// and transitions status to EMITTING_UPDATES so the idle checker
+				// knows the scanner is actively processing files.
+				if (onEmit != null) {
+					onEmit.accept(directory.toString());
+				}
+			}
 		}
 	}
 
@@ -327,10 +347,11 @@ public class NativeFileWatcher {
 	 * and will be emitted when the delay elapses (or on the next call).
 	 *
 	 * @param history the file history to emit
+	 * @return true if the file was actually emitted through the sink, false if buffered
 	 */
-	private void tryEmitWithDelay(FileHistory history) {
+	private boolean tryEmitWithDelay(FileHistory history) {
 		if (history == null) {
-			return;
+			return false;
 		}
 
 		LocalDateTime now = LocalDateTime.now();
@@ -343,16 +364,20 @@ public class NativeFileWatcher {
 			// No delay configured — emit immediately
 			sink.tryEmitNext(history);
 			lastEmissionTime = now;
+			scanBufferedAnyFile = true;
+			return true;
 		} else if (elapsed.getSeconds() >= emissionDelay.getSeconds()) {
 			// Delay has elapsed — emit and record time
 			sink.tryEmitNext(history);
 			lastEmissionTime = now;
+			scanBufferedAnyFile = true;
+			return true;
 		}
-		// else: delay not elapsed, history is buffered for later emission
-		// Always update lastEmissionTime when buffering to prevent immediate re-emission
-		// of the same file on the next buffered history check.
-		lastEmissionTime = now;
-		scanBufferedAnyFile = true;
+		// else: delay not elapsed, history is buffered for later emission.
+		// Do NOT update lastEmissionTime or scanBufferedAnyFile here — the timer
+		// must keep running from the original emission time, and the flag must only
+		// reflect actual emissions, not buffered-but-not-yet-emitted files.
+		return false;
 	}
 
 	/**
@@ -370,7 +395,10 @@ public class NativeFileWatcher {
 			sink.tryEmitNext(latestBufferedHistory);
 			lastEmissionTime = now;
 			latestBufferedHistory = null;
-			scanBufferedAnyFile = false;
+			// Do NOT reset scanBufferedAnyFile here — the adapter checks this flag
+			// to decide whether to transition to EMITTING_UPDATES. Resetting it
+			// after flush would cause the adapter to stay IDLE even though files
+			// were buffered and emitted during the scan.
 		}
 	}
 
@@ -414,6 +442,10 @@ public class NativeFileWatcher {
 						} else {
 							if (onUnchanged != null) {
 								onUnchanged.accept(directory.toString());
+							}
+							// Notify registry that a file was filtered by the hash check
+							if (onFiltered != null) {
+								onFiltered.accept(directory.toString());
 							}
 							log.debug("Scan - skipping existing file: {}", relativePath);
 						}

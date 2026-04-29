@@ -65,6 +65,7 @@ public class ScannerListView extends VerticalLayout
     private ProgressBar loadingIndicator;
     private ScheduledExecutorService refreshScheduler;
     private Consumer<ScannerMetricsChangedEvent> refreshCallback;
+    private volatile boolean quietRefreshScheduled = false;
 
     @Autowired
     public ScannerListView(ScannerService scannerService, ScannerObserverUseCase observer) {
@@ -163,12 +164,22 @@ public class ScannerListView extends VerticalLayout
         // ScannerMetricsPushService receives it and calls this callback.
         // The callback is wrapped with UI.access() so the grid refresh
         // runs on the Vaadin UI thread, not the background watch thread.
+        //
+        // IMPORTANT: We call loadScanners() (not grid.getDataProvider().refreshAll())
+        // because ScannerInfo is an immutable record — the status value is baked in
+        // at construction time. refreshAll() only re-renders existing items, it does
+        // not fetch new data. To show updated status (e.g. IDLE → EMITTING_UPDATES),
+        // we must re-fetch ScannerInfo from the service.
         addAttachListener(event -> {
             com.vaadin.flow.component.UI ui = event.getUI();
             refreshCallback = e -> {
                 log.debug("UI refresh callback triggered: agent={}, type={}",
                         e.getAgentId(), e.getType());
-                ui.access(() -> grid.getDataProvider().refreshAll());
+                // Use quiet refresh — no loading indicator or toast.
+                // loadScanners() shows loading + notification which is too noisy
+                // for frequent file events. ScannerInfo is an immutable record so
+                // we must re-fetch from the service (not just refreshAll()).
+                ui.access(() -> refreshScanners());
             };
             observer.registerRefreshCallback(refreshCallback);
         });
@@ -194,6 +205,7 @@ public class ScannerListView extends VerticalLayout
         switch (status) {
             case "EMITTING_INITIAL" -> color = "#f5a623";  // amber
             case "EMITTING_UPDATES" -> color = "#4a90d9";  // blue
+            case "FILTERED" -> color = "#e67e22";  // orange
             case "ERROR" -> color = "#e74c3c";  // red
             default -> color = "#27ae60";  // IDLE = green
         }
@@ -243,7 +255,7 @@ public class ScannerListView extends VerticalLayout
 
         scannerService.getAllScannerInfos()
             .subscribe(
-                scanners -> grid.getUI().get().access(() -> updateGrid(scanners)),
+                scanners -> grid.getUI().get().access(() -> updateGrid(scanners, true)),
                 error -> grid.getUI().get().access(() -> {
                     Notification.show("Error loading scanners: " + error.getMessage(), 4000, Notification.Position.MIDDLE);
                     showLoading(false);
@@ -251,14 +263,33 @@ public class ScannerListView extends VerticalLayout
             );
     }
 
-    private void updateGrid(List<ScannerInfo> scanners) {
+    /**
+     * Quiet refresh — no loading indicator, no notification toast.
+     * Called by the real-time metrics callback so frequent file events
+     * don't spam the UI with loading states and toasts.
+     * <p>
+     * IMPORTANT: ScannerInfo is an immutable record — the status value is baked in
+     * at construction time. We must re-fetch ScannerInfo from the service (not just
+     * call grid.getDataProvider().refreshAll()) to show updated status values.
+     */
+    private void refreshScanners() {
+        scannerService.getAllScannerInfos()
+            .subscribe(
+                scanners -> grid.getUI().get().access(() -> updateGrid(scanners, false)),
+                error -> log.warn("Error refreshing scanners: {}", error.getMessage())
+            );
+    }
+
+    private void updateGrid(List<ScannerInfo> scanners, boolean notify) {
         grid.setItems(scanners);
-        if (scanners.isEmpty()) {
-            Notification.show("No scanners found", 3000, Notification.Position.MIDDLE);
-        } else {
-            Notification.show("Loaded " + scanners.size() + " scanner(s)", 2000, Notification.Position.BOTTOM_START);
+        if (notify) {
+            if (scanners.isEmpty()) {
+                Notification.show("No scanners found", 3000, Notification.Position.MIDDLE);
+            } else {
+                Notification.show("Loaded " + scanners.size() + " scanner(s)", 2000, Notification.Position.BOTTOM_START);
+            }
+            showLoading(false);
         }
-        showLoading(false);
     }
 
     private void deleteScanner(String agentId, String scannerId) {
