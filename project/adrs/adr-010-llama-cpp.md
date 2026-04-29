@@ -1,4 +1,4 @@
-# ADR: Chat Model Setup for llama.cpp via OpenAI-Compatible API
+# ADR-010: llama.cpp
 
 ## Context
 

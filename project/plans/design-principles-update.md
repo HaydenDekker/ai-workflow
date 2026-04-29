@@ -49,18 +49,17 @@ The end state is a clear separation:
 | # | File | Subject | Issue |
 |---|------|---------|-------|
 | — | `adr-overview.md` | ADR format guide | ✅ Keep as-is |
-| 1 | `adr-rest-adapters.md` | REST adapter pattern | ⚠️ Minor — some code examples could be DPR |
-| 2 | `adr-ui-components.md` | Vaadin/Hilla components | ⚠️ Contains design notes (Service Access Boundary, Reactor Gotcha, CSS theming) |
-| 3 | `adr-ui-views.md` | Flow/Hilla routing | ⚠️ Repeats Service Access Boundary from ADR-002 |
-| 4 | `adr-ui-hilla-component-development.md` | Storybook for components | ⚠️ 80% is design note/tutorial, not ADR |
+| 1 | `adr-002-rest-adapters.md` | REST adapter pattern | ⚠️ Minor — some code examples could be DPR |
+| 2 | `adr-003-vaadin-hilla-ui.md` | Vaadin/Hilla components | ⚠️ Contains design notes (Service Access Boundary, Reactor Gotcha, CSS theming) |
+| 3 | `adr-004-flow-hilla-routing.md` | Flow/Hilla routing | ⚠️ Repeats Service Access Boundary from ADR-003 |
+| 4 | `adr-005-storybook.md` | Storybook for components | ⚠️ 80% is design note/tutorial, not ADR |
 | — | `adr-dynamic-scanners.md` | Filesystem monitoring | ⚠️ Scanner content migrated to DPRs; ADR removed 2026-04-29
 | — | `adr-testing-strategy.md` | Testing pyramid | ⚠️ Borderline — testing principles document, not a decision |
 | — | `adr-multi-db-support.md` | Multi-database config | ⚠️ Contains "How to Add a Third Database" tutorial |
-| — | `adr-application-memory-extraction.md` | Memory extraction architecture | ⚠️ Tight coupling notes, prompt template details, extraction level handler |
-| — | `adr-qdrant-vector-store.md` | Qdrant integration | ⚠️ `QdrantService` implementation, SHA-256 algorithm, filter expressions |
-| — | `adr-chat-model-setup-for-llama-cpp.md` | llama.cpp setup | ⚠️ Docker commands, GGUF download instructions, performance table |
-| — | `adr-application-observability.md` | LLM health monitoring | ⚠️ `AdapterStatusComponent` implementation, polling parameters, CSS |
-| — | `adr-hilla-setup-guide.md` | Hilla setup guide | 🔴 Not an ADR — this is a tutorial |
+| — | `adr-008-application-memory-extraction.md` | Memory extraction architecture | ⚠️ Tight coupling notes, prompt template details, extraction level handler |
+| — | `adr-009-qdrant-vector-store.md` | Qdrant integration | ⚠️ `QdrantService` implementation, SHA-256 algorithm, filter expressions |
+| — | `adr-010-llama-cpp.md` | llama.cpp setup | ⚠️ Docker commands, GGUF download instructions, performance table |
+| — | `adr-011-observability.md` | LLM health monitoring | ⚠️ `AdapterStatusComponent` implementation, polling parameters, CSS |
 
 ### Existing DPRs (1 file)
 
@@ -172,7 +171,7 @@ These ADRs are the foundation — they affect every developer's daily work. Clea
 
 **Review notes**: Consequences and Alternatives Considered sections removed from ADR. See Also simplified to `adr-overview` + `dpr-testing-strategy` only.
 
-### Phase 1.2: `adr-ui-components.md` → DPR Migration
+### Phase 1.2: `adr-003-vaadin-hilla-ui.md` → DPR Migration
 
 **Scope**: ADR-002 contains design notes about the Service Access Boundary and Reactor Gotcha that should be standalone DPRs.
 
@@ -202,11 +201,11 @@ These ADRs are the foundation — they affect every developer's daily work. Clea
 |---|------|--------|
 | 1.2.1 | Draft `dpr-service-access-boundary.md` | `project/docs/dpr-service-access-boundary.md` |
 | 1.2.2 | Draft `dpr-reactive-safety.md` | `project/docs/dpr-reactive-safety.md` |
-| 1.2.3 | Trim `adr-ui-components.md` to framework choice + architecture | `project/adrs/adr-002-vaadin-hilla-ui.md` |
+| 1.2.3 | Trim `adr-003-vaadin-hilla-ui.md` to framework choice + architecture | `project/adrs/adr-003-vaadin-hilla-ui.md` |
 | 1.2.4 | Add cross-references in all three files | All files |
-| 1.2.5 | Update `adr-ui-views.md` to reference `dpr-service-access-boundary.md` instead of repeating it | `project/adrs/adr-003-flow-hilla-routing.md` |
+| 1.2.5 | Update `adr-004-flow-hilla-routing.md` to reference `dpr-service-access-boundary.md` instead of repeating it | `project/adrs/adr-004-flow-hilla-routing.md` |
 
-### Phase 1.3: `adr-ui-hilla-component-development.md` → DPR Migration
+### Phase 1.3: `adr-005-storybook.md` → DPR Migration
 
 **Scope**: This is 80% a design note / tutorial, not an ADR.
 
@@ -232,12 +231,12 @@ These ADRs are the foundation — they affect every developer's daily work. Clea
 | # | Task | Output |
 |---|------|--------|
 | 1.3.1 | Draft `dpr-storybook-workflow.md` with full workflow | `project/docs/dpr-storybook-workflow.md` |
-| 1.3.2 | Trim `adr-ui-hilla-component-development.md` to decision + trade-offs | `project/adrs/adr-004-storybook.md` |
+| 1.3.2 | Trim `adr-005-storybook.md` to decision + trade-offs | `project/adrs/adr-005-storybook.md` |
 | 1.3.3 | Add cross-references | Both files |
 
 ### Phase 1.4: `adr-hilla-setup-guide.md` → Move to Docs
 
-**Scope**: This is a tutorial, not an ADR. The decision to use Hilla is already in `adr-ui-components.md`.
+**Scope**: This is a tutorial, not an ADR. The decision to use Hilla is already in `adr-003-vaadin-hilla-ui.md`.
 
 **Action**: Move entire file to `docs/hilla-setup-guide.md`. Delete from `adrs/`.
 
@@ -246,7 +245,7 @@ These ADRs are the foundation — they affect every developer's daily work. Clea
 | # | Task | Output |
 |---|------|--------|
 | 1.4.1 | Move `adr-hilla-setup-guide.md` → `docs/hilla-setup-guide.md` | `project/docs/hilla-setup-guide.md` |
-| 1.4.2 | Delete `adr-hilla-setup-guide.md` from `adrs/` | File removed |
+| 1.4.2 | Delete `adr-hilla-setup-guide.md` from `adrs/` | File removed (already completed)
 
 ### Phase 1 Summary
 
@@ -360,7 +359,7 @@ From `adr-dynamic-scanners.md` → `dpr-agent-scanner-relationship.md`:
 
 These ADRs are mostly architectural decisions with some implementation details that could be DPRs.
 
-### Phase 3.1: `adr-application-memory-extraction.md` → DPR Migration
+### Phase 3.1: `adr-008-application-memory-extraction.md` → DPR Migration
 
 **Scope**: Memory extraction architecture — the extraction levels, prompt templates, state tracking.
 
@@ -389,10 +388,10 @@ These ADRs are mostly architectural decisions with some implementation details t
 |---|------|--------|
 | 3.1.1 | Draft `dpr-memory-extraction-pipeline.md` | `project/docs/dpr-memory-extraction-pipeline.md` |
 | 3.1.2 | Draft `dpr-state-tracking.md` | `project/docs/dpr-state-tracking.md` |
-| 3.1.3 | Trim `adr-application-memory-extraction.md` | `project/adrs/adr-007-memory-extraction.md` |
+| 3.1.3 | Trim `adr-008-application-memory-extraction.md` | `project/adrs/adr-008-application-memory-extraction.md` |
 | 3.1.4 | Add cross-references | All files |
 
-### Phase 3.2: `adr-qdrant-vector-store.md` → DPR Migration
+### Phase 3.2: `adr-009-qdrant-vector-store.md` → DPR Migration
 
 **Scope**: Qdrant integration — service implementation, document model, filter expressions.
 
@@ -416,10 +415,10 @@ These ADRs are mostly architectural decisions with some implementation details t
 | # | Task | Output |
 |---|------|--------|
 | 3.2.1 | Draft `dpr-vector-store-usage.md` | `project/docs/dpr-vector-store-usage.md` |
-| 3.2.2 | Trim `adr-qdrant-vector-store.md` | `project/adrs/adr-008-qdrant-vector-store.md` |
+| 3.2.2 | Trim `adr-009-qdrant-vector-store.md` | `project/adrs/adr-009-qdrant-vector-store.md` |
 | 3.2.3 | Add cross-references | Both files |
 
-### Phase 3.3: `adr-chat-model-setup-for-llama-cpp.md` → DPR Migration
+### Phase 3.3: `adr-010-llama-cpp.md` → DPR Migration
 
 **Scope**: llama.cpp setup — Docker commands, GGUF downloads, performance tuning.
 
@@ -444,10 +443,10 @@ These ADRs are mostly architectural decisions with some implementation details t
 | # | Task | Output |
 |---|------|--------|
 | 3.3.1 | Draft `dpr-llama-cpp-operations.md` | `project/docs/dpr-llama-cpp-operations.md` |
-| 3.3.2 | Trim `adr-chat-model-setup-for-llama-cpp.md` | `project/adrs/adr-009-llama-cpp.md` |
+| 3.3.2 | Trim `adr-010-llama-cpp.md` | `project/adrs/adr-010-llama-cpp.md` |
 | 3.3.3 | Add cross-references | Both files |
 
-### Phase 3.4: `adr-application-observability.md` → DPR Migration
+### Phase 3.4: `adr-011-observability.md` → DPR Migration
 
 **Scope**: Observability — component implementation, polling parameters, CSS.
 
@@ -471,7 +470,7 @@ These ADRs are mostly architectural decisions with some implementation details t
 | # | Task | Output |
 |---|------|--------|
 | 3.4.1 | Draft `dpr-observability-components.md` | `project/docs/dpr-observability-components.md` |
-| 3.4.2 | Trim `adr-application-observability.md` | `project/adrs/adr-010-observability.md` |
+| 3.4.2 | Trim `adr-011-observability.md` | `project/adrs/adr-011-observability.md` |
 | 3.4.3 | Add cross-references | Both files |
 
 ### Phase 3 Summary
@@ -500,17 +499,17 @@ Rename all remaining ADRs to numbered format:
 
 | Old Name | New Name |
 |----------|----------|
-| `adr-rest-adapters.md` | `adr-001-rest-adapters.md` |
-| `adr-ui-components.md` | `adr-002-vaadin-hilla-ui.md` |
-| `adr-ui-views.md` | `adr-003-flow-hilla-routing.md` |
-| `adr-ui-hilla-component-development.md` | `adr-004-storybook.md` |
-| `adr-dynamic-scanners.md` | **Removed** (migrated to DPRs) |
-| `adr-testing-strategy.md` | `adr-001-testing-strategy.md` |
-| `adr-multi-db-support.md` | `adr-006-multi-database.md` |
-| `adr-application-memory-extraction.md` | `adr-007-memory-extraction.md` |
-| `adr-qdrant-vector-store.md` | `adr-008-qdrant-vector-store.md` |
-| `adr-chat-model-setup-for-llama-cpp.md` | `adr-009-llama-cpp.md` |
-| `adr-application-observability.md` | `adr-010-observability.md` |
+| `adr-rest-adapters.md` | `adr-002-rest-adapters.md` (✅ done) |
+| `adr-ui-components.md` | `adr-003-vaadin-hilla-ui.md` (✅ done) |
+| `adr-ui-views.md` | `adr-004-flow-hilla-routing.md` (✅ done) |
+| `adr-ui-hilla-component-development.md` | `adr-005-storybook.md` (✅ done) |
+| `adr-dynamic-scanners.md` | **Removed** (✅ done) |
+| `adr-testing-strategy.md` | `adr-001-testing-strategy.md` (✅ done) |
+| `adr-multi-db-support.md` | `adr-007-multi-database.md` (✅ done) |
+| `adr-application-memory-extraction.md` | `adr-008-application-memory-extraction.md` (✅ done) |
+| `adr-qdrant-vector-store.md` | `adr-009-qdrant-vector-store.md` (✅ done) |
+| `adr-chat-model-setup-for-llama-cpp.md` | `adr-010-llama-cpp.md` (✅ done) |
+| `adr-application-observability.md` | `adr-011-observability.md` (✅ done) |
 
 **Note**: `adr-001` is a conflict between REST Adapters and Testing Strategy. Resolution: Testing Strategy gets `adr-001` (it's the most referenced), REST Adapters gets `adr-002`, and all others shift accordingly.
 
@@ -523,7 +522,7 @@ Rename all remaining ADRs to numbered format:
 | `adr-dynamic-scanners.md` | **Removed** (migrated to DPRs) |
 | `adr-testing-strategy.md` | `adr-001-testing-strategy.md` |
 | `adr-multi-db-support.md` | `adr-007-multi-database.md` |
-| `adr-application-memory-extraction.md` | `adr-008-memory-extraction.md` |
+| `adr-application-memory-extraction.md` | `adr-008-application-memory-extraction.md` |
 | `adr-qdrant-vector-store.md` | `adr-009-qdrant-vector-store.md` |
 | `adr-chat-model-setup-for-llama-cpp.md` | `adr-010-llama-cpp.md` |
 | `adr-application-observability.md` | `adr-011-observability.md` |
@@ -687,6 +686,6 @@ Phase 4.4: Final consistency pass
 ## 13. Next Steps
 
 1. **Proceed to Phase 0** — draft `design-principles.md` (the anchor for everything else)
-2. **Proceed to Phase 1.2** — clean up `adr-ui-components.md` into DPRs
+2. **Proceed to Phase 1.2** — clean up `adr-003-vaadin-hilla-ui.md` into DPRs
 3. **Proceed phase by phase** — each phase produces working deliverables before the next begins
 4. **Review at each phase boundary** — ensure quality before proceeding

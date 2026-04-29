@@ -1,4 +1,4 @@
-# ADR: Application Layer Memory Extraction Architecture
+# ADR-008: Memory Extraction
 
 ## Context
 
@@ -509,8 +509,8 @@ public class ExtractionState {
 ## See Also
 
 - [ADR: Multiple SQLite Database Configuration](adr-multi-db-support.md)
-- [ADR: Qdrant Vector Store Integration](adr-qdrant-vector-store.md)
-- [ADR: Chat Model Setup for llama.cpp](adr-chat-model-setup-for-llama-cpp.md)
+- [ADR-009: Qdrant Vector Store](adr-009-qdrant-vector-store.md)
+- [ADR-010: llama.cpp](adr-010-llama-cpp.md)
 
 ## References
 

@@ -1,4 +1,4 @@
-# ADR: Application Observability with LLM Health Monitoring
+# ADR-011: Observability
 
 ## Context
 

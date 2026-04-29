@@ -79,7 +79,7 @@ public class OpenAiModelListUtils {
 
 ### Overview
 
-Implement production-ready configuration to handle slow local models, server busy states, and backend-specific parameters. Based on ADR documentation (`adr-chat-model-setup-for-llama-cpp.md`).
+Implement production-ready configuration to handle slow local models, server busy states, and backend-specific parameters. Based on ADR documentation (`adr-010-llama-cpp.md`).
 
 ### Use Cases
 
@@ -284,6 +284,6 @@ app:
 
 ## References
 
-- ADR: `adr-chat-model-setup-for-llama-cpp.md`
+- ADR: `adr-010-llama-cpp.md`
 - Original Plan: `ollama-term-refactor.md`
 - Spring AI Documentation: https://docs.spring.io/spring-ai/reference/api/openai.html

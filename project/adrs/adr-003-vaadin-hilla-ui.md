@@ -1,4 +1,4 @@
-# ADR-002: Vaadin/Hilla UI Components
+# ADR-003: Vaadin/Hilla UI Components
 
 ## Date
 
@@ -562,7 +562,6 @@ await page.locator('[data-testid="submit-button"]').click();
 
 ## See Also
 
-- [ADR-001: REST Adapters](adr-rest-adapters.md) — REST API layer that the UI does not depend on (services are injected directly)
-- [ADR-003: UI Views and Routing](adr-ui-views.md) — View routing, Hilla/Flow coexistence, navigation layout
-- [ADR: Application Observability with LLM Health Monitoring](adr-application-observability.md) — Backend observability service that the ObservabilityView displays
-- [ADR: Hilla Setup Guide](adr-hilla-setup-guide.md) — Hilla configuration (available but not actively used for current UI)
+- [ADR-002: REST Adapters](adr-002-rest-adapters.md) — REST API layer that the UI does not depend on (services are injected directly)
+- [ADR-004: Flow/Hilla Routing](adr-004-flow-hilla-routing.md) — View routing, Hilla/Flow coexistence, navigation layout
+- [ADR-011: Observability](adr-011-observability.md) — Backend observability service that the ObservabilityView displays

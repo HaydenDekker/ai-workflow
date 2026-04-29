@@ -1,4 +1,4 @@
-# ADR-001: REST Adapters
+# ADR-002: REST Adapters
 
 ## Date
 

@@ -120,16 +120,16 @@ A DPR should follow this structure:
 | ADR | Title | Subject |
 |-----|-------|---------|
 | [ADR-001](../adrs/adr-001-testing-strategy.md) | Testing Strategy | Why a six-tier testing pyramid was adopted |
-| [ADR-002](../adrs/adr-rest-adapters.md) | REST Adapters | Why a two-layer adapter pattern for driving and driven adapters |
-| [ADR-003](../adrs/adr-ui-components.md) | Vaadin/Hilla UI Components | Why Vaadin + Hilla was chosen over React SPA or Thymeleaf |
-| [ADR-004](../adrs/adr-ui-views.md) | Flow/Hilla Routing | Why a hybrid navigation approach for Flow + Hilla coexistence |
-| [ADR-005](../adrs/adr-ui-hilla-component-development.md) | Storybook | Why Storybook was chosen for Hilla/React component development |
+| [ADR-002](../adrs/adr-002-rest-adapters.md) | REST Adapters | Why a two-layer adapter pattern for driving and driven adapters |
+| [ADR-003](../adrs/adr-003-vaadin-hilla-ui.md) | Vaadin/Hilla UI Components | Why Vaadin + Hilla was chosen over React SPA or Thymeleaf |
+| [ADR-004](../adrs/adr-004-flow-hilla-routing.md) | Flow/Hilla Routing | Why a hybrid navigation approach for Flow + Hilla coexistence |
+| [ADR-005](../adrs/adr-005-storybook.md) | Storybook | Why Storybook was chosen for Hilla/React component development |
 
 | [ADR-007](../adrs/adr-007-multi-database.md) | Multi-Database | Why separate SQLite databases for agent vs. memory data |
-| [ADR-008](../adrs/adr-application-memory-extraction.md) | Memory Extraction | Why LLM-based multi-level memory extraction |
-| [ADR-009](../adrs/adr-qdrant-vector-store.md) | Qdrant Vector Store | Why Spring AI VectorStore abstraction with Qdrant backend |
-| [ADR-010](../adrs/adr-chat-model-setup-for-llama-cpp.md) | llama.cpp | Why OpenAI-compatible abstraction for local LLM models |
-| [ADR-011](../adrs/adr-011-micrometer.md) | Observability | Why health-first monitoring with Micrometer/Prometheus |
+| [ADR-008](../adrs/adr-008-application-memory-extraction.md) | Memory Extraction | Why LLM-based multi-level memory extraction |
+| [ADR-009](../adrs/adr-009-qdrant-vector-store.md) | Qdrant Vector Store | Why Spring AI VectorStore abstraction with Qdrant backend |
+| [ADR-010](../adrs/adr-010-llama-cpp.md) | llama.cpp | Why OpenAI-compatible abstraction for local LLM models |
+| [ADR-011](../adrs/adr-011-observability.md) | Observability | Why health-first monitoring with Micrometer/Prometheus |
 
 ### Design Pattern Records (DPRs)
 
@@ -162,7 +162,7 @@ Components must never inject or access services directly. Views inject services,
 
 **Why**: Threading safety (reactive callbacks run on arbitrary threads), Reactor safety (`Mono<Void>` gotcha), testability (pure UI components), and re-entrancy (views can gate and reorder calls).
 
-> **See**: [ADR-003: Vaadin/Hilla UI Components](../adrs/adr-ui-components.md#0-service-access-boundary), [DPR: Testing Strategy](dpr-testing-strategy.md)
+> **See**: [ADR-003: Vaadin/Hilla UI Components](../adrs/adr-003-vaadin-hilla-ui.md#0-service-access-boundary), [DPR: Testing Strategy](dpr-testing-strategy.md)
 
 ---
 
@@ -176,7 +176,7 @@ The application follows the Ports & Adapters (Hexagonal) pattern:
 - **Ports** (interface abstractions) define how the application layer communicates outward
 - **Use cases** live in `usecase/` and depend only on ports, never on adapter implementations
 
-> **See**: [ADR-002: REST Adapters](../adrs/adr-rest-adapters.md)
+> **See**: [ADR-002: REST Adapters](../adrs/adr-002-rest-adapters.md)
 
 ---
 
@@ -225,7 +225,7 @@ The application follows the Ports & Adapters (Hexagonal) pattern:
 - Components must not own reactive chains; views own them and pass data to components via callbacks
 - Always stop `ScheduledExecutorService` in `onDetach()` to prevent memory leaks
 
-> **See**: [ADR-003: Vaadin/Hilla UI Components](../adrs/adr-ui-components.md#0-service-access-boundary), [ADR-004: Flow/Hilla Routing](../adrs/adr-ui-views.md#reactive-data-loading)
+> **See**: [ADR-003: Vaadin/Hilla UI Components](../adrs/adr-003-vaadin-hilla-ui.md#0-service-access-boundary), [ADR-004: Flow/Hilla Routing](../adrs/adr-004-flow-hilla-routing.md#reactive-data-loading)
 
 ---
 
@@ -303,17 +303,16 @@ ADRs are numbered sequentially starting from 001. When splitting an ADR into mul
 ```
 project/
 ├── adrs/
-│   ├── adr-overview.md                    # ⛔ DEPRECATED — content moved to design-principles.md
 │   ├── adr-001-testing-strategy.md        # Why six-tier testing pyramid
 │   ├── adr-002-rest-adapters.md           # Why REST adapter pattern
 │   ├── adr-003-vaadin-hilla-ui.md         # Why Vaadin + Hilla
 │   ├── adr-004-flow-hilla-routing.md      # Why hybrid Flow/Hilla routing
 │   ├── adr-005-storybook.md               # Why Storybook for component dev
 │   ├── adr-007-multi-database.md          # Why multi-database
-│   ├── adr-008-memory-extraction.md       # Why LLM-based memory extraction
+│   ├── adr-008-application-memory-extraction.md  # Why LLM-based memory extraction
 │   ├── adr-009-qdrant-vector-store.md     # Why Spring AI VectorStore + Qdrant
 │   ├── adr-010-llama-cpp.md               # Why OpenAI-compatible abstraction
-│   └── adr-011-micrometer.md              # Why health-first monitoring
+│   └── adr-011-observability.md           # Why health-first monitoring
 ├── docs/
 │   ├── design-principles.md               # ← This document (master index)
 │   ├── dpr-testing-strategy.md            # How to implement each test tier

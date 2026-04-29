@@ -1,4 +1,4 @@
-# ADR-004: Hilla UI Component Development with Storybook
+# ADR-005: Storybook
 
 ## Date
 
@@ -6,7 +6,7 @@
 
 ## Context
 
-The application uses **Vaadin 25 with Hilla** for its UI layer ([ADR-002](adr-ui-components.md), [ADR-003](adr-ui-views.md)). Views are written as Java classes with `@Route`, and reusable components are Java-side Vaadin components. However, the application also has a **Hilla frontend layer** (`src/main/frontend/`) where React views and components live (e.g., the `HomeView.tsx` index view).
+The application uses **Vaadin 25 with Hilla** for its UI layer ([ADR-003](adr-003-vaadin-hilla-ui.md), [ADR-004](adr-004-flow-hilla-routing.md)). Views are written as Java classes with `@Route`, and reusable components are Java-side Vaadin components. However, the application also has a **Hilla frontend layer** (`src/main/frontend/`) where React views and components live (e.g., the `HomeView.tsx` index view).
 
 As the frontend grows, we need a way to:
 
@@ -400,7 +400,7 @@ import { StatusBadge } from "Frontend/components/StatusBadge";
 <StatusBadge status={agentStatus} label={agentName} />
 ```
 
-For Flow (Java) views, use the Vaadin component equivalents (see [ADR-002](adr-ui-components.md)).
+For Flow (Java) views, use the Vaadin component equivalents (see [ADR-003](adr-003-vaadin-hilla-ui.md)).
 
 #### Step 7 — Write Browserless Tests (If Applicable)
 
@@ -419,7 +419,7 @@ class StatusBadgeTest extends BrowserlessTest {
 }
 ```
 
-> **See:** [ADR-002](adr-ui-components.md) for browserless testing patterns.
+> **See:** [ADR-003](adr-003-vaadin-hilla-ui.md) for browserless testing patterns.
 
 ### Quick-Reference: Component vs. Story Checklist
 
@@ -471,7 +471,7 @@ The testing module provides:
 | **Flow component** | `src/test/java/**/components` | `BrowserlessTest` (`BrowserlessTest` + Mockito) |
 | **View E2E** | `tests/e2e/*.spec.ts` | Playwright + Spring Boot server |
 
-> **Note:** Browserless testing (`BrowserlessTest`) is the preferred approach for testing Java-side Flow components and views. It runs 100× faster than Playwright and provides direct Java API access. See [ADR-002](adr-ui-components.md) for details.
+> **Note:** Browserless testing (`BrowserlessTest`) is the preferred approach for testing Java-side Flow components and views. It runs 100× faster than Playwright and provides direct Java API access. See [ADR-003](adr-003-vaadin-hilla-ui.md) for details.
 
 ### Service Mocking Workaround — Graceful Degradation
 
@@ -802,14 +802,13 @@ export const WithThreeAgents: Story = {
 - Components using `@vaadin/hilla-react-signals` (`useSignal`) work correctly in Storybook because they are pure React hooks with no server dependency.
 - Components that call Hilla endpoints (generated in `Frontend/generated/endpoints.ts`) should be mocked using `vi.mock()` in the story file — **no running server required**.
 - The `Frontend/generated/endpoints.ts` module is regenerated on every `mvn vaadin:build-frontend` run. Mocks must match the current generated API shape. If the endpoint signature changes, update the corresponding story mocks.
-- For Flow views (Java `@Route` components), Storybook cannot render them — they require the full Vaadin server. Use **BrowserlessTest** for Flow component testing and **Playwright E2E** for full-page integration. See [ADR-002](adr-ui-components.md) and [ADR-003](adr-ui-views.md).
+- For Flow views (Java `@Route` components), Storybook cannot render them — they require the full Vaadin server. Use **BrowserlessTest** for Flow component testing and **Playwright E2E** for full-page integration. See [ADR-003](adr-003-vaadin-hilla-ui.md) and [ADR-004](adr-004-flow-hilla-routing.md).
 - **Graceful degradation workaround** — Components that call Hilla endpoints can use `try/catch` with local fallback state updates instead of `vi.mock()`. This is demonstrated by the `Counter` component in the layout drawer. Use this for simple stateful components or demo widgets; prefer `vi.mock()` for complex components with multiple endpoint calls. See the "Service Mocking Workaround" section above.
 
 ## See Also
 
-- [ADR-002: Vaadin/Hilla UI Components](adr-ui-components.md) — Java-side Vaadin components and views
-- [ADR-003: UI Views and Routing](adr-ui-views.md) — View routing, Hilla/Flow coexistence, navigation layout
-- [ADR: Hilla Setup Guide](adr-hilla-setup-guide.md) — Hilla configuration and project initialization
+- [ADR-003: Vaadin/Hilla UI Components](adr-003-vaadin-hilla-ui.md) — Java-side Vaadin components and views
+- [ADR-004: Flow/Hilla Routing](adr-004-flow-hilla-routing.md) — View routing, Hilla/Flow coexistence, navigation layout
 
 ## References
 

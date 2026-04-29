@@ -19,7 +19,7 @@ The application has grown to include multiple layers of complexity:
 - **External services** (llama.cpp)
 - **Reactive pipelines** (Project Reactor Flux/mono)
 
-Previous testing guidance was scattered across individual ADRs (`adr-rest-adapters`, `adr-multi-db-support`, `adr-ui-components`, `adr-ui-hilla-component-development`, `adr-ui-views`) with no single source of truth. This led to:
+Previous testing guidance was scattered across individual ADRs (`adr-002-rest-adapters`, `adr-003-vaadin-hilla-ui`, `adr-004-flow-hilla-routing`, `adr-005-storybook`) with no single source of truth. This led to:
 
 - **Inconsistent test annotations**: Some tests used `@SpringBootTest` without `classes=`, loading the full application context and persisting YAML agents to the database
 - **Unclear test tier boundaries**: Developers unsure whether to use `@DataJpaTest`, `@WebMvcTest`, or `@SpringBootTest`

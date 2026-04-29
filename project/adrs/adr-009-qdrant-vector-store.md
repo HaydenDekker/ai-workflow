@@ -1,4 +1,4 @@
-# ADR: Qdrant Vector Store Integration with Spring AI
+# ADR-009: Qdrant Vector Store
 
 ## Context
 
@@ -433,7 +433,7 @@ docker run -p 6334:6334 qdrant/qdrant
 
 ## See Also
 
-For detailed llama.cpp integration setup, see: [adr-chat-model-setup-for-llama-cpp.md](adr-chat-model-setup-for-llama-cpp.md)
+For detailed llama.cpp integration setup, see: [ADR-010: llama.cpp](adr-010-llama-cpp.md)
 
 ## References
 

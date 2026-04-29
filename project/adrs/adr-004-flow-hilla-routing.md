@@ -1,4 +1,4 @@
-# ADR-003: UI Views and Routing
+# ADR-004: Flow/Hilla Routing
 
 ## Date
 
@@ -140,7 +140,7 @@ public class AgentDetailDialog extends Dialog {
 }
 ```
 
-**Why views must own service access** (from [ADR-002](adr-ui-components.md#0-service-access-boundary)):
+**Why views must own service access** (from [ADR-003: Vaadin/Hilla UI Components](adr-003-vaadin-hilla-ui.md#0-service-access-boundary)):
 
 1. **Threading**: Reactive callbacks run on arbitrary threads. `UI.getCurrent()` is only valid on the Vaadin UI thread. Views control `UI.access()` wrapping; components cannot.
 2. **Reactor safety**: `Mono.empty()` completes without emitting — `subscribe(value -> ...)` is **never called**. This caused multiple bugs when reactive chains were embedded in components.
@@ -316,7 +316,7 @@ agentInfoService.deleteAgent(id)
 >
 > When a service operation doesn't return meaningful data but needs to trigger the subscriber for side effects (e.g., reloading a grid), return `Mono.just(unitValue)` or use `Mono.fromRunnable(() -> {...})`.
 >
-> See [ADR-002](adr-ui-components.md) for the full Service Access Boundary rules.
+> See [ADR-003: Vaadin/Hilla UI Components](adr-003-vaadin-hilla-ui.md) for the full Service Access Boundary rules.
 
 ### Testing Strategy
 
@@ -326,7 +326,7 @@ agentInfoService.deleteAgent(id)
 | **Browserless** | `BrowserlessTest` navigates to view and queries components | `AgentCreationDialogTest` verifies dialog fields via `$()` queries |
 | **E2E** | Playwright navigates via URL and verifies content | `navigation.spec.ts` checks links render and navigation works |
 
-Browserless tests (see [ADR-002](adr-ui-components.md) for details) are preferred for view-level testing because they:
+Browserless tests (see [ADR-003: Vaadin/Hilla UI Components](adr-003-vaadin-hilla-ui.md) for details) are preferred for view-level testing because they:
 - Run in milliseconds with no browser or servlet container
 - Provide direct Java API access to view components
 - Fail immediately on misconfiguration (no timeout waits)
@@ -463,7 +463,6 @@ This ADR represents the current state of the application. No migration is needed
 
 ## See Also
 
-- [ADR-001: REST Adapters](adr-rest-adapters.md) — REST API layer
-- [ADR-002: Vaadin/Hilla UI Components](adr-ui-components.md) — Component building principles, lifecycle management, CSS theming
-- [ADR: Application Observability with LLM Health Monitoring](adr-application-observability.md) — Backend service displayed by the ObservabilityView
-- [ADR: Hilla Setup Guide](adr-hilla-setup-guide.md) — Hilla configuration and file router basics
+- [ADR-002: REST Adapters](adr-002-rest-adapters.md) — REST API layer
+- [ADR-003: Vaadin/Hilla UI Components](adr-003-vaadin-hilla-ui.md) — Component building principles, lifecycle management, CSS theming
+- [ADR-011: Observability](adr-011-observability.md) — Backend service displayed by the ObservabilityView
