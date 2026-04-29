@@ -50,7 +50,7 @@ public class ScannerRegistryTest {
         assertThat(info).isNotNull();
         assertThat(info.agentId()).isEqualTo(agentId);
         assertThat(info.targetDirectory()).isEqualTo(targetDir);
-        assertThat(info.status()).isEqualTo("EMITTING_ALL");
+        assertThat(info.status()).isEqualTo("EMITTING_INITIAL");
         assertThat(info.createdAt()).isNotNull();
     }
 
@@ -121,7 +121,7 @@ public class ScannerRegistryTest {
         String targetDir = tempDir.toString();
 
         ScannerInfo created = registry.createForAgent(agentId, targetDir, 5);
-        assertThat(created.status()).isEqualTo("EMITTING_ALL");
+        assertThat(created.status()).isEqualTo("EMITTING_INITIAL");
 
         // Refresh should update the status
         registry.refreshAgent(agentId);
@@ -154,27 +154,6 @@ public class ScannerRegistryTest {
         var flux = registry.getScannerFlux("non-existent-agent");
         assertThat(flux).isNotNull();
         // Flux should be empty (no errors)
-    }
-
-    @Test
-    public void givenDummyData_ExpectSeededCorrectly() {
-        registry.seedDummyData();
-
-        List<ScannerInfo> scanners = registry.listAll();
-        assertThat(scanners).hasSize(4);
-
-        List<String> agentIds = scanners.stream().map(ScannerInfo::agentId).toList();
-        assertThat(agentIds).containsExactlyInAnyOrder(
-                "agent-alpha", "agent-beta", "agent-gamma", "agent-delta");
-    }
-
-    @Test
-    public void givenAlreadySeeded_ExpectNoDuplicateDummyData() {
-        registry.seedDummyData();
-        int firstSize = registry.listAll().size();
-
-        registry.seedDummyData();
-        assertThat(registry.listAll().size()).isEqualTo(firstSize);
     }
 
     @Test
