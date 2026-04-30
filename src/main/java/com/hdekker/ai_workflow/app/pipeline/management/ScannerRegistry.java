@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.EmissionDelayConfig;
-import com.hdekker.ai_workflow.files.FileSystemScannerAdapter;
+import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
@@ -33,7 +33,7 @@ import java.util.function.Consumer;
 
 /**
  * Full implementation of the scanner registry.
- * Manages the lifecycle of {@link FileSystemScannerAdapter} instances, one per agent.
+ * Manages the lifecycle of {@link Scanner} instances, one per agent.
  * <p>
  * Key responsibilities:
  * <ul>
@@ -88,7 +88,7 @@ public class ScannerRegistry implements DisposableBean {
      * Keyed by agentId (one-to-one: each scanner owned by exactly one agent).
      */
     private record ScannerMetadata(
-            FileSystemScannerAdapter scanner,
+            Scanner scanner,
             String agentId,
             String folderPath,
             String status,
@@ -202,7 +202,7 @@ public class ScannerRegistry implements DisposableBean {
 
         // Create the scanner adapter (pass agentId for metric tagging + observer + event publisher)
         final String agentIdForAdapter = agentId;
-        FileSystemScannerAdapter scanner = new FileSystemScannerAdapter(
+        Scanner scanner = new Scanner(
                 agentId,
                 targetDirectory,
                 delay,

@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
-import com.hdekker.ai_workflow.files.FileSystemScannerAdapter;
+import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
@@ -73,7 +73,7 @@ public class AgentPipelineTest {
     private SetupResult setupPipeline(Path inputDir, Path outputDir) throws Exception {
         FileMetadataDatabase db = createSmartDb();
         ScannerObserverUseCase observer = new ScannerObserverUseCase();
-        FileSystemScannerAdapter scanner = new FileSystemScannerAdapter("test-agent",
+        Scanner scanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
                 db,
@@ -134,7 +134,7 @@ public class AgentPipelineTest {
      * Helper record to return all setup pieces from setupPipeline.
      */
     private record SetupResult(
-            FileSystemScannerAdapter scanner,
+            Scanner scanner,
             FileMetadataDatabase db,
             CopyOnWriteArrayList<String> prompts,
             CopyOnWriteArrayList<PromptResponse> responses,
@@ -244,7 +244,7 @@ public class AgentPipelineTest {
 
         FileMetadataDatabase modDb = createSmartDb();
         ScannerObserverUseCase modObserver = new ScannerObserverUseCase();
-        FileSystemScannerAdapter modScanner = new FileSystemScannerAdapter("test-agent",
+        Scanner modScanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
                 modDb,
@@ -332,7 +332,7 @@ public class AgentPipelineTest {
 
         FileMetadataDatabase multiDb = createSmartDb();
         ScannerObserverUseCase multiObserver = new ScannerObserverUseCase();
-        FileSystemScannerAdapter multiScanner = new FileSystemScannerAdapter("test-agent",
+        Scanner multiScanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
                 multiDb,

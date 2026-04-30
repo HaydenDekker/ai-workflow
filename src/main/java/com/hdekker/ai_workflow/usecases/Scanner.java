@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.usecases;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,27 +13,29 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hdekker.ai_workflow.files.FileComparator;
+import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileMetadataStore;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
-
 import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.files.FileScanner;
+import com.hdekker.ai_workflow.files.NativeFileWatcherAdapter;
+
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 /**
- * Parameterised file scanner adapter for use with {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}.
+ * Domain scanner — the central concept for file watching.
  * <p>
- * This adapter accepts its folder path and delay at construction time, enabling one adapter per agent.
- * <p>
- * Lifecycle is managed externally: the adapter uses a native NIO WatchService pipeline
- * for watching the target directory.
+ * Owns status, idle timer, error handling, metrics publishing, DTO conversion,
+ * and the FileHash/FileHistory business rules. Composes {@link com.hdekker.ai_workflow.files.NativeFileWatcherAdapter}.
  */
-public class FileSystemScannerAdapter implements FileScanner {
+public class Scanner implements FileScanner {
 
-    private static final Logger log = LoggerFactory.getLogger(FileSystemScannerAdapter.class);
+    private static final Logger log = LoggerFactory.getLogger(Scanner.class);
 
     private final String folderPath;
     private final String effectiveAgentId;
@@ -41,7 +43,7 @@ public class FileSystemScannerAdapter implements FileScanner {
     private final Duration emissionDelay;
     private final FileMetadataStore fileMetadataStore;
 
-    private final NativeFileWatcher nativeFileWatcher;
+    private final NativeFileWatcherAdapter nativeFileWatcher;
     private final ScannerObserverUseCase observer;
     private volatile boolean disposed = false;
     private final Consumer<String> onErrorCallback;
@@ -51,7 +53,7 @@ public class FileSystemScannerAdapter implements FileScanner {
     private volatile java.util.concurrent.ScheduledFuture<?> filteredResetTask;
 
     /**
-     * Creates a new parameterised scanner adapter.
+     * Creates a new Scanner.
      *
      * @param agentId             owning agent's ID (used for metric tagging)
      * @param folderPath          absolute path to watch
@@ -64,7 +66,7 @@ public class FileSystemScannerAdapter implements FileScanner {
      * @param onStatusChanged     callback invoked when scanner status changes
      * @param onEmission          callback invoked when a file is emitted (updates idle timer)
      */
-    public FileSystemScannerAdapter(String agentId,
+    public Scanner(String agentId,
                                      String folderPath,
                                      Duration delayBetweenReads,
                                      Duration emissionDelay,
@@ -92,8 +94,8 @@ public class FileSystemScannerAdapter implements FileScanner {
             return t;
         });
 
-        // Pass callbacks to NativeFileWatcher instead of Micrometer types
-        this.nativeFileWatcher = new NativeFileWatcher(
+        // Pass callbacks to NativeFileWatcherAdapter instead of Micrometer types
+        this.nativeFileWatcher = new NativeFileWatcherAdapter(
                 Path.of(folderPath), delayBetweenReads, emissionDelay, fileMetadataStore,
                 aId -> observer.recordDiscovery(agentIdForCallbacks),
                 aId -> observer.recordUnchanged(agentIdForCallbacks),
@@ -138,7 +140,7 @@ public class FileSystemScannerAdapter implements FileScanner {
      * @param observer            scanner observer use case for metrics tracking
      * @param metricsEventPublisher  callback to publish metrics change events
      */
-    public FileSystemScannerAdapter(String agentId,
+    public Scanner(String agentId,
                                      String folderPath,
                                      Duration delayBetweenReads,
                                      FileMetadataStore fileMetadataStore,

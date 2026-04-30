@@ -7,7 +7,7 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 /**
  * General interface for file metadata storage and retrieval.
  * <p>
- * Used by {@link NativeFileWatcher} for change detection and persistence,
+ * Used by {@link NativeFileWatcherAdapter} for change detection and persistence,
  * allowing both real implementations and test doubles.
  */
 public interface FileMetadataStore {

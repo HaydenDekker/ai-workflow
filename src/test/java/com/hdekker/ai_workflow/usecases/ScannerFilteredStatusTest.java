@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
+import com.hdekker.ai_workflow.files.FileHash;
+import com.hdekker.ai_workflow.files.FileMetadataStore;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 /**
@@ -32,9 +34,9 @@ import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
  * 2. The FILTERED status is triggered during initSource() for pre-existing files
  * 3. The FILTERED status is triggered during resetToFullScan() for unchanged files
  */
-public class FileSystemScannerAdapterFilteredStatusTest {
+public class ScannerFilteredStatusTest {
 
-    private static final Logger log = LoggerFactory.getLogger(FileSystemScannerAdapterFilteredStatusTest.class);
+    private static final Logger log = LoggerFactory.getLogger(ScannerFilteredStatusTest.class);
 
     @TempDir
     Path tempDir;
@@ -43,7 +45,7 @@ public class FileSystemScannerAdapterFilteredStatusTest {
     private FileMetadataStore fileMetadataStore;
     private ScannerObserverUseCase observer;
 
-    private FileSystemScannerAdapter adapter;
+    private Scanner adapter;
     private CopyOnWriteArrayList<String> statusChanges;
     private String agentId;
 
@@ -96,7 +98,7 @@ public class FileSystemScannerAdapterFilteredStatusTest {
         });
 
         // Step 3: Create adapter with status change callback
-        adapter = new FileSystemScannerAdapter(
+        adapter = new Scanner(
                 agentId,
                 inputDir.toString(),
                 Duration.ofMillis(500),
@@ -151,7 +153,7 @@ public class FileSystemScannerAdapterFilteredStatusTest {
         });
 
         // Step 3: Create adapter with status callback
-        adapter = new FileSystemScannerAdapter(
+        adapter = new Scanner(
                 agentId,
                 inputDir.toString(),
                 Duration.ofMillis(500),
@@ -204,7 +206,7 @@ public class FileSystemScannerAdapterFilteredStatusTest {
         when(fileMetadataStore.findById(any())).thenReturn(Optional.empty());
 
         // Step 3: Create adapter with status callback
-        adapter = new FileSystemScannerAdapter(
+        adapter = new Scanner(
                 agentId,
                 inputDir.toString(),
                 Duration.ofMillis(500),

@@ -31,7 +31,7 @@ public class FileSystemSimplePollerFluxAdapterTest {
 	@TempDir
 	Path tempDirectory;
 
-	private NativeFileWatcher fileWatcher;
+	private NativeFileWatcherAdapter fileWatcher;
 
 	@AfterEach
 	void tearDown() {
@@ -60,7 +60,7 @@ public class FileSystemSimplePollerFluxAdapterTest {
 	public Flux<FileHistory> createFluxWithNativeWatcher(File folder, FileMetadataStore database) {
 		Duration pollInterval = Duration.ofMillis(500);
 		ScannerObserverUseCase observer = new ScannerObserverUseCase();
-		NativeFileWatcher watcher = new NativeFileWatcher(
+		NativeFileWatcherAdapter watcher = new NativeFileWatcherAdapter(
 				folder.toPath(), pollInterval, database,
 				agentId -> observer.recordDiscovery(agentId),
 				agentId -> observer.recordUnchanged(agentId),

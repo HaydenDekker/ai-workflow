@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  * Central use case for scanner metrics observation.
  * <p>
  * Replaces scattered Micrometer-based metrics in {@code FileSystemScannerAdapter},
- * {@code NativeFileWatcher}, and {@code ScannerMetricsService} with a single,
+ * {@code NativeFileWatcherAdapter}, and {@code ScannerMetricsService} with a single,
  * thread-safe, in-memory metrics store keyed by agentId.
  * <p>
  * Core responsibilities:

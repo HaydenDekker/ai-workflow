@@ -21,22 +21,22 @@ import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 /**
- * Unit tests for {@link NativeFileWatcher} functional callbacks instead of Micrometer types.
+ * Unit tests for {@link NativeFileWatcherAdapter} functional callbacks instead of Micrometer types.
  * <p>
  * Verifies that:
  * 1. onDiscovery callback is invoked during initial scan
  * 2. onUnchanged callback is invoked for unchanged files
  * 3. onFileCount callback is invoked after scan completes
  */
-public class NativeFileWatcherMetricsTest {
+public class NativeFileWatcherAdapterMetricsTest {
 
-    private static final Logger log = LoggerFactory.getLogger(NativeFileWatcherMetricsTest.class);
+    private static final Logger log = LoggerFactory.getLogger(NativeFileWatcherAdapterMetricsTest.class);
 
     @TempDir
     Path tempDir;
 
     private ScannerObserverUseCase observer;
-    private NativeFileWatcher watcher;
+    private NativeFileWatcherAdapter watcher;
     private InMemoryFileMetadataStore store;
 
     @BeforeEach
@@ -44,7 +44,7 @@ public class NativeFileWatcherMetricsTest {
         observer = new ScannerObserverUseCase();
         store = new InMemoryFileMetadataStore();
         
-        watcher = new NativeFileWatcher(
+        watcher = new NativeFileWatcherAdapter(
                 tempDir, Duration.ofMillis(500), store,
                 agentId -> observer.recordDiscovery(agentId),
                 agentId -> observer.recordUnchanged(agentId),
@@ -83,7 +83,7 @@ public class NativeFileWatcherMetricsTest {
             else if ("file_count".equals(e.getType())) fileCounts.add(e.getAgentId());
         });
 
-        NativeFileWatcher testWatcher = new NativeFileWatcher(
+        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
                 tempDir, Duration.ofMillis(500), store,
                 agentId -> trackingObserver.recordDiscovery(agentId),
                 agentId -> trackingObserver.recordUnchanged(agentId),
@@ -112,7 +112,7 @@ public class NativeFileWatcherMetricsTest {
             if ("discovered".equals(e.getType())) discoveredAgents.add(e.getAgentId());
         });
 
-        NativeFileWatcher testWatcher = new NativeFileWatcher(
+        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
                 tempDir, Duration.ofMillis(500), store,
                 agentId -> trackingObserver.recordDiscovery(agentId),
                 agentId -> trackingObserver.recordUnchanged(agentId),
@@ -133,7 +133,7 @@ public class NativeFileWatcherMetricsTest {
         // Create a file before starting the watcher
         Files.writeString(tempDir.resolve("unchanged.txt"), "unchanged content");
 
-        NativeFileWatcher testWatcher = new NativeFileWatcher(
+        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
                 tempDir, Duration.ofMillis(500), store,
                 agentId -> observer.recordDiscovery(agentId),
                 agentId -> observer.recordUnchanged(agentId),
@@ -172,7 +172,7 @@ public class NativeFileWatcherMetricsTest {
         Files.writeString(tempDir.resolve("file2.txt"), "content 2");
         Files.writeString(tempDir.resolve("file3.txt"), "content 3");
 
-        NativeFileWatcher testWatcher = new NativeFileWatcher(
+        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
                 tempDir, Duration.ofMillis(500), store,
                 agentId -> observer.recordDiscovery(agentId),
                 agentId -> observer.recordUnchanged(agentId),
@@ -202,7 +202,7 @@ public class NativeFileWatcherMetricsTest {
             }
         });
 
-        NativeFileWatcher testWatcher = new NativeFileWatcher(
+        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
                 tempDir, Duration.ofMillis(500), store,
                 agentId -> trackingObserver.recordDiscovery(agentId),
                 agentId -> trackingObserver.recordUnchanged(agentId),

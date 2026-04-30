@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,16 +26,16 @@ import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 /**
- * Unit tests for {@link FileSystemScannerAdapter} metrics instrumentation via {@link ScannerObserverUseCase}.
+ * Unit tests for {@link Scanner} metrics instrumentation via {@link ScannerObserverUseCase}.
  * <p>
  * Verifies that:
  * 1. recordDiscovery is called on file discovery
  * 2. recordUnchanged is called on unchanged files
  * 3. updateFileCount is called after scan completes
  */
-public class FileSystemScannerAdapterMetricsTest {
+public class ScannerMetricsTest {
 
-    private static final Logger log = LoggerFactory.getLogger(FileSystemScannerAdapterMetricsTest.class);
+    private static final Logger log = LoggerFactory.getLogger(ScannerMetricsTest.class);
 
     @TempDir
     Path tempDir;
@@ -43,7 +43,7 @@ public class FileSystemScannerAdapterMetricsTest {
     private Path inputDir;
     private FileMetadataDatabase fileMetadataDatabase;
     private ScannerObserverUseCase observer;
-    private FileSystemScannerAdapter adapter;
+    private Scanner adapter;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -74,7 +74,7 @@ public class FileSystemScannerAdapterMetricsTest {
     void givenEmptyDirectory_WhenAdapterCreated_ThenFileCountIsZero() throws Exception {
         log.info("Test: file count is zero for empty directory");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
                 fileMetadataDatabase,
@@ -96,7 +96,7 @@ public class FileSystemScannerAdapterMetricsTest {
         Path testFile = inputDir.resolve("test-metrics.txt");
         Files.writeString(testFile, "test content for metrics");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
@@ -120,7 +120,7 @@ public class FileSystemScannerAdapterMetricsTest {
         Path testFile = inputDir.resolve("test-unchanged.txt");
         Files.writeString(testFile, "test content for unchanged");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
@@ -149,7 +149,7 @@ public class FileSystemScannerAdapterMetricsTest {
         Files.writeString(inputDir.resolve("file2.txt"), "content 2");
         Files.writeString(inputDir.resolve("file3.txt"), "content 3");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
@@ -172,7 +172,7 @@ public class FileSystemScannerAdapterMetricsTest {
         // Create initial files
         Files.writeString(inputDir.resolve("initial.txt"), "initial content");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
@@ -203,7 +203,7 @@ public class FileSystemScannerAdapterMetricsTest {
         Files.writeString(inputDir.resolve("file-a.txt"), "content a");
         Files.writeString(inputDir.resolve("file-b.txt"), "content b");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,
@@ -236,7 +236,7 @@ public class FileSystemScannerAdapterMetricsTest {
         // Create a test file
         Files.writeString(inputDir.resolve("test-event.txt"), "test content");
 
-        adapter = new FileSystemScannerAdapter("test-agent",
+        adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
                 fileMetadataDatabase,

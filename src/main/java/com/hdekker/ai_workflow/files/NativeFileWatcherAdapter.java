@@ -37,9 +37,9 @@ import reactor.core.publisher.Sinks;
  * Lifecycle is managed externally: call {@link #start()} to begin watching
  * and {@link #stop()} to clean up resources.
  */
-public class NativeFileWatcher {
+public class NativeFileWatcherAdapter {
 
-	private static final Logger log = LoggerFactory.getLogger(NativeFileWatcher.class);
+	private static final Logger log = LoggerFactory.getLogger(NativeFileWatcherAdapter.class);
 
 	private final Path directory;
 	private final Duration pollInterval;
@@ -89,7 +89,7 @@ public class NativeFileWatcher {
 	 * @param agentId                    owning agent ID (for error reporting)
 	 * @param onError                    callback invoked when an error occurs
 	 */
-	public NativeFileWatcher(Path directory,
+	public NativeFileWatcherAdapter(Path directory,
 			Duration pollInterval,
 			Duration emissionDelay,
 			FileMetadataStore fileMetadataStore,
@@ -131,7 +131,7 @@ public class NativeFileWatcher {
 	 * @param onFileCount                callback invoked when file count changes
 	 * @param emitCallback               callback invoked after each file emission
 	 */
-	public NativeFileWatcher(Path directory,
+	public NativeFileWatcherAdapter(Path directory,
 			Duration pollInterval,
 			FileMetadataStore fileMetadataStore,
 			Consumer<String> onDiscovery,
@@ -383,7 +383,7 @@ public class NativeFileWatcher {
 	/**
 	 * Flush any buffered history if the emission delay has elapsed.
 	 */
-	void flushBufferedEmission() {
+	public void flushBufferedEmission() {
 		if (latestBufferedHistory == null) {
 			return;
 		}
@@ -549,7 +549,7 @@ public class NativeFileWatcher {
 	 *
 	 * @return true if at least one file was buffered during the initial scan
 	 */
-	boolean scanBufferedAnyFile() {
+	public boolean scanBufferedAnyFile() {
 		return scanBufferedAnyFile;
 	}
 }
