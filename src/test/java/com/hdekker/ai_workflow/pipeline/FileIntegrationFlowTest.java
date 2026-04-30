@@ -3,7 +3,6 @@ package com.hdekker.ai_workflow.pipeline;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.AfterEach;
@@ -57,9 +56,6 @@ public class FileIntegrationFlowTest {
 
     @MockitoBean
     private ChatClient mockChatClient;
-
-    @Autowired
-    private ChatClientTestConfig chatClientTestConfig;
 
     @Autowired
     private AgentLifecycleUseCase dynamicAgentManager;

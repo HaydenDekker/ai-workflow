@@ -1,10 +1,8 @@
 package com.hdekker.ai_workflow.app.pipeline.management;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -45,7 +43,6 @@ public class ScannerRegistry implements DisposableBean {
     private static final Logger log = LoggerFactory.getLogger(ScannerRegistry.class);
 
     private final ConcurrentHashMap<String, Scanner> scanners = new ConcurrentHashMap<>();
-    private final ApplicationContext applicationContext;
     private final FileMetadataDatabase fileMetadataDatabase;
     private final ScannerObserverUseCase observer;
     private final EmissionDelayConfig emissionDelayConfig;
@@ -66,7 +63,6 @@ public class ScannerRegistry implements DisposableBean {
             FileMetadataDatabase fileMetadataDatabase,
             ScannerObserverUseCase observer,
             EmissionDelayConfig emissionDelayConfig) {
-        this.applicationContext = applicationContext;
         this.fileMetadataDatabase = fileMetadataDatabase;
         this.observer = observer;
         this.emissionDelayConfig = emissionDelayConfig != null

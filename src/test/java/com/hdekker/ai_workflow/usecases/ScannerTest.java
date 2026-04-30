@@ -6,12 +6,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -29,11 +26,7 @@ import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
-
 import reactor.core.publisher.Flux;
-import reactor.test.StepVerifier;
 
 /**
  * Integration tests for {@link Scanner} with real file system operations.
@@ -56,7 +49,6 @@ public class ScannerTest {
     Path tempDir;
 
     private Path inputDir;
-    private Path outputDir;
     private FileMetadataDatabase fileMetadataDatabase;
     private ScannerObserverUseCase observer;
 
@@ -67,12 +59,12 @@ public class ScannerTest {
     @BeforeEach
     void setUp() throws Exception {
         inputDir = Files.createDirectory(tempDir.resolve("input"));
-        outputDir = Files.createDirectory(tempDir.resolve("output"));
+        Files.createDirectory(tempDir.resolve("output"));
         fileMetadataDatabase = mock(FileMetadataDatabase.class);
         observer = new ScannerObserverUseCase();
         // Mock save to store files for comparison checks
         doAnswer(invocation -> {
-            FileMetadata fm = invocation.getArgument(0);
+            invocation.getArgument(0);
             return null;
         }).when(fileMetadataDatabase).save(any(FileMetadata.class));
 
@@ -100,8 +92,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         assertThat(adapter).isNotNull();
         assertThat(adapter.getFolderPath()).isEqualTo(inputDir.toString());
@@ -121,8 +114,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         assertThat(adapter.isDisposed()).isFalse();
 
@@ -142,8 +136,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         adapter.destroy();
         
@@ -162,8 +157,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         long startTime = System.currentTimeMillis();
 
@@ -187,8 +183,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Directory is empty - no files to scan
         adapter.resetToFullScan();
@@ -212,8 +209,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Subscribe multiple times - should not throw exceptions
         List<Throwable> errors = new CopyOnWriteArrayList<>();
@@ -252,8 +250,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Destroy first
         adapter.destroy();
@@ -281,8 +280,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         assertThat(adapter.getFolderPath()).isEqualTo(inputDir.toString());
 
@@ -296,8 +296,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         assertThat(adapter.isDisposed()).isFalse();
 
@@ -315,8 +316,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Collect emitted files
         List<FileHistory> emitted = new CopyOnWriteArrayList<>();
@@ -352,8 +354,9 @@ public class ScannerTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Create a test file after adapter starts
         Path testFile = inputDir.resolve("watch-create.txt");

@@ -21,7 +21,6 @@ import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
@@ -200,8 +199,7 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         // which skips validation for backward compatibility.
         // The real validation happens in production where null is rejected.
         AgentEntity activeEntity = createActiveEntity("no-target-1", "No Target Agent", "DYNAMIC", null);
-        // AgentDefinition with null targetDirectory
-        AgentDefinition defWithoutTarget = new AgentDefinition(
+        new AgentDefinition(
                 ".*\\.txt", "No Target Agent", "prompt", "Map", "structure", "template", null);
         
         when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));

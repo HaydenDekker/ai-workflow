@@ -65,8 +65,6 @@ public class ScannerListView extends VerticalLayout
     private ProgressBar loadingIndicator;
     private ScheduledExecutorService refreshScheduler;
     private Consumer<ScannerMetricsChangedEvent> refreshCallback;
-    private volatile boolean quietRefreshScheduled = false;
-
     @Autowired
     public ScannerListView(ScannerService scannerService, ScannerObserverUseCase observer) {
         this.scannerService = scannerService;
@@ -231,7 +229,9 @@ public class ScannerListView extends VerticalLayout
      * Helper Div that renders its children (dot + text) horizontally.
      */
     private static class StatusWrapper extends Div {
-        public StatusWrapper(Div dot, Span text) {
+        private static final long serialVersionUID = -2932962928480190387L;
+
+		public StatusWrapper(Div dot, Span text) {
             super(dot, text);
             getElement().getStyle().set("display", "flex");
             getElement().getStyle().set("align-items", "center");

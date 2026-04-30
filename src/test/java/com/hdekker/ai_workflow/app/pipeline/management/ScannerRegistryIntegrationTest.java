@@ -7,14 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,13 +16,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;

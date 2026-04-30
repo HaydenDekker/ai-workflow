@@ -202,8 +202,7 @@ public class AgentPersistenceServiceTest {
 				"output/{filename}",
 				"/tmp/large-body");
 
-		// Act
-		AgentEntity entity = persistenceService.save("large-1", def, "DYNAMIC");
+		persistenceService.save("large-1", def, "DYNAMIC");
 		Optional<AgentDefinition> retrieved = persistenceService.getDefinition("large-1");
 
 		// Assert

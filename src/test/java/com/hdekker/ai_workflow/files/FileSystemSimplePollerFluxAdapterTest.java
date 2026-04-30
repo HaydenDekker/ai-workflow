@@ -10,7 +10,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -73,9 +72,10 @@ public class FileSystemSimplePollerFluxAdapterTest {
                 folder.toString(),
                 folder.toString(),
                 Duration.ofMillis(500),
+                Duration.ZERO,
                 database,
-                observer,
-                null);
+                observer
+                );
         return scanner.flux();
     }
 

@@ -6,11 +6,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.AfterEach;
@@ -77,8 +75,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(5),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Metrics should be zero for empty directory
         var snapshot = observer.getMetrics("test-agent");
@@ -99,8 +98,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Wait for initial scan to complete
         Thread.sleep(1000);
@@ -124,8 +124,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Wait for initial scan
         Thread.sleep(1000);
@@ -155,8 +156,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Wait for initial scan to complete
         Thread.sleep(1000);
@@ -178,8 +180,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Wait for initial scan
         Thread.sleep(1000);
@@ -209,8 +212,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Wait for initial scan
         Thread.sleep(1000);
@@ -242,8 +246,9 @@ public class ScannerMetricsTest {
         adapter = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofSeconds(1),
+                Duration.ZERO,
                 fileMetadataDatabase,
-                observer, null);
+                observer);
 
         // Wait for initial scan
         Thread.sleep(1000);

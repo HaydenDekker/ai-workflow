@@ -10,7 +10,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
@@ -75,7 +74,7 @@ public class NativeFileWatcherAdapterMetricsTest {
 
         watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
 
-        CountDownLatch latch = new CountDownLatch(1);
+        new CountDownLatch(1);
         CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
 
         watcher.flux().subscribe(events::add, e -> {}, () -> {});

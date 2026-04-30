@@ -8,8 +8,6 @@ import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +18,6 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.NativeFileWatcherAdapter;
-
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -48,7 +44,6 @@ public class Scanner implements FileScanner {
 
     private final String folderPath;
     private final String effectiveAgentId;
-    private final Duration delayBetweenReads;
     private final Duration emissionDelay;
     private final FileMetadataStore fileMetadataStore;
     private final FileComparator fileComparator;
@@ -100,7 +95,6 @@ public class Scanner implements FileScanner {
                                      ScannerObserverUseCase observer) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
-        this.delayBetweenReads = delayBetweenReads;
         this.emissionDelay = emissionDelay;
         this.fileMetadataStore = fileMetadataStore;
         this.fileComparator = new FileComparator(fileMetadataStore);
@@ -136,29 +130,6 @@ public class Scanner implements FileScanner {
         log.debug("Scanner created for agent {} (folder={})", effectiveAgentId, folderPath);
     }
 
-    /**
-     * Backward-compatible constructor for tests.
-     * <p>
-     * Uses zero emission delay.
-     *
-     * @param agentId             owning agent's ID (used for metric tagging)
-     * @param folderPath          absolute path to watch
-     * @param delayBetweenReads   poll interval for the watch service
-     * @param fileMetadataStore   metadata for change detection
-     * @param observer            scanner observer use case for metrics and UI push
-     * @param metricsEventPublisher  unused, retained for API compatibility
-     */
-    @Deprecated
-    public Scanner(String agentId,
-                                     String folderPath,
-                                     Duration delayBetweenReads,
-                                     FileMetadataStore fileMetadataStore,
-                                     ScannerObserverUseCase observer,
-                                     Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
-        this(agentId, folderPath, delayBetweenReads, Duration.ZERO, fileMetadataStore, observer);
-        // Tests using this constructor need the watcher to run.
-        initSource(this.effectiveAgentId);
-    }
 
     /**
      * Subscribe to raw events from the adapter and apply business logic.
@@ -298,7 +269,6 @@ public class Scanner implements FileScanner {
             filteredResetTask.cancel(false);
         }
         notifyStatusChange(ScannerStatus.FILTERED);
-        final String agentIdForReset = effectiveAgentId;
         filteredResetTask = filteredResetScheduler.schedule(
                 () -> notifyStatusChange(ScannerStatus.IDLE), 2, TimeUnit.SECONDS);
     }

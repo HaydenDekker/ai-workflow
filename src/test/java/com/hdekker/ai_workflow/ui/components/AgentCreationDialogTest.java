@@ -142,7 +142,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
         assertThat(dialog.isOpened()).isTrue();
 
         // Verify pre-populated agent type
-        ComboBox<String> combo = $(ComboBox.class).single();
+        @SuppressWarnings("unchecked")
+		ComboBox<String> combo = $(ComboBox.class).single();
         assertThat(combo.getValue()).isEqualTo("Map");
     }
 
@@ -162,7 +163,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
         dialog.resetForm();
 
         // After reset, agent type combo should be null
-        ComboBox<String> combo = $(ComboBox.class).single();
+        @SuppressWarnings("unchecked")
+		ComboBox<String> combo = $(ComboBox.class).single();
         assertThat(combo.getValue()).isNull();
 
         // File input regex should default to ".*"
@@ -200,7 +202,8 @@ class AgentCreationDialogTest extends BrowserlessTest {
         $(TextArea.class).all().forEach(area ->
                 assertThat(area.isRequired()).as("Field '%s' should be required", area.getLabel()).isTrue());
 
-        ComboBox<String> combo = $(ComboBox.class).single();
+        @SuppressWarnings("unchecked")
+		ComboBox<String> combo = $(ComboBox.class).single();
         assertThat(combo.isRequired()).isTrue();
     }
 

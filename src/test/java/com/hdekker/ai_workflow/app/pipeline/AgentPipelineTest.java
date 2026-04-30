@@ -76,8 +76,9 @@ public class AgentPipelineTest {
         Scanner scanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
+                Duration.ZERO,
                 db,
-                observer, null);
+                observer);
 
         CopyOnWriteArrayList<String> prompts = new CopyOnWriteArrayList<>();
         CopyOnWriteArrayList<PromptResponse> responses = new CopyOnWriteArrayList<>();
@@ -240,15 +241,16 @@ public class AgentPipelineTest {
 
         Path tempDir = Files.createTempDirectory("agent-pipeline-mod-");
         Path inputDir = Files.createDirectory(tempDir.resolve("input"));
-        Path outputDir = Files.createDirectory(tempDir.resolve("output"));
+        Files.createDirectory(tempDir.resolve("output"));
 
         FileMetadataDatabase modDb = createSmartDb();
         ScannerObserverUseCase modObserver = new ScannerObserverUseCase();
         Scanner modScanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
+                Duration.ZERO,
                 modDb,
-                modObserver, null);
+                modObserver);
 
         CopyOnWriteArrayList<String> modPrompts = new CopyOnWriteArrayList<>();
         AtomicReference<CountDownLatch> modLatchRef = new AtomicReference<>(new CountDownLatch(1));
@@ -328,15 +330,16 @@ public class AgentPipelineTest {
 
         Path tempDir = Files.createTempDirectory("agent-pipeline-multi-");
         Path inputDir = Files.createDirectory(tempDir.resolve("input"));
-        Path outputDir = Files.createDirectory(tempDir.resolve("output"));
+        Files.createDirectory(tempDir.resolve("output"));
 
         FileMetadataDatabase multiDb = createSmartDb();
         ScannerObserverUseCase multiObserver = new ScannerObserverUseCase();
         Scanner multiScanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
+                Duration.ZERO,
                 multiDb,
-                multiObserver, null);
+                multiObserver);
 
         CopyOnWriteArrayList<String> multiPrompts = new CopyOnWriteArrayList<>();
         CountDownLatch multiLatch = new CountDownLatch(3); // Wait for 3 files

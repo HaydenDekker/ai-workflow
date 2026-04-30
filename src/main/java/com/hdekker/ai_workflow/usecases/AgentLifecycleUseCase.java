@@ -1,7 +1,6 @@
 package com.hdekker.ai_workflow.usecases;
 
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +24,6 @@ import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
-
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 

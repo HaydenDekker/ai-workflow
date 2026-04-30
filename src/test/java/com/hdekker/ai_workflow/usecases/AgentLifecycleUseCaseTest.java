@@ -20,7 +20,6 @@ import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
