@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -46,6 +47,22 @@ public class Scanner implements FileScanner {
     private final NativeFileWatcherAdapter nativeFileWatcher;
     private final ScannerObserverUseCase observer;
     private volatile boolean disposed = false;
+
+    // -- Status state (moved from ScannerRegistry) --
+    private volatile String status = STATUS_IDLE;
+    private volatile String errorMessage;
+    private volatile LocalDateTime lastEmittedAt;
+    private final LocalDateTime createdAt;
+
+    /** Seconds of inactivity before transitioning from EMITTING_UPDATES to IDLE. */
+    private static final Duration IDLE_TIMEOUT = Duration.ofSeconds(30);
+    /** Interval for the idle-checker scheduler. */
+    private static final Duration IDLE_CHECK_INTERVAL = Duration.ofSeconds(10);
+
+    // -- Idle checker (moved from ScannerRegistry) --
+    private final ScheduledExecutorService idleChecker;
+
+    private final Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
     private final Consumer<String> onErrorCallback;
     private final Consumer<String> onStatusChanged;
     private final Consumer<String> onEmission; // called when a file is emitted (updates idle timer)
@@ -82,9 +99,20 @@ public class Scanner implements FileScanner {
         this.emissionDelay = emissionDelay;
         this.fileMetadataStore = fileMetadataStore;
         this.observer = observer;
+        this.createdAt = LocalDateTime.now();
+        this.metricsEventPublisher = metricsEventPublisher;
         this.onErrorCallback = onErrorCallback;
         this.onStatusChanged = onStatusChanged;
         this.onEmission = onEmission;
+
+        // Idle checker — monitors this scanner for inactivity
+        this.idleChecker = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "scanner-idle-checker-" + this.effectiveAgentId);
+            t.setDaemon(true);
+            return t;
+        });
+        startIdleChecker();
+
         final String agentIdForCallbacks = this.effectiveAgentId;
 
         // Scheduled executor for resetting FILTERED status back to IDLE
@@ -146,8 +174,49 @@ public class Scanner implements FileScanner {
                                      FileMetadataStore fileMetadataStore,
                                      ScannerObserverUseCase observer,
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
-        this(agentId, folderPath, delayBetweenReads, Duration.ZERO,
-                fileMetadataStore, observer, metricsEventPublisher, null, null, null);
+        this.folderPath = folderPath;
+        this.effectiveAgentId = agentId != null ? agentId : folderPath;
+        this.delayBetweenReads = delayBetweenReads;
+        this.emissionDelay = Duration.ZERO;
+        this.fileMetadataStore = fileMetadataStore;
+        this.observer = observer;
+        this.createdAt = LocalDateTime.now();
+        this.metricsEventPublisher = metricsEventPublisher;
+        this.onErrorCallback = null;
+        this.onStatusChanged = null;
+        this.onEmission = null;
+
+        // Idle checker
+        this.idleChecker = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "scanner-idle-checker-" + this.effectiveAgentId);
+            t.setDaemon(true);
+            return t;
+        });
+        startIdleChecker();
+
+        this.filteredResetScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "filtered-reset");
+            t.setDaemon(true);
+            return t;
+        });
+
+        // No callbacks — tests using this constructor don't need status/error transitions
+        this.nativeFileWatcher = new NativeFileWatcherAdapter(
+                Path.of(folderPath), delayBetweenReads, Duration.ZERO, fileMetadataStore,
+                aId -> observer.recordDiscovery(this.effectiveAgentId),
+                aId -> observer.recordUnchanged(this.effectiveAgentId),
+                aId -> observer.updateFileCount(this.effectiveAgentId, countFiles()),
+                history -> {
+                    // no metrics event publisher in test constructor
+                },
+                aId -> {
+                    // hash filter — no status callback in test constructor
+                },
+                aId -> {
+                    // emission — no emission callback in test constructor
+                },
+                this.effectiveAgentId, null);
+
         // Tests using this constructor need the watcher to run.
         // No status callback, so no status transitions occur.
         initSource(this.effectiveAgentId);
@@ -205,21 +274,155 @@ public class Scanner implements FileScanner {
     }
 
     /**
-     * Notify the registry of a status change.
+     * Update the scanner's status.
+     * <p>
+     * Updates the internal status field only. Does not trigger callbacks —
+     * this method is the target of the {@code onStatusChanged} callback chain
+     * so calling the callback here would cause infinite recursion.
+     *
+     * @param newStatus the new status string
      */
-    private void notifyStatusChange(String status) {
-        if (onStatusChanged != null) {
-            onStatusChanged.accept(status);
+    public void updateStatus(String newStatus) {
+        this.status = newStatus;
+    }
+
+    /**
+     * Get the current scanner status.
+     *
+     * @return the current status string
+     */
+    public String getStatus() {
+        return status;
+    }
+
+    /**
+     * Transition this scanner to the ERROR state.
+     *
+     * @param reason human-readable description of the error
+     */
+    public void transitionToError(String reason) {
+        this.errorMessage = reason;
+        this.status = STATUS_ERROR;
+        log.error("Scanner for agent {} entered ERROR state: {}", effectiveAgentId, reason);
+    }
+
+    /**
+     * Recover from the ERROR state.
+     * Resets status to IDLE and clears the error message.
+     */
+    public void recover() {
+        this.errorMessage = null;
+        this.status = STATUS_IDLE;
+        log.info("Recovered scanner for agent {} from ERROR state", effectiveAgentId);
+    }
+
+    /**
+     * Get the error message, if any.
+     *
+     * @return the error message, or null if no error
+     */
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    /**
+     * Push a metrics change event to the UI.
+     *
+     * @param event the metrics change event
+     */
+    public void pushMetricsEvent(ScannerMetricsChangedEvent event) {
+        if (metricsEventPublisher != null) {
+            try {
+                metricsEventPublisher.accept(event);
+            } catch (Exception e) {
+                log.warn("Error publishing metrics event: {}", e.getMessage());
+            }
         }
     }
 
     /**
-     * Backward-compatible status constants used by the adapter.
+     * Record that a file was emitted, resetting the idle timer.
      */
-    private static final String STATUS_EMITTING_INITIAL = "EMITTING_INITIAL";
-    private static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
-    private static final String STATUS_IDLE = "IDLE";
-    private static final String STATUS_FILTERED = "FILTERED";
+    public void recordEmission() {
+        this.lastEmittedAt = LocalDateTime.now();
+        log.debug("Recorded emission for agent {} – resetting idle timer", effectiveAgentId);
+    }
+
+    /**
+     * Get the last emission timestamp.
+     *
+     * @return the last emission timestamp, or null if none
+     */
+    public LocalDateTime getLastEmittedAt() {
+        return lastEmittedAt;
+    }
+
+    /**
+     * Get the creation timestamp.
+     *
+     * @return the creation timestamp
+     */
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    /**
+     * Start the idle-checker that monitors this scanner for inactivity.
+     */
+    private void startIdleChecker() {
+        idleChecker.scheduleAtFixedRate(this::checkIdle,
+                IDLE_CHECK_INTERVAL.toSeconds(),
+                IDLE_CHECK_INTERVAL.toSeconds(),
+                TimeUnit.SECONDS);
+        log.debug("Idle checker started for agent {} (interval={}s)", effectiveAgentId, IDLE_CHECK_INTERVAL.getSeconds());
+    }
+
+    /**
+     * Check if this scanner is idle. If in EMITTING_UPDATES and no emission
+     * for IDLE_TIMEOUT, transition to IDLE.
+     */
+    private void checkIdle() {
+        if (disposed) {
+            return;
+        }
+        // Only check scanners that are actively emitting
+        if (!STATUS_EMITTING_UPDATES.equals(status)) {
+            return;
+        }
+
+        // If we have a lastEmittedAt, check whether it's older than the idle timeout
+        LocalDateTime lastEmit = lastEmittedAt;
+        if (lastEmit != null) {
+            Duration sinceLastEmission = Duration.between(lastEmit, LocalDateTime.now());
+            if (sinceLastEmission.compareTo(IDLE_TIMEOUT) >= 0) {
+                notifyStatusChange(STATUS_IDLE);
+                log.info("Scanner for agent {} transitioned to IDLE after {}s of inactivity",
+                        effectiveAgentId, sinceLastEmission.getSeconds());
+            }
+        }
+    }
+
+    /**
+     * Notify the registry of a status change.
+     * Updates internal state and fires the external callback.
+     */
+    private void notifyStatusChange(String newStatus) {
+        this.status = newStatus;
+        if (onStatusChanged != null) {
+            onStatusChanged.accept(newStatus);
+        }
+    }
+
+    /** Status: performing a full scan of existing files. */
+    public static final String STATUS_EMITTING_INITIAL = "EMITTING_INITIAL";
+    /** Status: watching for incremental changes. */
+    public static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
+    /** Status: no event for 30 seconds, idle watching. */
+    public static final String STATUS_IDLE = "IDLE";
+    /** Status: hash filter rejected a file (unchanged / already known). */
+    public static final String STATUS_FILTERED = "FILTERED";
+    /** Status: scanner encountered an error. */
+    public static final String STATUS_ERROR = "ERROR";
 
     /**
      * Returns the flux of file changes. Subscribers receive incremental updates
@@ -323,6 +526,15 @@ public class Scanner implements FileScanner {
             filteredResetTask.cancel(false);
         }
         filteredResetScheduler.shutdownNow();
+        // Stop the idle checker
+        idleChecker.shutdownNow();
+        try {
+            if (!idleChecker.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("Idle checker for agent {} did not terminate within timeout", effectiveAgentId);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         log.info("Scanner destroyed for folder: {}", folderPath);
     }
 
@@ -358,5 +570,22 @@ public class Scanner implements FileScanner {
         } catch (IOException e) {
             return 0L;
         }
+    }
+
+    /**
+     * Convert this scanner to a public DTO.
+     *
+     * @return a ScannerInfo DTO
+     */
+    public com.hdekker.ai_workflow.rest.dto.ScannerInfo toInfo() {
+        return new com.hdekker.ai_workflow.rest.dto.ScannerInfo(
+                effectiveAgentId,
+                effectiveAgentId,
+                folderPath,
+                status,
+                createdAt,
+                lastEmittedAt,
+                errorMessage
+        );
     }
 }

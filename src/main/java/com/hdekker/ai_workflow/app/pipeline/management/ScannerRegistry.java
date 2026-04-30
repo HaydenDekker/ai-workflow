@@ -6,11 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,96 +28,42 @@ import reactor.core.publisher.Flux;
 import java.util.function.Consumer;
 
 /**
- * Full implementation of the scanner registry.
- * Manages the lifecycle of {@link Scanner} instances, one per agent.
+ * Scanner registry — thin collection + orchestration layer.
+ * <p>
+ * Stores {@link Scanner} instances by agentId and delegates lifecycle
+ * operations (status, error handling, idle detection, metrics, DTO conversion)
+ * to the Scanner domain object itself.
  * <p>
  * Key responsibilities:
  * <ul>
  *   <li>Create scanner instances for agents (one-to-one mapping)</li>
- *   <li>Track scanner status lifecycle (IDLE ↔ EMITTING_INITIAL ↔ EMITTING_UPDATES ↔ ERROR)</li>
- *   <li>Support full-scan reset via {@link #refreshAgent(String)}</li>
- *   <li>Thread-safe access via ConcurrentHashMap</li>
- *   <li>Automatic idle detection via a shared scheduled executor</li>
- *   <li>Error handling with {@link #transitionToError(String, String)} and recovery via {@link #recoverFromError(String)}</li>
+ *   <li>Store and retrieve scanners by agentId</li>
+ *   <li>Delegate lifecycle to Scanner (status, error, idle, metrics, DTO)</li>
  * </ul>
- * <p>
- * Scanner statuses:
- * <ul>
- *   <li>IDLE — no file system event for 30 seconds; watching, waiting for events</li>
- *   <li>EMITTING_INITIAL — performing a full scan (all existing files emitted)</li>
- *   <li>EMITTING_UPDATES — file system event detected (CREATE, MODIFY, DELETE)</li>
- *   <li>FILTERED — hash filter rejected a file (unchanged / already known)</li>
- *   <li>ERROR — scanner encountered an unrecoverable error; manual recovery required</li>
- * </ul>
- * <p>
- * Status lifecycle:
- * <pre>
- *   EMITTING_INITIAL ──(full scan complete)──► EMITTING_UPDATES
- *   EMITTING_UPDATES ──(30s no events)──► IDLE
- *   IDLE ──(event detected)──► EMITTING_UPDATES
- *   Any state ──(exception)──► ERROR
- * </pre>
  */
 @Component
 public class ScannerRegistry implements DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(ScannerRegistry.class);
 
-    /** Status string: performing a full scan of existing files. */
-    public static final String STATUS_EMITTING_INITIAL = "EMITTING_INITIAL";
-    /** Status string: watching for incremental changes. */
-    public static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
-    /** Status string: no event for 30 seconds, idle watching. */
-    public static final String STATUS_IDLE = "IDLE";
-    /** Status string: hash filter rejected a file (unchanged / already known). */
-    public static final String STATUS_FILTERED = "FILTERED";
-    /** Status string: scanner encountered an error. */
-    public static final String STATUS_ERROR = "ERROR";
-
-    /** Seconds of inactivity before transitioning from EMITTING_UPDATES to IDLE. */
-    private static final Duration IDLE_TIMEOUT = Duration.ofSeconds(30);
-    /** Interval for the shared idle-checker scheduler. */
-    private static final Duration IDLE_CHECK_INTERVAL = Duration.ofSeconds(10);
-
-    /**
-     * Internal metadata for a registered scanner.
-     * Keyed by agentId (one-to-one: each scanner owned by exactly one agent).
-     */
-    private record ScannerMetadata(
-            Scanner scanner,
-            String agentId,
-            String folderPath,
-            String status,
-            LocalDateTime createdAt,
-            LocalDateTime lastEmittedAt,
-            String errorMessage
-    ) {
-        ScannerMetadata withStatus(String newStatus) {
-            return new ScannerMetadata(scanner, agentId, folderPath, newStatus, createdAt, lastEmittedAt, errorMessage);
-        }
-
-        ScannerMetadata withError(String errorMsg) {
-            return new ScannerMetadata(scanner, agentId, folderPath, STATUS_ERROR, createdAt, lastEmittedAt, errorMsg);
-        }
-    }
-
-    private final ConcurrentHashMap<String, ScannerMetadata> scanners = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Scanner> scanners = new ConcurrentHashMap<>();
     private final ApplicationContext applicationContext;
     private final FileMetadataDatabase fileMetadataDatabase;
     private final ScannerObserverUseCase observer;
-    private final Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
     private final EmissionDelayConfig emissionDelayConfig;
-    private final ScheduledExecutorService idleChecker;
+    // Transient reference — passed to Scanner instances, not used directly
+    private transient Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
 
     /**
      * Creates a new ScannerRegistry with the required Spring dependencies.
      * <p>
      * Uses the default emission delay if {@code emissionDelayConfig} is null.
+     * The metrics event publisher is passed through to each Scanner but not stored.
      *
      * @param applicationContext            Spring application context
      * @param fileMetadataDatabase          Database for file metadata change detection
      * @param observer                      scanner observer use case for metrics tracking
-     * @param metricsEventPublisher         Callback to publish metrics change events
+     * @param metricsEventPublisher         Callback to publish metrics change events (passed to Scanner)
      * @param emissionDelayConfig           Configuration for emission delay behaviour (nullable)
      */
     @Autowired
@@ -138,24 +80,18 @@ public class ScannerRegistry implements DisposableBean {
         this.emissionDelayConfig = emissionDelayConfig != null
                 ? emissionDelayConfig
                 : new EmissionDelayConfig(EmissionDelayConfig.DEFAULT_DELAY_SECONDS);
-        this.idleChecker = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "scanner-idle-checker");
-            t.setDaemon(true);
-            return t;
-        });
-        startIdleChecker();
     }
 
     /**
      * Creates a new ScannerRegistry without emission delay configuration.
      * <p>
-     * Defaults to the standard emission delay and starts the idle checker.
+     * Defaults to the standard emission delay.
      * Useful for tests that don't need emission delay behaviour.
      *
      * @param applicationContext            Spring application context
      * @param fileMetadataDatabase          Database for file metadata change detection
      * @param observer                      scanner observer use case for metrics tracking
-     * @param metricsEventPublisher         Callback to publish metrics change events
+     * @param metricsEventPublisher         Callback to publish metrics change events (passed to Scanner)
      */
     public ScannerRegistry(
             ApplicationContext applicationContext,
@@ -192,15 +128,16 @@ public class ScannerRegistry implements DisposableBean {
         }
 
         // Check for duplicate
-        if (scanners.containsKey(agentId)) {
+        Scanner existing = scanners.get(agentId);
+        if (existing != null) {
             log.warn("Scanner already exists for agent {}, returning existing", agentId);
-            return toScannerInfo(scanners.get(agentId));
+            return existing.toInfo();
         }
 
         Duration delay = Duration.ofSeconds(delaySeconds);
         Duration emissionDelay = Duration.ofSeconds(emissionDelayConfig.getEmissionDelaySeconds());
 
-        // Create the scanner adapter (pass agentId for metric tagging + observer + event publisher)
+        // Create the scanner (pass agentId for metric tagging + observer + event publisher)
         final String agentIdForAdapter = agentId;
         Scanner scanner = new Scanner(
                 agentId,
@@ -219,57 +156,39 @@ public class ScannerRegistry implements DisposableBean {
                     // A file was emitted — update idle timer so the scanner stays active
                     recordEmission(aId);
                     // Briefly transition to EMITTING_UPDATES if currently IDLE
-                    updateStatus(aId, STATUS_EMITTING_UPDATES);
+                    updateStatus(aId, Scanner.STATUS_EMITTING_UPDATES);
                     // Publish metrics event so the UI refreshes the status column
-                    pushMetricsEvent(ScannerMetricsChangedEvent.fileEmitted(aId));
+                    Scanner s = scanners.get(aId);
+                    if (s != null) {
+                        s.pushMetricsEvent(ScannerMetricsChangedEvent.fileEmitted(aId));
+                    }
                 });
 
-        ScannerMetadata metadata = new ScannerMetadata(
-                scanner, agentId, targetDirectory, STATUS_IDLE,
-                LocalDateTime.now(), null, null);
-
         // Put in map BEFORE initSource() so callbacks can find it
-        scanners.put(agentId, metadata);
-        log.info("Created scanner {} for agent {} (target={}, delay={}s)",
-                metadata, agentId, targetDirectory, delaySeconds);
+        scanners.put(agentId, scanner);
+        log.info("Created scanner for agent {} (target={}, delay={}s)",
+                agentId, targetDirectory, delaySeconds);
 
         // Now initialise — status transitions (IDLE → EMITTING_INITIAL → EMITTING_UPDATES)
         // happen synchronously after the hash filter processes all files
         scanner.initSource(agentId);
 
         // Return the current state after initSource() has run
-        return toScannerInfo(scanners.get(agentId));
+        return scanner.toInfo();
     }
 
     /**
      * Destroy a scanner by its ID.
-     * Cleans up the integration flow registration and scanner resources.
+     * Cleans up the scanner resources.
      *
-     * @param scannerId the scanner ID to destroy
+     * @param scannerId the scanner ID to destroy (agentId)
      */
     public void destroyForAgent(String scannerId) {
-        // Try to find by key first
-        ScannerMetadata meta = scanners.remove(scannerId);
-        
-        if (meta == null) {
-            // Try to find by agentId
-            String keyToRemove = null;
-            for (Map.Entry<String, ScannerMetadata> entry : scanners.entrySet()) {
-                if (entry.getValue().agentId().equals(scannerId)) {
-                    keyToRemove = entry.getKey();
-                    meta = entry.getValue();
-                    break;
-                }
-            }
-            if (keyToRemove != null) {
-                scanners.remove(keyToRemove);
-            }
-        }
-
-        if (meta != null) {
+        Scanner scanner = scanners.remove(scannerId);
+        if (scanner != null) {
             try {
-                meta.scanner().destroy();
-                log.info("Destroyed scanner {} for agent {}", meta.agentId(), scannerId);
+                scanner.destroy();
+                log.info("Destroyed scanner for agent {}", scannerId);
             } catch (Exception e) {
                 log.warn("Error destroying scanner {}: {}", scannerId, e.getMessage());
             }
@@ -280,25 +199,12 @@ public class ScannerRegistry implements DisposableBean {
 
     /**
      * Refresh a scanner: reset it to full-scan mode.
-     * Disposes the current subscription, clears the replay processor,
-     * and re-emits all files from the target directory.
      *
-     * @param scannerId the scanner ID to refresh
+     * @param scannerId the scanner ID to refresh (agentId)
      */
     public void refreshAgent(String scannerId) {
-        ScannerMetadata meta = scanners.values().stream()
-                .filter(m -> m.agentId().equals(scannerId))
-                .findFirst()
-                .orElseGet(() -> {
-                    for (var entry : scanners.entrySet()) {
-                        if (entry.getKey().equals(scannerId)) {
-                            return entry.getValue();
-                        }
-                    }
-                    return null;
-                });
-
-        if (meta == null) {
+        Scanner scanner = scanners.get(scannerId);
+        if (scanner == null) {
             log.warn("Cannot refresh: no scanner found for ID/agentId: {}", scannerId);
             return;
         }
@@ -306,35 +212,23 @@ public class ScannerRegistry implements DisposableBean {
         // Reset scanner to full-scan mode.
         // Status transitions (EMITTING_INITIAL → EMITTING_UPDATES) happen inside
         // resetToFullScan() after the hash filter has processed all files.
-        meta.scanner().resetToFullScan();
-        log.info("Refreshed scanner {} for agent {} to full-scan mode", scannerId, meta.agentId());
+        scanner.resetToFullScan();
+        log.info("Refreshed scanner for agent {} to full-scan mode", scannerId);
     }
 
     /**
      * Get the scanner's flux for processing.
      *
-     * @param scannerId the scanner ID
+     * @param scannerId the scanner ID (agentId)
      * @return the flux of file history events
      */
     public Flux<FileHistory> getScannerFlux(String scannerId) {
-        ScannerMetadata meta = scanners.values().stream()
-                .filter(m -> m.agentId().equals(scannerId))
-                .findFirst()
-                .orElseGet(() -> {
-                    for (var entry : scanners.entrySet()) {
-                        if (entry.getKey().equals(scannerId)) {
-                            return entry.getValue();
-                        }
-                    }
-                    return null;
-                });
-
-        if (meta == null) {
+        Scanner scanner = scanners.get(scannerId);
+        if (scanner == null) {
             log.warn("No scanner found for flux lookup: {}", scannerId);
             return Flux.empty();
         }
-
-        return meta.scanner().flux();
+        return scanner.flux();
     }
 
     /**
@@ -342,7 +236,7 @@ public class ScannerRegistry implements DisposableBean {
      */
     public List<ScannerInfo> listAll() {
         return new ArrayList<>(scanners.values()).stream()
-                .map(this::toScannerInfo)
+                .map(Scanner::toInfo)
                 .toList();
     }
 
@@ -350,8 +244,8 @@ public class ScannerRegistry implements DisposableBean {
      * Get a scanner by agentId.
      */
     public Optional<ScannerInfo> getById(String agentId) {
-        return Optional.ofNullable(scanners.get(agentId))
-                .map(this::toScannerInfo);
+        Scanner scanner = scanners.get(agentId);
+        return scanner != null ? Optional.of(scanner.toInfo()) : Optional.empty();
     }
 
     /**
@@ -370,69 +264,33 @@ public class ScannerRegistry implements DisposableBean {
 
     /**
      * Update the status of a scanner.
+     * Delegates to the Scanner's own status management and metrics publishing.
      *
      * @param scannerId the agent ID or scanner ID
      * @param status    the new status string
      */
     public void updateStatus(String scannerId, String status) {
-        ScannerMetadata meta = scanners.values().stream()
-                .filter(m -> m.agentId().equals(scannerId))
-                .findFirst()
-                .orElseGet(() -> {
-                    for (var entry : scanners.entrySet()) {
-                        if (entry.getKey().equals(scannerId)) {
-                            return entry.getValue();
-                        }
-                    }
-                    return null;
-                });
-
-        if (meta != null) {
-            String key = scanners.entrySet().stream()
-                    .filter(e -> e.getValue().equals(meta))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(scannerId);
-            ScannerMetadata updated = meta.withStatus(status);
-            scanners.put(key, updated);
+        Scanner scanner = scanners.get(scannerId);
+        if (scanner != null) {
+            scanner.updateStatus(status);
             log.debug("Updated scanner {} status to {}", scannerId, status);
-            pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(meta.agentId(), status));
+            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(scannerId, status));
         }
     }
 
     /**
      * Transition a scanner to the ERROR state.
-     * <p>
-     * Called by {@link FileSystemScannerAdapter} when the file watcher
-     * encounters an unrecoverable error (e.g. directory becomes inaccessible).
+     * Delegates to the Scanner's own error handling.
      *
      * @param agentId the owning agent's ID
      * @param reason  human-readable description of the error
      */
     public void transitionToError(String agentId, String reason) {
-        ScannerMetadata meta = scanners.values().stream()
-                .filter(m -> m.agentId().equals(agentId))
-                .findFirst()
-                .orElseGet(() -> {
-                    for (var entry : scanners.entrySet()) {
-                        if (entry.getKey().equals(agentId)) {
-                            return entry.getValue();
-                        }
-                    }
-                    return null;
-                });
-
-        if (meta != null) {
-            String key = scanners.entrySet().stream()
-                    .filter(e -> e.getValue().equals(meta))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(agentId);
-            ScannerMetadata updated = meta.withError(reason);
-            scanners.put(key, updated);
-            log.error("Scanner for agent {} entered ERROR state: {}", agentId, reason);
+        Scanner scanner = scanners.get(agentId);
+        if (scanner != null) {
+            scanner.transitionToError(reason);
             // Notify UI
-            pushMetricsEvent(ScannerMetricsChangedEvent.errorOccurred(agentId, reason));
+            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.errorOccurred(agentId, reason));
         } else {
             log.warn("Cannot transition to error: no scanner found for agent {}", agentId);
         }
@@ -440,38 +298,17 @@ public class ScannerRegistry implements DisposableBean {
 
     /**
      * Recover a scanner from the ERROR state.
-     * <p>
-     * Resets the status to {@code EMITTING_INITIAL}, clears the error message,
-     * and triggers a full rescan of the target directory.
+     * Delegates to the Scanner's own recovery.
      *
      * @param agentId the owning agent's ID
      */
     public void recoverFromError(String agentId) {
-        ScannerMetadata meta = scanners.values().stream()
-                .filter(m -> m.agentId().equals(agentId))
-                .findFirst()
-                .orElseGet(() -> {
-                    for (var entry : scanners.entrySet()) {
-                        if (entry.getKey().equals(agentId)) {
-                            return entry.getValue();
-                        }
-                    }
-                    return null;
-                });
-
-        if (meta != null) {
-            String key = scanners.entrySet().stream()
-                    .filter(e -> e.getValue().equals(meta))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(agentId);
-            ScannerMetadata updated = meta.withStatus(STATUS_EMITTING_INITIAL);
-            updated = updated.withError(null);
-            scanners.put(key, updated);
+        Scanner scanner = scanners.get(agentId);
+        if (scanner != null) {
+            scanner.recover();
             // Trigger a full rescan
-            meta.scanner().resetToFullScan();
-            log.info("Recovered scanner for agent {} from ERROR state", agentId);
-            pushMetricsEvent(ScannerMetricsChangedEvent.recoveredFromError(agentId));
+            scanner.resetToFullScan();
+            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.recoveredFromError(agentId));
         } else {
             log.warn("Cannot recover: no scanner found for agent {}", agentId);
         }
@@ -479,54 +316,16 @@ public class ScannerRegistry implements DisposableBean {
 
     /**
      * Notify a scanner that an event has been emitted, resetting the idle timer.
-     * <p>
-     * Called from {@link ScannerObserverUseCase} callbacks so the idle checker
-     * can accurately detect when a scanner has become idle.
+     * Delegates to the Scanner's own emission tracking.
      *
      * @param agentId the owning agent's ID
      */
     public void recordEmission(String agentId) {
-        // Update lastEmittedAt in metadata
-        ScannerMetadata meta = scanners.values().stream()
-                .filter(m -> m.agentId().equals(agentId))
-                .findFirst()
-                .orElseGet(() -> {
-                    for (var entry : scanners.entrySet()) {
-                        if (entry.getKey().equals(agentId)) {
-                            return entry.getValue();
-                        }
-                    }
-                    return null;
-                });
-
-        if (meta != null && !STATUS_ERROR.equals(meta.status())) {
-            String key = scanners.entrySet().stream()
-                    .filter(e -> e.getValue().equals(meta))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(agentId);
-            ScannerMetadata updated = new ScannerMetadata(
-                    meta.scanner(), meta.agentId(), meta.folderPath(),
-                    STATUS_EMITTING_UPDATES, meta.createdAt(),
-                    LocalDateTime.now(), meta.errorMessage());
-            scanners.put(key, updated);
+        Scanner scanner = scanners.get(agentId);
+        if (scanner != null && !Scanner.STATUS_ERROR.equals(scanner.getStatus())) {
+            scanner.recordEmission();
             log.debug("Recorded emission for agent {} – resetting idle timer", agentId);
         }
-    }
-
-    /**
-     * Convert internal metadata to public DTO.
-     */
-    private ScannerInfo toScannerInfo(ScannerMetadata meta) {
-        return new ScannerInfo(
-                meta.agentId(),
-                meta.agentId(),
-                meta.folderPath(),
-                meta.status(),
-                meta.createdAt(),
-                meta.lastEmittedAt(),
-                meta.errorMessage()
-        );
     }
 
     /**
@@ -536,90 +335,18 @@ public class ScannerRegistry implements DisposableBean {
      * @return the error message, or empty if no error
      */
     public Optional<String> getErrorMessage(String scannerId) {
-        return scanners.values().stream()
-                .filter(m -> m.agentId().equals(scannerId))
-                .findFirst()
-                .map(ScannerMetadata::errorMessage);
-    }
-
-    /**
-     * Get the internal metadata for a scanner (for testing/advanced use).
-     */
-    public Optional<ScannerMetadata> getMetadata(String scannerId) {
-        return scanners.values().stream()
-                .filter(m -> m.agentId().equals(scannerId) || scanners.entrySet().stream()
-                        .anyMatch(e -> e.getValue().equals(m) && e.getKey().equals(scannerId)))
-                .findFirst();
-    }
-
-    /**
-     * Start the shared idle-checker that monitors all scanners for inactivity.
-     */
-    private void startIdleChecker() {
-        idleChecker.scheduleAtFixedRate(this::checkAllScannersForIdle,
-                IDLE_CHECK_INTERVAL.toSeconds(),
-                IDLE_CHECK_INTERVAL.toSeconds(),
-                TimeUnit.SECONDS);
-        log.info("Idle checker started (interval={}s)", IDLE_CHECK_INTERVAL.getSeconds());
-    }
-
-    /**
-     * Check every registered scanner. If a scanner is in EMITTING_UPDATES and
-     * has not emitted for IDLE_TIMEOUT, transition it to IDLE.
-     */
-    private void checkAllScannersForIdle() {
-        LocalDateTime now = LocalDateTime.now();
-        for (Map.Entry<String, ScannerMetadata> entry : scanners.entrySet()) {
-            ScannerMetadata meta = entry.getValue();
-            String agentId = meta.agentId();
-
-            // Only check scanners that are actively emitting
-            if (!STATUS_EMITTING_UPDATES.equals(meta.status())) {
-                continue;
-            }
-
-            // If we have a lastEmittedAt, check whether it's older than the idle timeout
-            LocalDateTime lastEmit = meta.lastEmittedAt();
-            if (lastEmit != null) {
-                Duration sinceLastEmission = Duration.between(lastEmit, now);
-                if (sinceLastEmission.compareTo(IDLE_TIMEOUT) >= 0) {
-                    updateStatus(agentId, STATUS_IDLE);
-                    log.info("Scanner for agent {} transitioned to IDLE after {}s of inactivity",
-                            agentId, sinceLastEmission.getSeconds());
-                    pushMetricsEvent(ScannerMetricsChangedEvent.idleReached(agentId));
-                }
-            }
-        }
-    }
-
-    /**
-     * Push a metrics change event to all registered UI callbacks.
-     */
-    private void pushMetricsEvent(ScannerMetricsChangedEvent event) {
-        if (metricsEventPublisher != null) {
-            try {
-                metricsEventPublisher.accept(event);
-            } catch (Exception e) {
-                log.warn("Error publishing metrics event: {}", e.getMessage());
-            }
-        }
+        Scanner scanner = scanners.get(scannerId);
+        return scanner != null
+                ? Optional.ofNullable(scanner.getErrorMessage())
+                : Optional.empty();
     }
 
     @Override
     public void destroy() {
         log.info("Destroying ScannerRegistry, cleaning up {} scanners", scanners.size());
-        // Stop idle checker
-        idleChecker.shutdownNow();
-        try {
-            if (!idleChecker.awaitTermination(5, TimeUnit.SECONDS)) {
-                log.warn("Idle checker did not terminate within timeout");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        scanners.forEach((agentId, meta) -> {
+        scanners.forEach((agentId, scanner) -> {
             try {
-                meta.scanner().destroy();
+                scanner.destroy();
             } catch (Exception e) {
                 log.warn("Error cleaning up scanner for agent {}: {}", agentId, e.getMessage());
             }
