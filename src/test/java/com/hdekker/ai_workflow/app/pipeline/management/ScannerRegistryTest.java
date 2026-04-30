@@ -23,6 +23,7 @@ import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
+import com.hdekker.ai_workflow.usecases.ScannerStatus;
 
 public class ScannerRegistryTest {
 
@@ -190,10 +191,13 @@ public class ScannerRegistryTest {
 
         registry.transitionToError(agentId, "disk full");
 
-        assertThat(capturedEvents).hasSize(1);
-        assertThat(capturedEvents.get(0).getAgentId()).isEqualTo(agentId);
-        assertThat(capturedEvents.get(0).getType()).isEqualTo("error");
-        assertThat(capturedEvents.get(0).getErrorMessage()).isEqualTo("disk full");
+        // transitionToError now fires both a status_change (ERROR) and an error event
+        assertThat(capturedEvents).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(capturedEvents).anySatisfy(event -> {
+            assertThat(event.getAgentId()).isEqualTo(agentId);
+            assertThat(event.getType()).isEqualTo("error");
+            assertThat(event.getErrorMessage()).isEqualTo("disk full");
+        });
     }
 
     @Test
@@ -274,7 +278,7 @@ public class ScannerRegistryTest {
         capturedEvents.clear(); // clear events from creation
 
         // Simulate a status change (e.g. IDLE -> EMITTING_UPDATES)
-        registry.updateStatus(agentId, "EMITTING_UPDATES");
+        registry.updateStatus(agentId, ScannerStatus.EMITTING_UPDATES);
 
         assertThat(capturedEvents).anySatisfy(event -> {
             assertThat(event.getAgentId()).isEqualTo(agentId);

@@ -107,7 +107,8 @@ public class ScannerFilteredStatusTest {
                 observer,
                 null,           // no metrics event publisher
                 null,           // no error callback
-                statusChanges::add, // record status changes
+                statusChanges::add, // record status changes (string callback)
+                null,           // no enum callback
                 null            // no emission callback
         );
 
@@ -162,8 +163,9 @@ public class ScannerFilteredStatusTest {
                 observer,
                 null,
                 null,
-                statusChanges::add,
-                null
+                statusChanges::add, // record status changes (string callback)
+                null,           // no enum callback
+                null            // no emission callback
         );
 
         // Step 4: Init source first (to establish initial state)
@@ -215,8 +217,9 @@ public class ScannerFilteredStatusTest {
                 observer,
                 null,
                 null,
-                statusChanges::add,
-                null
+                statusChanges::add, // record status changes (string callback)
+                null,           // no enum callback
+                null            // no emission callback
         );
 
         // Step 4: Call initSource()

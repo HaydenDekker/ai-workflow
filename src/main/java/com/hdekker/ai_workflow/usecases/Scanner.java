@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +21,6 @@ import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.NativeFileWatcherAdapter;
 
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import reactor.core.publisher.Flux;
@@ -32,7 +30,17 @@ import reactor.core.publisher.Sinks;
  * Domain scanner — the central concept for file watching.
  * <p>
  * Owns status, idle timer, error handling, metrics publishing, DTO conversion,
- * and the FileHash/FileHistory business rules. Composes {@link com.hdekker.ai_workflow.files.NativeFileWatcherAdapter}.
+ * and the FileHash/FileHistory business rules. Composes {@link NativeFileWatcherAdapter}.
+ * <p>
+ * Subscribes to raw {@link RawFileEvent} from the adapter and applies business logic:
+ * <ul>
+ *   <li>Computes hash via {@link FileHash#hash(String)}</li>
+ *   <li>Creates {@link FileMetadata} and compares via {@link FileComparator}</li>
+ *   <li>Produces {@link FileHistory} and decides whether to emit</li>
+ *   <li>Saves metadata to {@link FileMetadataStore} on discovery</li>
+ *   <li>Tracks metrics via {@link ScannerObserverUseCase}</li>
+ *   <li>Applies emission delay throttling</li>
+ * </ul>
  */
 public class Scanner implements FileScanner {
 
@@ -43,13 +51,14 @@ public class Scanner implements FileScanner {
     private final Duration delayBetweenReads;
     private final Duration emissionDelay;
     private final FileMetadataStore fileMetadataStore;
+    private final FileComparator fileComparator;
 
     private final NativeFileWatcherAdapter nativeFileWatcher;
     private final ScannerObserverUseCase observer;
     private volatile boolean disposed = false;
 
     // -- Status state (moved from ScannerRegistry) --
-    private volatile String status = STATUS_IDLE;
+    private volatile ScannerStatus status = ScannerStatus.IDLE;
     private volatile String errorMessage;
     private volatile LocalDateTime lastEmittedAt;
     private final LocalDateTime createdAt;
@@ -64,10 +73,19 @@ public class Scanner implements FileScanner {
 
     private final Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
     private final Consumer<String> onErrorCallback;
-    private final Consumer<String> onStatusChanged;
+    private final Consumer<String> onStatusChanged; // string callback for registry logging
+    private final Consumer<ScannerStatus> onStatusChangedEnum; // enum callback for registry metrics publishing
     private final Consumer<String> onEmission; // called when a file is emitted (updates idle timer)
     private final ScheduledExecutorService filteredResetScheduler;
     private volatile java.util.concurrent.ScheduledFuture<?> filteredResetTask;
+
+    // -- Emission throttle state (moved from NativeFileWatcherAdapter) --
+    private volatile LocalDateTime lastEmissionTime;
+    private volatile FileHistory latestBufferedHistory;
+    private volatile boolean scanBufferedAnyFile = false;
+
+    // -- Scanner's own sink for FileHistory (consumers subscribe to this) --
+    private final Sinks.Many<FileHistory> fileHistorySink;
 
     /**
      * Creates a new Scanner.
@@ -80,7 +98,8 @@ public class Scanner implements FileScanner {
      * @param observer            scanner observer use case for metrics tracking
      * @param metricsEventPublisher  callback to publish metrics change events
      * @param onErrorCallback     callback invoked when the scanner encounters an error
-     * @param onStatusChanged     callback invoked when scanner status changes
+     * @param onStatusChanged     callback invoked when scanner status changes (string, for logging)
+     * @param onStatusChangedEnum callback invoked when scanner status changes (enum, for metrics)
      * @param onEmission          callback invoked when a file is emitted (updates idle timer)
      */
     public Scanner(String agentId,
@@ -92,18 +111,22 @@ public class Scanner implements FileScanner {
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher,
                                      Consumer<String> onErrorCallback,
                                      Consumer<String> onStatusChanged,
+                                     Consumer<ScannerStatus> onStatusChangedEnum,
                                      Consumer<String> onEmission) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
         this.delayBetweenReads = delayBetweenReads;
         this.emissionDelay = emissionDelay;
         this.fileMetadataStore = fileMetadataStore;
+        this.fileComparator = new FileComparator(fileMetadataStore);
         this.observer = observer;
         this.createdAt = LocalDateTime.now();
         this.metricsEventPublisher = metricsEventPublisher;
         this.onErrorCallback = onErrorCallback;
         this.onStatusChanged = onStatusChanged;
+        this.onStatusChangedEnum = onStatusChangedEnum;
         this.onEmission = onEmission;
+        this.lastEmissionTime = LocalDateTime.now();
 
         // Idle checker — monitors this scanner for inactivity
         this.idleChecker = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -113,8 +136,6 @@ public class Scanner implements FileScanner {
         });
         startIdleChecker();
 
-        final String agentIdForCallbacks = this.effectiveAgentId;
-
         // Scheduled executor for resetting FILTERED status back to IDLE
         this.filteredResetScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "filtered-reset");
@@ -122,38 +143,17 @@ public class Scanner implements FileScanner {
             return t;
         });
 
-        // Pass callbacks to NativeFileWatcherAdapter instead of Micrometer types
+        // Scanner's own sink for FileHistory — consumers (pipeline) subscribe to this
+        this.fileHistorySink = Sinks.many().multicast().directBestEffort();
+
+        // Create the native file watcher adapter (pure infrastructure — no business rules)
         this.nativeFileWatcher = new NativeFileWatcherAdapter(
-                Path.of(folderPath), delayBetweenReads, emissionDelay, fileMetadataStore,
-                aId -> observer.recordDiscovery(agentIdForCallbacks),
-                aId -> observer.recordUnchanged(agentIdForCallbacks),
-                aId -> observer.updateFileCount(agentIdForCallbacks, countFiles()),
-                history -> {
-                    if (metricsEventPublisher != null) {
-                        metricsEventPublisher.accept(ScannerMetricsChangedEvent.fileCountUpdated(agentIdForCallbacks));
-                    }
-                },
-                aId -> {
-                    // Hash filter rejected a file — briefly set FILTERED status
-                    if (onStatusChanged != null) {
-                        // Cancel any pending reset task
-                        if (filteredResetTask != null) {
-                            filteredResetTask.cancel(false);
-                        }
-                        onStatusChanged.accept(STATUS_FILTERED);
-                        // Schedule reset to IDLE after 2 seconds
-                        final String agentIdForReset = agentIdForCallbacks;
-                        filteredResetTask = filteredResetScheduler.schedule(
-                                () -> onStatusChanged.accept(STATUS_IDLE), 2, TimeUnit.SECONDS);
-                    }
-                },
-                aId -> {
-                    // A file was emitted — update idle timer so the scanner stays active
-                    if (onEmission != null) {
-                        onEmission.accept(agentIdForCallbacks);
-                    }
-                },
-                agentIdForCallbacks, onErrorCallback);
+                Path.of(folderPath), delayBetweenReads);
+
+        // Subscribe to raw events from the adapter and apply business logic
+        subscribeToRawEvents();
+
+        log.debug("Scanner created for agent {} (folder={})", effectiveAgentId, folderPath);
     }
 
     /**
@@ -179,12 +179,15 @@ public class Scanner implements FileScanner {
         this.delayBetweenReads = delayBetweenReads;
         this.emissionDelay = Duration.ZERO;
         this.fileMetadataStore = fileMetadataStore;
+        this.fileComparator = new FileComparator(fileMetadataStore);
         this.observer = observer;
         this.createdAt = LocalDateTime.now();
         this.metricsEventPublisher = metricsEventPublisher;
         this.onErrorCallback = null;
         this.onStatusChanged = null;
+        this.onStatusChangedEnum = null;
         this.onEmission = null;
+        this.lastEmissionTime = LocalDateTime.now();
 
         // Idle checker
         this.idleChecker = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -200,22 +203,15 @@ public class Scanner implements FileScanner {
             return t;
         });
 
-        // No callbacks — tests using this constructor don't need status/error transitions
+        // Scanner's own sink for FileHistory
+        this.fileHistorySink = Sinks.many().multicast().directBestEffort();
+
+        // Create the native file watcher adapter
         this.nativeFileWatcher = new NativeFileWatcherAdapter(
-                Path.of(folderPath), delayBetweenReads, Duration.ZERO, fileMetadataStore,
-                aId -> observer.recordDiscovery(this.effectiveAgentId),
-                aId -> observer.recordUnchanged(this.effectiveAgentId),
-                aId -> observer.updateFileCount(this.effectiveAgentId, countFiles()),
-                history -> {
-                    // no metrics event publisher in test constructor
-                },
-                aId -> {
-                    // hash filter — no status callback in test constructor
-                },
-                aId -> {
-                    // emission — no emission callback in test constructor
-                },
-                this.effectiveAgentId, null);
+                Path.of(folderPath), delayBetweenReads);
+
+        // Subscribe to raw events from the adapter and apply business logic
+        subscribeToRawEvents();
 
         // Tests using this constructor need the watcher to run.
         // No status callback, so no status transitions occur.
@@ -223,10 +219,163 @@ public class Scanner implements FileScanner {
     }
 
     /**
+     * Subscribe to raw events from the adapter and apply business logic.
+     * <p>
+     * For each raw event:
+     * <ol>
+     *   <li>Compute hash via FileHash</li>
+     *   <li>Create FileMetadata</li>
+     *   <li>Compare with stored metadata via FileComparator → FileHistory</li>
+     *   <li>If changed (hash mismatch): save metadata, apply emission delay, emit FileHistory</li>
+     *   <li>If unchanged: record unchanged, set FILTERED status</li>
+     * </ol>
+     */
+    private void subscribeToRawEvents() {
+        nativeFileWatcher.flux().subscribe(
+                rawEvent -> processRawEvent(rawEvent),
+                error -> {
+                    log.error("Error in raw event subscription for agent {}: {}",
+                            effectiveAgentId, error.getMessage());
+                    if (onErrorCallback != null) {
+                        onErrorCallback.accept("Error processing raw event: " + error.getMessage());
+                    }
+                }
+        );
+    }
+
+    /**
+     * Process a raw file event: apply hashing, comparison, and emission logic.
+     */
+    private void processRawEvent(RawFileEvent rawEvent) {
+        Path path = rawEvent.path();
+        String content = rawEvent.content();
+
+        try {
+            String hash = FileHash.hash(content);
+            Path directory = nativeFileWatcher.getDirectory();
+            String relativePath = directory.relativize(path).toString().replace("\\", "/");
+            FileMetadata metadata = new FileMetadata(relativePath, content, hash);
+            FileHistory history = fileComparator.matches(metadata);
+
+            if (!history.hashMatches()) {
+                // File is new or changed
+                observer.recordDiscovery(effectiveAgentId);
+                log.debug("New or changed file: {}", relativePath);
+                fileMetadataStore.save(metadata);
+                emitWithDelay(history);
+            } else {
+                // File is unchanged
+                observer.recordUnchanged(effectiveAgentId);
+                if (onStatusChanged != null) {
+                    cancelAndScheduleFilteredReset();
+                }
+                log.debug("Unchanged file (skipped): {}", relativePath);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to process raw event for path {}: {}", path, e.getMessage());
+            if (onErrorCallback != null) {
+                onErrorCallback.accept("Failed to process raw event: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Attempt to emit a file history through the scanner's sink, respecting the emission delay.
+     * <p>
+     * If the delay has not elapsed since the last emission, the history is buffered
+     * and will be emitted when the delay elapses (or on the next call).
+     *
+     * @param history the file history to emit
+     */
+    private void emitWithDelay(FileHistory history) {
+        if (history == null) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Coalesce: always update the buffered history
+        latestBufferedHistory = history;
+
+        if (emissionDelay == null || emissionDelay.isZero() || emissionDelay.isNegative()) {
+            // No delay configured — emit immediately
+            fileHistorySink.tryEmitNext(history);
+            lastEmissionTime = now;
+            scanBufferedAnyFile = true;
+            onEmitCallback();
+            return;
+        }
+
+        Duration elapsed = Duration.between(lastEmissionTime, now);
+        if (elapsed.getSeconds() >= emissionDelay.getSeconds()) {
+            // Delay has elapsed — emit and record time
+            fileHistorySink.tryEmitNext(history);
+            lastEmissionTime = now;
+            scanBufferedAnyFile = true;
+            onEmitCallback();
+        }
+        // else: delay not elapsed, history is buffered for later emission
+    }
+
+    /**
+     * Flush any buffered history if the emission delay has elapsed.
+     */
+    public void flushBufferedEmission() {
+        if (latestBufferedHistory == null) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Duration elapsed = Duration.between(lastEmissionTime, now);
+
+        if (elapsed.getSeconds() >= emissionDelay.getSeconds()) {
+            fileHistorySink.tryEmitNext(latestBufferedHistory);
+            lastEmissionTime = now;
+            latestBufferedHistory = null;
+            onEmitCallback();
+        }
+    }
+
+    /**
+     * Check whether any files were buffered during the initial scan.
+     * Used to determine whether to transition to EMITTING_UPDATES or stay IDLE.
+     *
+     * @return true if at least one file was buffered during the initial scan
+     */
+    public boolean scanBufferedAnyFile() {
+        return scanBufferedAnyFile;
+    }
+
+    /**
+     * Cancel any pending FILTERED reset task and schedule a new one.
+     * Sets status to FILTERED, then resets to IDLE after 2 seconds.
+     */
+    private void cancelAndScheduleFilteredReset() {
+        if (filteredResetTask != null) {
+            filteredResetTask.cancel(false);
+        }
+        if (onStatusChanged != null) {
+            onStatusChanged.accept(ScannerStatus.FILTERED.name());
+            final String agentIdForReset = effectiveAgentId;
+            filteredResetTask = filteredResetScheduler.schedule(
+                    () -> onStatusChanged.accept(ScannerStatus.IDLE.name()), 2, TimeUnit.SECONDS);
+        }
+    }
+
+    /**
+     * Handle the emission callback (reset idle timer, etc.).
+     */
+    private void onEmitCallback() {
+        if (onEmission != null) {
+            onEmission.accept(effectiveAgentId);
+        }
+    }
+
+    /**
      * Initialise the native file watcher for watching the target directory.
      * <p>
      * Status transitions happen here so they occur after the hash filter
-     * in {@code scanAllFiles()} has processed all existing files:
+     * in {@code rawScan()} has processed all existing files:
      * IDLE → EMITTING_INITIAL (before scan) → EMITTING_UPDATES (after scan).
      * <p>
      * Called by {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}
@@ -238,15 +387,14 @@ public class Scanner implements FileScanner {
             log.info("Setting up scanner for folder: {}", folder);
 
             // Transition to EMITTING_INITIAL before the initial full scan
-            // (hash filter runs inside nativeFileWatcher.start() → scanAllFiles())
-            notifyStatusChange(STATUS_EMITTING_INITIAL);
+            notifyStatusChange(ScannerStatus.EMITTING_INITIAL);
 
             nativeFileWatcher.start();
 
             // Flush any buffered files so they are emitted immediately if the
             // emission delay has elapsed. This ensures the file count is accurate
             // and the status reflects actual emission activity.
-            nativeFileWatcher.flushBufferedEmission();
+            flushBufferedEmission();
 
             // Update file count after initial scan completes
             long currentCount = countFiles();
@@ -255,10 +403,10 @@ public class Scanner implements FileScanner {
             // Transition to EMITTING_UPDATES only if files were buffered (meaning
             // the hash filter found at least one changed/new file). If nothing
             // was buffered, all files are already known — stay IDLE.
-            if (nativeFileWatcher.scanBufferedAnyFile()) {
-                notifyStatusChange(STATUS_EMITTING_UPDATES);
+            if (scanBufferedAnyFile) {
+                notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
             } else {
-                notifyStatusChange(STATUS_IDLE);
+                notifyStatusChange(ScannerStatus.IDLE);
                 log.info("Scanner initialised for folder: {} – no new files, staying IDLE", folderPath);
             }
 
@@ -280,18 +428,18 @@ public class Scanner implements FileScanner {
      * this method is the target of the {@code onStatusChanged} callback chain
      * so calling the callback here would cause infinite recursion.
      *
-     * @param newStatus the new status string
+     * @param newStatus the new status (enum)
      */
-    public void updateStatus(String newStatus) {
+    public void updateStatus(ScannerStatus newStatus) {
         this.status = newStatus;
     }
 
     /**
      * Get the current scanner status.
      *
-     * @return the current status string
+     * @return the current status enum
      */
-    public String getStatus() {
+    public ScannerStatus getStatus() {
         return status;
     }
 
@@ -302,7 +450,7 @@ public class Scanner implements FileScanner {
      */
     public void transitionToError(String reason) {
         this.errorMessage = reason;
-        this.status = STATUS_ERROR;
+        notifyStatusChange(ScannerStatus.ERROR);
         log.error("Scanner for agent {} entered ERROR state: {}", effectiveAgentId, reason);
     }
 
@@ -312,7 +460,7 @@ public class Scanner implements FileScanner {
      */
     public void recover() {
         this.errorMessage = null;
-        this.status = STATUS_IDLE;
+        notifyStatusChange(ScannerStatus.IDLE);
         log.info("Recovered scanner for agent {} from ERROR state", effectiveAgentId);
     }
 
@@ -386,7 +534,7 @@ public class Scanner implements FileScanner {
             return;
         }
         // Only check scanners that are actively emitting
-        if (!STATUS_EMITTING_UPDATES.equals(status)) {
+        if (status != ScannerStatus.EMITTING_UPDATES) {
             return;
         }
 
@@ -395,7 +543,7 @@ public class Scanner implements FileScanner {
         if (lastEmit != null) {
             Duration sinceLastEmission = Duration.between(lastEmit, LocalDateTime.now());
             if (sinceLastEmission.compareTo(IDLE_TIMEOUT) >= 0) {
-                notifyStatusChange(STATUS_IDLE);
+                notifyStatusChange(ScannerStatus.IDLE);
                 log.info("Scanner for agent {} transitioned to IDLE after {}s of inactivity",
                         effectiveAgentId, sinceLastEmission.getSeconds());
             }
@@ -404,25 +552,34 @@ public class Scanner implements FileScanner {
 
     /**
      * Notify the registry of a status change.
-     * Updates internal state and fires the external callback.
+     * Updates internal state and fires the external callbacks.
+     *
+     * @param newStatus the new status enum
      */
-    private void notifyStatusChange(String newStatus) {
+    private void notifyStatusChange(ScannerStatus newStatus) {
         this.status = newStatus;
+        // Fire string callback for registry logging
         if (onStatusChanged != null) {
-            onStatusChanged.accept(newStatus);
+            onStatusChanged.accept(newStatus.name());
+        }
+        // Fire enum callback for registry metrics publishing
+        if (onStatusChangedEnum != null) {
+            onStatusChangedEnum.accept(newStatus);
         }
     }
 
+    // -- Backward-compatible string constants (aliased to enum values) --
+
     /** Status: performing a full scan of existing files. */
-    public static final String STATUS_EMITTING_INITIAL = "EMITTING_INITIAL";
+    public static final String STATUS_EMITTING_INITIAL = ScannerStatus.EMITTING_INITIAL.name();
     /** Status: watching for incremental changes. */
-    public static final String STATUS_EMITTING_UPDATES = "EMITTING_UPDATES";
+    public static final String STATUS_EMITTING_UPDATES = ScannerStatus.EMITTING_UPDATES.name();
     /** Status: no event for 30 seconds, idle watching. */
-    public static final String STATUS_IDLE = "IDLE";
+    public static final String STATUS_IDLE = ScannerStatus.IDLE.name();
     /** Status: hash filter rejected a file (unchanged / already known). */
-    public static final String STATUS_FILTERED = "FILTERED";
+    public static final String STATUS_FILTERED = ScannerStatus.FILTERED.name();
     /** Status: scanner encountered an error. */
-    public static final String STATUS_ERROR = "ERROR";
+    public static final String STATUS_ERROR = ScannerStatus.ERROR.name();
 
     /**
      * Returns the flux of file changes. Subscribers receive incremental updates
@@ -430,7 +587,7 @@ public class Scanner implements FileScanner {
      */
     @Override
     public Flux<FileHistory> flux() {
-        return nativeFileWatcher.flux().onBackpressureBuffer();
+        return fileHistorySink.asFlux().onBackpressureBuffer();
     }
 
     /**
@@ -443,17 +600,8 @@ public class Scanner implements FileScanner {
      */
     public void resetToFullScan() {
         log.info("Resetting scanner to full scan at: {}", folderPath);
-        notifyStatusChange(STATUS_EMITTING_INITIAL);
-        scanAllFiles();
-        notifyStatusChange(STATUS_EMITTING_UPDATES);
-        log.info("Full scan complete for: {}", folderPath);
-    }
+        notifyStatusChange(ScannerStatus.EMITTING_INITIAL);
 
-    /**
-     * Scan all files in the target directory and emit new ones through the sink.
-     * This is called during reset-to-full-scan operations.
-     */
-    private void scanAllFiles() {
         try {
             Path folder = Path.of(folderPath).toAbsolutePath();
             if (!Files.exists(folder)) {
@@ -464,45 +612,20 @@ public class Scanner implements FileScanner {
                 return;
             }
 
-            FileComparator comparator = new FileComparator(fileMetadataStore);
+            // Reset buffered file tracking for the new scan
+            scanBufferedAnyFile = false;
 
-            Files.walk(folder)
-                    .filter(Files::isRegularFile)
-                    .forEach(p -> {
-                        try {
-                            String content = Files.readString(p);
-                            String hash = FileHash.hash(content);
-                            String relativePath = folder.relativize(p).toString().replace("\\", "/");
-                            FileMetadata metadata = new FileMetadata(relativePath, content, hash);
-                            FileHistory history = comparator.matches(metadata);
+            // Trigger raw scan through the adapter — raw events flow through
+            // the subscription and business logic is applied automatically
+            nativeFileWatcher.rawScan();
 
-                            if (!history.hashMatches()) {
-                                observer.recordDiscovery(effectiveAgentId);
-                                log.debug("Full scan - emitting new file: {}", relativePath);
-                                fileMetadataStore.save(metadata);
-                                nativeFileWatcher.emit(history);
-                            } else {
-                                observer.recordUnchanged(effectiveAgentId);
-                                // Trigger filtered status for hash-rejected file
-                                if (onStatusChanged != null) {
-                                    if (filteredResetTask != null) {
-                                        filteredResetTask.cancel(false);
-                                    }
-                                    onStatusChanged.accept(STATUS_FILTERED);
-                                    final String agentIdForReset = effectiveAgentId;
-                                    filteredResetTask = filteredResetScheduler.schedule(
-                                            () -> onStatusChanged.accept(STATUS_IDLE), 2, TimeUnit.SECONDS);
-                                }
-                                log.debug("Full scan - skipping existing file: {}", relativePath);
-                            }
-                        } catch (IOException e) {
-                            log.warn("Failed to read file during full scan: {}", p, e);
-                        }
-                    });
+            // Flush any buffered files
+            flushBufferedEmission();
 
             // Update file count after scan completes
             long currentCount = countFiles();
             observer.updateFileCount(effectiveAgentId, currentCount);
+
         } catch (IOException e) {
             String errorMsg = "Failed to walk folder during full scan: " + e.getMessage();
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
@@ -510,6 +633,9 @@ public class Scanner implements FileScanner {
                 onErrorCallback.accept(errorMsg);
             }
         }
+
+        notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
+        log.info("Full scan complete for: {}", folderPath);
     }
 
     /**
@@ -535,6 +661,8 @@ public class Scanner implements FileScanner {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        // Complete the FileHistory sink
+        fileHistorySink.tryEmitComplete();
         log.info("Scanner destroyed for folder: {}", folderPath);
     }
 
@@ -582,7 +710,7 @@ public class Scanner implements FileScanner {
                 effectiveAgentId,
                 effectiveAgentId,
                 folderPath,
-                status,
+                status.name(),
                 createdAt,
                 lastEmittedAt,
                 errorMessage

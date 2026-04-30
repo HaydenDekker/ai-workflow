@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  * Consumes {@link ScannerMetricsChangedEvent} and publishes them via Spring's
  * {@link ApplicationEventPublisher} so the UI can react in real time.
  *
- * <p>Wired into {@link com.hdekker.ai_workflow.files.NativeFileWatcherAdapter} so
+ * <p>Wired into {@link com.hdekker.ai_workflow.usecases.Scanner} so
  * events fire on every file create/modify/delete event.</p>
  */
 @Component

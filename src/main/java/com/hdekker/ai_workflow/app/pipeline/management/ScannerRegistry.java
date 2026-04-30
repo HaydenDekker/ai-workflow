@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.EmissionDelayConfig;
 import com.hdekker.ai_workflow.usecases.Scanner;
+import com.hdekker.ai_workflow.usecases.ScannerStatus;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
@@ -149,14 +150,22 @@ public class ScannerRegistry implements DisposableBean {
                 metricsEventPublisher,
                 errMsg -> transitionToError(agentIdForAdapter, errMsg),
                 newStatus -> {
-                    updateStatus(agentIdForAdapter, newStatus);
+                    // String callback — for registry logging only
                     log.debug("Scanner {} status changed to {}", agentIdForAdapter, newStatus);
+                },
+                newStatus -> {
+                    // Enum callback — update scanner status and publish metrics event
+                    Scanner s = scanners.get(agentIdForAdapter);
+                    if (s != null) {
+                        s.updateStatus(newStatus);
+                        s.pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(agentIdForAdapter, newStatus.name()));
+                    }
                 },
                 aId -> {
                     // A file was emitted — update idle timer so the scanner stays active
                     recordEmission(aId);
                     // Briefly transition to EMITTING_UPDATES if currently IDLE
-                    updateStatus(aId, Scanner.STATUS_EMITTING_UPDATES);
+                    updateStatus(aId, ScannerStatus.EMITTING_UPDATES);
                     // Publish metrics event so the UI refreshes the status column
                     Scanner s = scanners.get(aId);
                     if (s != null) {
@@ -267,14 +276,14 @@ public class ScannerRegistry implements DisposableBean {
      * Delegates to the Scanner's own status management and metrics publishing.
      *
      * @param scannerId the agent ID or scanner ID
-     * @param status    the new status string
+     * @param status    the new status enum
      */
-    public void updateStatus(String scannerId, String status) {
+    public void updateStatus(String scannerId, ScannerStatus status) {
         Scanner scanner = scanners.get(scannerId);
         if (scanner != null) {
             scanner.updateStatus(status);
             log.debug("Updated scanner {} status to {}", scannerId, status);
-            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(scannerId, status));
+            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(scannerId, status.name()));
         }
     }
 
@@ -322,7 +331,7 @@ public class ScannerRegistry implements DisposableBean {
      */
     public void recordEmission(String agentId) {
         Scanner scanner = scanners.get(agentId);
-        if (scanner != null && !Scanner.STATUS_ERROR.equals(scanner.getStatus())) {
+        if (scanner != null && scanner.getStatus() != ScannerStatus.ERROR) {
             scanner.recordEmission();
             log.debug("Recorded emission for agent {} – resetting idle timer", agentId);
         }

@@ -16,17 +16,19 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
+import com.hdekker.ai_workflow.usecases.RawFileEvent;
 
 /**
- * Unit tests for {@link NativeFileWatcherAdapter} functional callbacks instead of Micrometer types.
+ * Unit tests for {@link NativeFileWatcherAdapter} raw event emission.
+ * <p>
+ * The adapter is a pure infrastructure component — it emits {@link RawFileEvent}
+ * (path + content) for CREATE, MODIFY, and initial scan. No business rules
+ * (hashing, comparison, metadata) are applied here.
  * <p>
  * Verifies that:
- * 1. onDiscovery callback is invoked during initial scan
- * 2. onUnchanged callback is invoked for unchanged files
- * 3. onFileCount callback is invoked after scan completes
+ * 1. Raw events are emitted during initial scan
+ * 2. Raw events are emitted for file creation (watch service)
+ * 3. Multiple files produce multiple raw events
  */
 public class NativeFileWatcherAdapterMetricsTest {
 
@@ -35,32 +37,7 @@ public class NativeFileWatcherAdapterMetricsTest {
     @TempDir
     Path tempDir;
 
-    private ScannerObserverUseCase observer;
     private NativeFileWatcherAdapter watcher;
-    private InMemoryFileMetadataStore store;
-
-    @BeforeEach
-    void setUp() {
-        observer = new ScannerObserverUseCase();
-        store = new InMemoryFileMetadataStore();
-        
-        watcher = new NativeFileWatcherAdapter(
-                tempDir, Duration.ofMillis(500), store,
-                agentId -> observer.recordDiscovery(agentId),
-                agentId -> observer.recordUnchanged(agentId),
-                agentId -> observer.updateFileCount(agentId, countFiles()),
-                history -> {}); // no-op callback for tests
-    }
-
-    private long countFiles() {
-        try {
-            return java.nio.file.Files.walk(tempDir)
-                    .filter(java.nio.file.Files::isRegularFile)
-                    .count();
-        } catch (Exception e) {
-            return 0L;
-        }
-    }
 
     @AfterEach
     void tearDown() {
@@ -70,169 +47,133 @@ public class NativeFileWatcherAdapterMetricsTest {
     }
 
     @Test
-    void givenEmptyDirectory_WhenWatcherStarted_ThenNoCallbacksInvoked() throws Exception {
-        CopyOnWriteArrayList<String> discovered = new CopyOnWriteArrayList<>();
-        CopyOnWriteArrayList<String> unchanged = new CopyOnWriteArrayList<>();
-        CopyOnWriteArrayList<String> fileCounts = new CopyOnWriteArrayList<>();
+    void givenEmptyDirectory_WhenWatcherStarted_ThenNoRawEventsEmitted() throws Exception {
+        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
 
-        // Use a fresh observer with callbacks to track invocations
-        ScannerObserverUseCase trackingObserver = new ScannerObserverUseCase();
-        trackingObserver.registerRefreshCallback(e -> {
-            if ("discovered".equals(e.getType())) discovered.add(e.getAgentId());
-            else if ("unchanged".equals(e.getType())) unchanged.add(e.getAgentId());
-            else if ("file_count".equals(e.getType())) fileCounts.add(e.getAgentId());
-        });
-
-        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
-                tempDir, Duration.ofMillis(500), store,
-                agentId -> trackingObserver.recordDiscovery(agentId),
-                agentId -> trackingObserver.recordUnchanged(agentId),
-                agentId -> trackingObserver.updateFileCount(agentId, countFiles()),
-                history -> {});
-
-        testWatcher.start();
-        Thread.sleep(500);
-
-        // No files discovered, no unchanged
-        var snapshot = trackingObserver.getMetrics(tempDir.toString());
-        assertThat(snapshot.totalDiscovered()).isZero();
-        assertThat(snapshot.unchanged()).isZero();
-        log.info("PASSED: no callbacks invoked for empty directory");
-    }
-
-    @Test
-    void givenFileInDirectory_WhenWatcherStarted_ThenDiscoveredCallbackInvoked() throws Exception {
-        // Create a file before starting the watcher
-        Files.writeString(tempDir.resolve("initial.txt"), "initial content");
-
-        CopyOnWriteArrayList<String> discoveredAgents = new CopyOnWriteArrayList<>();
-        
-        ScannerObserverUseCase trackingObserver = new ScannerObserverUseCase();
-        trackingObserver.registerRefreshCallback(e -> {
-            if ("discovered".equals(e.getType())) discoveredAgents.add(e.getAgentId());
-        });
-
-        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
-                tempDir, Duration.ofMillis(500), store,
-                agentId -> trackingObserver.recordDiscovery(agentId),
-                agentId -> trackingObserver.recordUnchanged(agentId),
-                agentId -> trackingObserver.updateFileCount(agentId, countFiles()),
-                history -> {});
-
-        testWatcher.start();
-        Thread.sleep(1000);
-
-        var snapshot = trackingObserver.getMetrics(tempDir.toString());
-
-        assertThat(snapshot.totalDiscovered()).isGreaterThanOrEqualTo(1);
-        log.info("PASSED: discovered callback invoked {} times", snapshot.totalDiscovered());
-    }
-
-    @Test
-    void givenFileInDirectory_WhenFileUnchanged_ThenUnchangedCallbackInvokedOnReset() throws Exception {
-        // Create a file before starting the watcher
-        Files.writeString(tempDir.resolve("unchanged.txt"), "unchanged content");
-
-        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
-                tempDir, Duration.ofMillis(500), store,
-                agentId -> observer.recordDiscovery(agentId),
-                agentId -> observer.recordUnchanged(agentId),
-                agentId -> observer.updateFileCount(agentId, countFiles()),
-                history -> {});
-
-        testWatcher.start();
-        Thread.sleep(1000);
-
-        // Now manually test that the emitFile method would increment unchanged
-        // We'll do this by creating another file and then checking the behavior
-        Path testFile = tempDir.resolve("test-event.txt");
-        Files.writeString(testFile, "test content");
-
-        // Subscribe to flux to trigger processing
         CountDownLatch latch = new CountDownLatch(1);
-        testWatcher.flux().subscribe(
-                fh -> latch.countDown(),
+        CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
+
+        watcher.flux().subscribe(
+                events::add,
                 e -> {},
-                () -> {}
+                latch::countDown
         );
 
-        boolean completed = latch.await(5, TimeUnit.SECONDS);
-        
-        var snapshot = observer.getMetrics(tempDir.toString());
+        watcher.start();
+        Thread.sleep(500);
 
-        // At least one file should have been discovered (the new one)
-        assertThat(snapshot.totalDiscovered()).isGreaterThanOrEqualTo(1);
-        log.info("PASSED: discovered count incremented to {}", snapshot.totalDiscovered());
+        // No files to scan — no raw events emitted
+        assertThat(events).isEmpty();
+        log.info("PASSED: no raw events for empty directory");
     }
 
     @Test
-    void givenMultipleFiles_WhenWatcherStarted_ThenAllDiscovered() throws Exception {
+    void givenFileInDirectory_WhenWatcherStarted_ThenRawEventEmitted() throws Exception {
+        // Create a file before starting the watcher
+        Path testFile = tempDir.resolve("initial.txt");
+        Files.writeString(testFile, "initial content");
+
+        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
+
+        CountDownLatch latch = new CountDownLatch(1);
+        CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
+
+        watcher.flux().subscribe(events::add, e -> {}, () -> {});
+
+        watcher.start();
+        Thread.sleep(1000);
+
+        // At least one raw event should have been emitted during initial scan
+        assertThat(events).isNotEmpty();
+        RawFileEvent event = events.get(0);
+        assertThat(event.path().getFileName().toString()).isEqualTo("initial.txt");
+        assertThat(event.content()).isEqualTo("initial content");
+        log.info("PASSED: raw event emitted for file in directory");
+    }
+
+    @Test
+    void givenMultipleFiles_WhenWatcherStarted_ThenAllEmitRawEvents() throws Exception {
         // Create multiple files
         Files.writeString(tempDir.resolve("file1.txt"), "content 1");
         Files.writeString(tempDir.resolve("file2.txt"), "content 2");
         Files.writeString(tempDir.resolve("file3.txt"), "content 3");
 
-        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
-                tempDir, Duration.ofMillis(500), store,
-                agentId -> observer.recordDiscovery(agentId),
-                agentId -> observer.recordUnchanged(agentId),
-                agentId -> observer.updateFileCount(agentId, countFiles()),
-                history -> {});
+        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
 
-        testWatcher.start();
+        CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
+        watcher.flux().subscribe(events::add, e -> {}, () -> {});
+
+        watcher.start();
         Thread.sleep(1000);
 
-        var snapshot = observer.getMetrics(tempDir.toString());
+        // All 3 files should produce raw events during initial scan
+        assertThat(events).hasSize(3);
 
-        assertThat(snapshot.totalDiscovered()).isEqualTo(3);
-        log.info("PASSED: all {} files discovered", snapshot.totalDiscovered());
+        CopyOnWriteArrayList<String> fileNames = new CopyOnWriteArrayList<>();
+        for (RawFileEvent event : events) {
+            fileNames.add(event.path().getFileName().toString());
+        }
+        assertThat(fileNames).contains("file1.txt", "file2.txt", "file3.txt");
+        log.info("PASSED: all {} files emitted as raw events", events.size());
     }
 
     @Test
-    void givenWatcherStarted_ThenFileCountCallbackInvoked() throws Exception {
-        // Create a file before starting the watcher
-        Files.writeString(tempDir.resolve("count-test.txt"), "content");
+    void givenWatcherStarted_WhenFileCreated_ThenRawEventEmitted() throws Exception {
+        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
 
-        CopyOnWriteArrayList<Long> fileCountValues = new CopyOnWriteArrayList<>();
-        
-        ScannerObserverUseCase trackingObserver = new ScannerObserverUseCase();
-        trackingObserver.registerRefreshCallback(e -> {
-            if ("file_count".equals(e.getType())) {
-                fileCountValues.add(trackingObserver.getMetrics(tempDir.toString()).fileCount());
-            }
-        });
+        CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(1);
 
-        NativeFileWatcherAdapter testWatcher = new NativeFileWatcherAdapter(
-                tempDir, Duration.ofMillis(500), store,
-                agentId -> trackingObserver.recordDiscovery(agentId),
-                agentId -> trackingObserver.recordUnchanged(agentId),
-                agentId -> trackingObserver.updateFileCount(agentId, countFiles()),
-                history -> {});
+        watcher.flux().subscribe(
+                events::add,
+                e -> {},
+                () -> {}
+        );
 
-        testWatcher.start();
-        Thread.sleep(1000);
+        watcher.start();
+        Thread.sleep(500);
 
-        // File count callback should have been invoked
-        assertThat(fileCountValues).isNotEmpty();
-        assertThat(fileCountValues.get(fileCountValues.size() - 1)).isGreaterThanOrEqualTo(1);
-        log.info("PASSED: file count callback invoked {} times, last value: {}", 
-                fileCountValues.size(), fileCountValues.get(fileCountValues.size() - 1));
+        // Create a file after watcher starts
+        Path testFile = tempDir.resolve("watch-create.txt");
+        Files.writeString(testFile, "watch service test content");
+
+        // Wait for watch service to detect
+        boolean detected = latch.await(10, TimeUnit.SECONDS);
+
+        if (detected) {
+            assertThat(events).isNotEmpty();
+            assertThat(events.get(0).content()).isEqualTo("watch service test content");
+        } else {
+            // Watch service may not fire in all environments — check events anyway
+            assertThat(events).isNotEmpty();
+        }
+
+        log.info("PASSED: raw event emitted for file creation ({} events)", events.size());
     }
 
-    /**
-     * In-memory implementation of FileMetadataStore for testing.
-     */
-    private static class InMemoryFileMetadataStore implements FileMetadataStore {
-        private final java.util.Map<String, FileMetadata> store = new java.util.concurrent.ConcurrentHashMap<>();
+    @Test
+    void givenWatcherStarted_ThenRawScanEmitsEvents() throws Exception {
+        // Create files
+        Files.writeString(tempDir.resolve("scan1.txt"), "scan content 1");
+        Files.writeString(tempDir.resolve("scan2.txt"), "scan content 2");
 
-        @Override
-        public java.util.Optional<FileMetadata> findById(String url) {
-            return java.util.Optional.ofNullable(store.get(url));
-        }
+        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
 
-        @Override
-        public void save(FileMetadata file) {
-            store.put(file.url(), file);
-        }
+        CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
+        watcher.flux().subscribe(events::add, e -> {}, () -> {});
+
+        watcher.start();
+        Thread.sleep(500);
+
+        // Clear events from initial scan
+        events.clear();
+
+        // Trigger raw scan again
+        watcher.rawScan();
+        Thread.sleep(500);
+
+        // Raw scan should emit events for all files
+        assertThat(events).hasSize(2);
+        log.info("PASSED: rawScan emitted {} events", events.size());
     }
 }
