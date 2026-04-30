@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.pipeline.llmadapter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
@@ -9,6 +11,8 @@ import com.hdekker.ai_workflow.prompt.PromptResponse;
 import reactor.core.publisher.Flux;
 
 public class LLMReducerAdapter implements LLMAdapter {
+
+    private static final Logger log = LoggerFactory.getLogger(LLMReducerAdapter.class);
 
 	final ChatClient chatClient;
 	AgentDefinition agentDefinition;
@@ -29,6 +33,7 @@ public class LLMReducerAdapter implements LLMAdapter {
                                  + (latestResponse.isEmpty() ? "" : "\n\r\n")
                                  + "New aspect for analysis: \r\n\r\n" + pp.file();
 
+			log.info("Sending prompt to LLM for file: {}", pp.fileURL());
 			return chatClient.prompt(agentDefinition.body() + "\n\r" + "```code" + fileContent + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
 				.stream()
 				.content()

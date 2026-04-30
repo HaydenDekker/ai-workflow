@@ -25,13 +25,14 @@ public class SplitterLLMAdapter implements LLMAdapter {
 
     @Override
     public Flux<PromptResponse> call(Flux<com.hdekker.ai_workflow.prompt.PromptRequest> request) {
-        return request.flatMap(fpe ->
-                chatClient.prompt(agentDefinition.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
+        return request.flatMap(fpe -> {
+            log.info("Sending prompt to LLM for file: {}", fpe.fileURL());
+            return chatClient.prompt(agentDefinition.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
                         .stream()
                         .content()
                         .reduce((a, b) -> a + b)
-                        .flatMapMany(fullResponse -> parseAndEmitResponses(fpe, fullResponse))
-        );
+                        .flatMapMany(fullResponse -> parseAndEmitResponses(fpe, fullResponse));
+        });
     }
 
     private Flux<PromptResponse> parseAndEmitResponses(com.hdekker.ai_workflow.prompt.PromptRequest fpe, String fullResponse) {

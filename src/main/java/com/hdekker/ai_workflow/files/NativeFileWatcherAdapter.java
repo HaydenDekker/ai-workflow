@@ -112,8 +112,14 @@ public class NativeFileWatcherAdapter {
                 for (WatchEvent<?> event : key.pollEvents()) {
                     WatchEvent.Kind<?> kind = event.kind();
 
-                    // Overflow event indicates events were lost
+                    // Overflow event indicates events were lost — trigger a rescan
                     if (kind == StandardWatchEventKinds.OVERFLOW) {
+                        log.info("Overflow detected for: {} — some events may have been lost, triggering rescan", directory);
+                        try {
+                            rawScan();
+                        } catch (IOException e) {
+                            log.error("Failed to rescan after overflow for: {}", directory, e);
+                        }
                         continue;
                     }
 
@@ -150,6 +156,7 @@ public class NativeFileWatcherAdapter {
             switch (kind.name()) {
                 case "ENTRY_CREATE" -> {
                     if (Files.isRegularFile(eventPath)) {
+                        log.info("CREATE event: {}", eventPath);
                         // Small delay to ensure file is fully written
                         Thread.sleep(100);
                         emitRawFile(eventPath);
@@ -157,17 +164,17 @@ public class NativeFileWatcherAdapter {
                 }
                 case "ENTRY_MODIFY" -> {
                     if (Files.isRegularFile(eventPath)) {
+                        log.info("MODIFY event: {}", eventPath);
                         // Small delay to ensure file is fully written
                         Thread.sleep(100);
                         emitRawFile(eventPath);
                     }
                 }
                 case "ENTRY_DELETE" -> {
-                    log.debug("File deleted: {}", eventPath);
-                    // Note: We don't emit DELETE events since content is no longer available.
-                    // The file will be re-created if it appears again.
+                    log.info("DELETE event: {}", eventPath);
+                    emitDeleteEvent(eventPath);
                 }
-                default -> log.debug("Unknown event kind: {} for: {}", kind, eventPath);
+                default -> log.info("Unknown event kind: {} for: {}", kind, eventPath);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -187,6 +194,14 @@ public class NativeFileWatcherAdapter {
         } catch (IOException e) {
             log.warn("Failed to read file for event: {}", path, e);
         }
+    }
+
+    /**
+     * Emit a DELETE raw event (path only, content is null).
+     * Called when a file is removed from the watched directory.
+     */
+    private void emitDeleteEvent(Path path) {
+        sink.tryEmitNext(new RawFileEvent(path, null, RawFileEvent.RawFileEventType.DELETE));
     }
 
     /**
