@@ -59,6 +59,13 @@ public class ScannerMetricsChangedEvent {
     }
 
     /**
+     * Create an event for a file deletion.
+     */
+    public static ScannerMetricsChangedEvent fileDeleted(String agentId) {
+        return new ScannerMetricsChangedEvent(agentId, "file_deleted");
+    }
+
+    /**
      * Create an event for a file emission (file actually sent through the sink).
      * Triggers UI refresh so the status column shows EMITTING_UPDATES.
      */
@@ -102,5 +109,25 @@ public class ScannerMetricsChangedEvent {
      */
     public static ScannerMetricsChangedEvent scannerMetricsChanged(String type) {
         return new ScannerMetricsChangedEvent(null, type);
+    }
+
+    /**
+     * Create an event from a {@link com.hdekker.ai_workflow.usecases.ScannerEventType}.
+     * <p>
+     * Maps enum values to event type strings:
+     * <ul>
+     *   <li>CREATION → "creation"</li>
+     *   <li>MODIFICATION → "modification"</li>
+     *   <li>DELETION → "deletion"</li>
+     *   <li>UNCHANGED → "unchanged"</li>
+     * </ul>
+     *
+     * @param eventType the scanner event type
+     * @param agentId   the owning agent's ID
+     * @return a new event
+     */
+    public static ScannerMetricsChangedEvent scannerEvent(
+            com.hdekker.ai_workflow.usecases.ScannerEventType eventType, String agentId) {
+        return new ScannerMetricsChangedEvent(agentId, eventType.name().toLowerCase());
     }
 }

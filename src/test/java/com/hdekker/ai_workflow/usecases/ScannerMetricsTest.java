@@ -23,15 +23,15 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 /**
  * Unit tests for {@link Scanner} metrics instrumentation via {@link ScannerObserverUseCase}.
  * <p>
  * Verifies that:
- * 1. recordDiscovery is called on file discovery
- * 2. recordUnchanged is called on unchanged files
- * 3. updateFileCount is called after scan completes
+ * 1. File count is computed on-demand from the watched directory
+ * 2. Discovered count increments for new and changed files
+ * 3. Discovered count does NOT increment for unchanged or deleted files
+ * 4. File count reflects actual directory contents after events
  */
 public class ScannerMetricsTest {
 
@@ -109,12 +109,13 @@ public class ScannerMetricsTest {
         var snapshot = observer.getMetrics("test-agent");
 
         assertThat(snapshot.totalDiscovered()).isEqualTo(1);
+        assertThat(snapshot.fileCount()).isEqualTo(1);
         log.info("PASSED: discovered count incremented to {}", snapshot.totalDiscovered());
     }
 
     @Test
-    void givenFileInDirectory_WhenFullScan_ThenUnchangedCountIncrements() throws Exception {
-        log.info("Test: unchanged count increments on full scan");
+    void givenFileInDirectory_WhenFullScan_ThenDiscoveredDoesNotIncrement() throws Exception {
+        log.info("Test: discovered count does not increment on full scan of unchanged files");
 
         // Create a test file
         Path testFile = inputDir.resolve("test-unchanged.txt");
@@ -129,15 +130,17 @@ public class ScannerMetricsTest {
         // Wait for initial scan
         Thread.sleep(1000);
 
+        long initialDiscovered = observer.getMetrics("test-agent").totalDiscovered();
+
         // Now do a full scan (reset) - file should be unchanged
         adapter.resetToFullScan();
         Thread.sleep(500);
 
-        // Unchanged count should be at least 1
+        // Discovered count should NOT increase (unchanged file)
         var snapshot = observer.getMetrics("test-agent");
 
-        assertThat(snapshot.unchanged()).isGreaterThanOrEqualTo(1);
-        log.info("PASSED: unchanged count incremented to {}", snapshot.unchanged());
+        assertThat(snapshot.totalDiscovered()).isEqualTo(initialDiscovered);
+        log.info("PASSED: discovered count stayed at {} for unchanged files", snapshot.totalDiscovered());
     }
 
     @Test
@@ -191,7 +194,7 @@ public class ScannerMetricsTest {
         long finalDiscovered = observer.getMetrics("test-agent").totalDiscovered();
 
         assertThat(finalDiscovered).isGreaterThan(initialDiscovered);
-        log.info("PASSED: discovered count went from {} to {}", 
+        log.info("PASSED: discovered count went from {} to {}",
                 initialDiscovered, finalDiscovered);
     }
 
@@ -214,12 +217,12 @@ public class ScannerMetricsTest {
 
         // Add more files
         Files.writeString(inputDir.resolve("file-c.txt"), "content c");
-        
+
         // Trigger full scan
         adapter.resetToFullScan();
         Thread.sleep(500);
 
-        // File count should reflect 3 files
+        // File count should reflect 3 files (computed from directory walk)
         var snapshot = observer.getMetrics("test-agent");
 
         assertThat(snapshot.fileCount()).isEqualTo(3);
@@ -245,7 +248,7 @@ public class ScannerMetricsTest {
         // Wait for initial scan
         Thread.sleep(1000);
 
-        // Should have received events (file_count, discovered, etc.)
+        // Should have received events (creation, etc.)
         assertThat(events).isNotEmpty();
         log.info("PASSED: received {} metrics events", events.size());
     }

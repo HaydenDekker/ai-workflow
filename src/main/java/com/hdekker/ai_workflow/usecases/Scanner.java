@@ -251,6 +251,13 @@ public class Scanner implements FileScanner {
         String content = rawEvent.content();
 
         try {
+            // Handle DELETE events — content is not available
+            if (rawEvent.eventType() == RawFileEvent.RawFileEventType.DELETE) {
+                observer.recordScannerEvent(ScannerEventType.DELETION, effectiveAgentId, folderPath);
+                log.debug("Deleted file: {}", path);
+                return;
+            }
+
             String hash = FileHash.hash(content);
             Path directory = nativeFileWatcher.getDirectory();
             String relativePath = directory.relativize(path).toString().replace("\\", "/");
@@ -258,19 +265,14 @@ public class Scanner implements FileScanner {
             FileHistory history = fileComparator.matches(metadata);
 
             if (!history.hashMatches()) {
-                // File is new or changed
-                boolean isNewFile = history.previousFile().isEmpty();
-                if (isNewFile) {
-                    observer.recordDiscoveryNewFile(effectiveAgentId);
-                } else {
-                    observer.recordDiscovery(effectiveAgentId);
-                }
-                log.debug("{} file: {}", isNewFile ? "New" : "Changed", relativePath);
+                ScannerEventType eventType = history.previousFile().isEmpty()
+                        ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
+                observer.recordScannerEvent(eventType, effectiveAgentId, folderPath);
+                log.debug("{} file: {}", eventType == ScannerEventType.CREATION ? "New" : "Changed", relativePath);
                 fileMetadataStore.save(metadata);
                 emitWithDelay(history);
             } else {
-                // File is unchanged
-                observer.recordUnchanged(effectiveAgentId);
+                observer.recordScannerEvent(ScannerEventType.UNCHANGED, effectiveAgentId, folderPath);
                 if (onStatusChanged != null) {
                     cancelAndScheduleFilteredReset();
                 }
@@ -397,13 +399,8 @@ public class Scanner implements FileScanner {
             nativeFileWatcher.start();
 
             // Flush any buffered files so they are emitted immediately if the
-            // emission delay has elapsed. This ensures the file count is accurate
-            // and the status reflects actual emission activity.
+            // emission delay has elapsed.
             flushBufferedEmission();
-
-            // Update file count after initial scan completes
-            long currentCount = countFiles();
-            observer.updateFileCount(effectiveAgentId, currentCount);
 
             // Transition to EMITTING_UPDATES only if files were buffered (meaning
             // the hash filter found at least one changed/new file). If nothing
@@ -627,10 +624,6 @@ public class Scanner implements FileScanner {
             // Flush any buffered files
             flushBufferedEmission();
 
-            // Update file count after scan completes
-            long currentCount = countFiles();
-            observer.updateFileCount(effectiveAgentId, currentCount);
-
         } catch (IOException e) {
             String errorMsg = "Failed to walk folder during full scan: " + e.getMessage();
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
@@ -690,19 +683,6 @@ public class Scanner implements FileScanner {
      */
     public String getEffectiveAgentId() {
         return effectiveAgentId;
-    }
-
-    /**
-     * Count the number of regular files in the target directory.
-     */
-    private long countFiles() {
-        try {
-            return Files.walk(Path.of(folderPath).toAbsolutePath())
-                    .filter(Files::isRegularFile)
-                    .count();
-        } catch (IOException e) {
-            return 0L;
-        }
     }
 
     /**
