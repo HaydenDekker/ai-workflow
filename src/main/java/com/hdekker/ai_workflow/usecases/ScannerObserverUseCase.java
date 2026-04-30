@@ -128,7 +128,50 @@ public class ScannerObserverUseCase {
             }
             return existing.withLastEmission(now);
         });
-        pushToUI(ScannerMetricsChangedEvent.fileCountUpdated(agentId));
+        pushToUI(ScannerMetricsChangedEvent.fileEmitted(agentId));
+    }
+
+    /**
+     * Record a scanner status change for the given agent.
+     * <p>
+     * Pushes a status change event to the UI so the grid can reflect
+     * the new scanner state (e.g. IDLE → EMITTING_UPDATES, FILTERED → IDLE).
+     *
+     * @param agentId the owning agent's ID
+     * @param status  the new scanner status
+     */
+    public void recordStatusChange(String agentId, ScannerStatus status) {
+        pushToUI(ScannerMetricsChangedEvent.statusChanged(agentId, status.name()));
+    }
+
+    /**
+     * Record a scanner error for the given agent.
+     * <p>
+     * Pushes an error event to the UI so the grid can display the error state.
+     *
+     * @param agentId the owning agent's ID
+     * @param message human-readable description of the error
+     */
+    public void recordError(String agentId, String message) {
+        pushToUI(ScannerMetricsChangedEvent.errorOccurred(agentId, message));
+    }
+
+    /**
+     * Record a scanner recovery from error for the given agent.
+     *
+     * @param agentId the owning agent's ID
+     */
+    public void recordRecovery(String agentId) {
+        pushToUI(ScannerMetricsChangedEvent.recoveredFromError(agentId));
+    }
+
+    /**
+     * Record that a scanner reached idle for the given agent.
+     *
+     * @param agentId the owning agent's ID
+     */
+    public void recordIdle(String agentId) {
+        pushToUI(ScannerMetricsChangedEvent.idleReached(agentId));
     }
 
     /**

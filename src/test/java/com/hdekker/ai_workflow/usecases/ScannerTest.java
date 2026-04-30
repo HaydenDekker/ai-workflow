@@ -27,7 +27,9 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
+import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
@@ -59,6 +61,8 @@ public class ScannerTest {
     private ScannerObserverUseCase observer;
 
     private Scanner adapter;
+    private CopyOnWriteArrayList<String> statusChanges;
+    private ScannerObserverUseCase testObserver;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -71,6 +75,15 @@ public class ScannerTest {
             FileMetadata fm = invocation.getArgument(0);
             return null;
         }).when(fileMetadataDatabase).save(any(FileMetadata.class));
+
+        observer = new ScannerObserverUseCase();
+        statusChanges = new CopyOnWriteArrayList<>();
+        testObserver = new ScannerObserverUseCase();
+        testObserver.registerRefreshCallback(e -> {
+            if ("status_change".equals(e.getType())) {
+                statusChanges.add(e.getErrorMessage());
+            }
+        });
     }
 
     @AfterEach
@@ -376,5 +389,156 @@ public class ScannerTest {
         // This test is skipped because watch service modification detection is platform-dependent
         // and already covered by FileSystemSimplePollerFluxAdapterTest
         log.info("SKIPPED: watch service modification test (see FileSystemSimplePollerFluxAdapterTest)");
+    }
+
+    // -- Filtered status tests --
+
+    @Test
+    void givenExistingFileWithStoredHash_WhenInitSourceCalled_ThenStatusFilteredEmitted() throws Exception {
+        log.info("Test: FILTERED status emitted when file hash matches stored metadata on initSource");
+
+        Path testFile = inputDir.resolve("known-file.txt");
+        String fileContent = "this file is already known";
+        String fileHash = FileHash.hash(fileContent);
+        Files.writeString(testFile, fileContent);
+
+        when(fileMetadataDatabase.findById(any())).thenAnswer(invocation -> {
+            String url = invocation.getArgument(0);
+            if (url.equals("known-file.txt")) {
+                return Optional.of(new FileMetadata(url, fileContent, fileHash));
+            }
+            return Optional.empty();
+        });
+
+        adapter = new Scanner(
+                "test-agent-filtered",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                fileMetadataDatabase,
+                testObserver
+        );
+
+        adapter.initSource("test-agent-filtered");
+
+        assertThat(statusChanges)
+                .as("Status change callback should have been invoked via observer")
+                .isNotEmpty();
+        assertThat(statusChanges)
+                .as("FILTERED status should be emitted when file is rejected by hash filter")
+                .contains("FILTERED");
+
+        log.info("PASSED: FILTERED status emitted, recorded transitions: {}", statusChanges);
+    }
+
+    @Test
+    void givenExistingFileWithStoredHash_WhenResetToFullScan_ThenStatusFilteredEmitted() throws Exception {
+        log.info("Test: FILTERED status emitted on resetToFullScan for unchanged file");
+
+        Path testFile = inputDir.resolve("known-file-2.txt");
+        String fileContent = "this file is also known";
+        String fileHash = FileHash.hash(fileContent);
+        Files.writeString(testFile, fileContent);
+
+        when(fileMetadataDatabase.findById(any())).thenAnswer(invocation -> {
+            String url = invocation.getArgument(0);
+            if (url.equals("known-file-2.txt")) {
+                return Optional.of(new FileMetadata(url, fileContent, fileHash));
+            }
+            return Optional.empty();
+        });
+
+        adapter = new Scanner(
+                "test-agent-filtered",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                fileMetadataDatabase,
+                testObserver
+        );
+
+        adapter.initSource("test-agent-filtered");
+        statusChanges.clear();
+
+        adapter.resetToFullScan();
+
+        assertThat(statusChanges)
+                .as("Status change callback should have been invoked during full scan")
+                .isNotEmpty();
+        assertThat(statusChanges)
+                .as("FILTERED status should be emitted when resetToFullScan encounters unchanged file")
+                .contains("FILTERED");
+
+        log.info("PASSED: FILTERED status emitted on reset, recorded transitions: {}", statusChanges);
+    }
+
+    @Test
+    void givenFileDeletedAndReaddedWithSameHash_WhenWatcherFires_ThenStatusFilteredEmitted() throws Exception {
+        log.info("Test: FILTERED status emitted when file is deleted and re-added with same content");
+
+        Path testFile = inputDir.resolve("readded-file.txt");
+        String fileContent = "content that stays the same";
+        String fileHash = FileHash.hash(fileContent);
+        Files.writeString(testFile, fileContent);
+
+        // Metadata store always returns the stored hash (simulating persistent metadata across delete/re-add)
+        when(fileMetadataDatabase.findById(any())).thenAnswer(invocation -> {
+            String url = invocation.getArgument(0);
+            if (url.equals("readded-file.txt")) {
+                return Optional.of(new FileMetadata(url, fileContent, fileHash));
+            }
+            return Optional.empty();
+        });
+
+        adapter = new Scanner(
+                "test-agent-filtered",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                fileMetadataDatabase,
+                testObserver
+        );
+
+        // Phase 1: initSource scans the existing file — hash matches, emits FILTERED
+        adapter.initSource("test-agent-filtered");
+
+        assertThat(statusChanges)
+                .as("Phase 1: FILTERED should be emitted for initial scan of known file")
+                .contains("FILTERED");
+
+        statusChanges.clear();
+
+        // Phase 2: Delete the file — watcher fires DELETE, metadata is NOT cleared
+        Files.delete(testFile);
+        Thread.sleep(500); // Allow watcher to process the DELETE event
+
+        // Phase 3: Re-add the file with the SAME content — watcher fires CREATE
+        // Hash still matches stored metadata, so FILTERED should be emitted again
+        Files.writeString(testFile, fileContent);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        new Thread(() -> {
+            try {
+                for (int i = 0; i < 40; i++) {
+                    if (statusChanges.contains("FILTERED")) {
+                        latch.countDown();
+                        return;
+                    }
+                    Thread.sleep(100);
+                }
+                latch.countDown();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                latch.countDown();
+            }
+        }).start();
+
+        latch.await(15, TimeUnit.SECONDS);
+
+        assertThat(statusChanges)
+                .as("FILTERED status should be emitted when deleted file is re-added with same hash")
+                .contains("FILTERED");
+
+        log.info("PASSED: FILTERED status emitted on delete+re-add, recorded transitions: {}", statusChanges);
     }
 }

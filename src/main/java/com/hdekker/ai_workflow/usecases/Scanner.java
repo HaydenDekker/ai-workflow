@@ -71,11 +71,6 @@ public class Scanner implements FileScanner {
     // -- Idle checker (moved from ScannerRegistry) --
     private final ScheduledExecutorService idleChecker;
 
-    private final Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
-    private final Consumer<String> onErrorCallback;
-    private final Consumer<String> onStatusChanged; // string callback for registry logging
-    private final Consumer<ScannerStatus> onStatusChangedEnum; // enum callback for registry metrics publishing
-    private final Consumer<String> onEmission; // called when a file is emitted (updates idle timer)
     private final ScheduledExecutorService filteredResetScheduler;
     private volatile java.util.concurrent.ScheduledFuture<?> filteredResetTask;
 
@@ -95,24 +90,14 @@ public class Scanner implements FileScanner {
      * @param delayBetweenReads   poll interval for the watch service
      * @param emissionDelay       minimum interval between consecutive file emissions
      * @param fileMetadataStore   metadata for change detection
-     * @param observer            scanner observer use case for metrics tracking
-     * @param metricsEventPublisher  callback to publish metrics change events
-     * @param onErrorCallback     callback invoked when the scanner encounters an error
-     * @param onStatusChanged     callback invoked when scanner status changes (string, for logging)
-     * @param onStatusChangedEnum callback invoked when scanner status changes (enum, for metrics)
-     * @param onEmission          callback invoked when a file is emitted (updates idle timer)
+     * @param observer            scanner observer use case for metrics and UI push
      */
     public Scanner(String agentId,
                                      String folderPath,
                                      Duration delayBetweenReads,
                                      Duration emissionDelay,
                                      FileMetadataStore fileMetadataStore,
-                                     ScannerObserverUseCase observer,
-                                     Consumer<ScannerMetricsChangedEvent> metricsEventPublisher,
-                                     Consumer<String> onErrorCallback,
-                                     Consumer<String> onStatusChanged,
-                                     Consumer<ScannerStatus> onStatusChangedEnum,
-                                     Consumer<String> onEmission) {
+                                     ScannerObserverUseCase observer) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
         this.delayBetweenReads = delayBetweenReads;
@@ -121,11 +106,6 @@ public class Scanner implements FileScanner {
         this.fileComparator = new FileComparator(fileMetadataStore);
         this.observer = observer;
         this.createdAt = LocalDateTime.now();
-        this.metricsEventPublisher = metricsEventPublisher;
-        this.onErrorCallback = onErrorCallback;
-        this.onStatusChanged = onStatusChanged;
-        this.onStatusChangedEnum = onStatusChangedEnum;
-        this.onEmission = onEmission;
         this.lastEmissionTime = LocalDateTime.now();
 
         // Idle checker — monitors this scanner for inactivity
@@ -159,62 +139,24 @@ public class Scanner implements FileScanner {
     /**
      * Backward-compatible constructor for tests.
      * <p>
-     * Uses zero emission delay and no error or status callbacks.
+     * Uses zero emission delay.
      *
      * @param agentId             owning agent's ID (used for metric tagging)
      * @param folderPath          absolute path to watch
      * @param delayBetweenReads   poll interval for the watch service
      * @param fileMetadataStore   metadata for change detection
-     * @param observer            scanner observer use case for metrics tracking
-     * @param metricsEventPublisher  callback to publish metrics change events
+     * @param observer            scanner observer use case for metrics and UI push
+     * @param metricsEventPublisher  unused, retained for API compatibility
      */
+    @Deprecated
     public Scanner(String agentId,
                                      String folderPath,
                                      Duration delayBetweenReads,
                                      FileMetadataStore fileMetadataStore,
                                      ScannerObserverUseCase observer,
                                      Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
-        this.folderPath = folderPath;
-        this.effectiveAgentId = agentId != null ? agentId : folderPath;
-        this.delayBetweenReads = delayBetweenReads;
-        this.emissionDelay = Duration.ZERO;
-        this.fileMetadataStore = fileMetadataStore;
-        this.fileComparator = new FileComparator(fileMetadataStore);
-        this.observer = observer;
-        this.createdAt = LocalDateTime.now();
-        this.metricsEventPublisher = metricsEventPublisher;
-        this.onErrorCallback = null;
-        this.onStatusChanged = null;
-        this.onStatusChangedEnum = null;
-        this.onEmission = null;
-        this.lastEmissionTime = LocalDateTime.now();
-
-        // Idle checker
-        this.idleChecker = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "scanner-idle-checker-" + this.effectiveAgentId);
-            t.setDaemon(true);
-            return t;
-        });
-        startIdleChecker();
-
-        this.filteredResetScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "filtered-reset");
-            t.setDaemon(true);
-            return t;
-        });
-
-        // Scanner's own sink for FileHistory
-        this.fileHistorySink = Sinks.many().multicast().directBestEffort();
-
-        // Create the native file watcher adapter
-        this.nativeFileWatcher = new NativeFileWatcherAdapter(
-                Path.of(folderPath), delayBetweenReads);
-
-        // Subscribe to raw events from the adapter and apply business logic
-        subscribeToRawEvents();
-
+        this(agentId, folderPath, delayBetweenReads, Duration.ZERO, fileMetadataStore, observer);
         // Tests using this constructor need the watcher to run.
-        // No status callback, so no status transitions occur.
         initSource(this.effectiveAgentId);
     }
 
@@ -236,9 +178,7 @@ public class Scanner implements FileScanner {
                 error -> {
                     log.error("Error in raw event subscription for agent {}: {}",
                             effectiveAgentId, error.getMessage());
-                    if (onErrorCallback != null) {
-                        onErrorCallback.accept("Error processing raw event: " + error.getMessage());
-                    }
+                    observer.recordError(effectiveAgentId, "Error processing raw event: " + error.getMessage());
                 }
         );
     }
@@ -273,16 +213,12 @@ public class Scanner implements FileScanner {
                 emitWithDelay(history);
             } else {
                 observer.recordScannerEvent(ScannerEventType.UNCHANGED, effectiveAgentId, folderPath);
-                if (onStatusChanged != null) {
-                    cancelAndScheduleFilteredReset();
-                }
+                cancelAndScheduleFilteredReset();
                 log.debug("Unchanged file (skipped): {}", relativePath);
             }
         } catch (Exception e) {
             log.warn("Failed to process raw event for path {}: {}", path, e.getMessage());
-            if (onErrorCallback != null) {
-                onErrorCallback.accept("Failed to process raw event: " + e.getMessage());
-            }
+            observer.recordError(effectiveAgentId, "Failed to process raw event: " + e.getMessage());
         }
     }
 
@@ -361,21 +297,18 @@ public class Scanner implements FileScanner {
         if (filteredResetTask != null) {
             filteredResetTask.cancel(false);
         }
-        if (onStatusChanged != null) {
-            onStatusChanged.accept(ScannerStatus.FILTERED.name());
-            final String agentIdForReset = effectiveAgentId;
-            filteredResetTask = filteredResetScheduler.schedule(
-                    () -> onStatusChanged.accept(ScannerStatus.IDLE.name()), 2, TimeUnit.SECONDS);
-        }
+        notifyStatusChange(ScannerStatus.FILTERED);
+        final String agentIdForReset = effectiveAgentId;
+        filteredResetTask = filteredResetScheduler.schedule(
+                () -> notifyStatusChange(ScannerStatus.IDLE), 2, TimeUnit.SECONDS);
     }
 
     /**
-     * Handle the emission callback (reset idle timer, etc.).
+     * Handle the emission callback — record emission with observer and reset idle timer.
      */
     private void onEmitCallback() {
-        if (onEmission != null) {
-            onEmission.accept(effectiveAgentId);
-        }
+        this.lastEmittedAt = LocalDateTime.now();
+        observer.recordEmission(effectiveAgentId);
     }
 
     /**
@@ -417,9 +350,7 @@ public class Scanner implements FileScanner {
         } catch (Exception e) {
             String errorMsg = "Failed to initialise scanner: " + e.getMessage();
             log.error("Failed to initialise scanner for folder: {}", folderPath, e);
-            if (onErrorCallback != null) {
-                onErrorCallback.accept(errorMsg);
-            }
+            observer.recordError(effectiveAgentId, errorMsg);
         }
     }
 
@@ -447,11 +378,13 @@ public class Scanner implements FileScanner {
 
     /**
      * Transition this scanner to the ERROR state.
+     * Records both the status change and the error with the observer.
      *
      * @param reason human-readable description of the error
      */
     public void transitionToError(String reason) {
         this.errorMessage = reason;
+        observer.recordError(effectiveAgentId, reason);
         notifyStatusChange(ScannerStatus.ERROR);
         log.error("Scanner for agent {} entered ERROR state: {}", effectiveAgentId, reason);
     }
@@ -462,6 +395,7 @@ public class Scanner implements FileScanner {
      */
     public void recover() {
         this.errorMessage = null;
+        observer.recordRecovery(effectiveAgentId);
         notifyStatusChange(ScannerStatus.IDLE);
         log.info("Recovered scanner for agent {} from ERROR state", effectiveAgentId);
     }
@@ -473,21 +407,6 @@ public class Scanner implements FileScanner {
      */
     public String getErrorMessage() {
         return errorMessage;
-    }
-
-    /**
-     * Push a metrics change event to the UI.
-     *
-     * @param event the metrics change event
-     */
-    public void pushMetricsEvent(ScannerMetricsChangedEvent event) {
-        if (metricsEventPublisher != null) {
-            try {
-                metricsEventPublisher.accept(event);
-            } catch (Exception e) {
-                log.warn("Error publishing metrics event: {}", e.getMessage());
-            }
-        }
     }
 
     /**
@@ -553,21 +472,14 @@ public class Scanner implements FileScanner {
     }
 
     /**
-     * Notify the registry of a status change.
-     * Updates internal state and fires the external callbacks.
+     * Update the scanner's status and notify the observer.
+     * The observer pushes the status change to the UI.
      *
      * @param newStatus the new status enum
      */
     private void notifyStatusChange(ScannerStatus newStatus) {
         this.status = newStatus;
-        // Fire string callback for registry logging
-        if (onStatusChanged != null) {
-            onStatusChanged.accept(newStatus.name());
-        }
-        // Fire enum callback for registry metrics publishing
-        if (onStatusChangedEnum != null) {
-            onStatusChangedEnum.accept(newStatus);
-        }
+        observer.recordStatusChange(effectiveAgentId, newStatus);
     }
 
     // -- Backward-compatible string constants (aliased to enum values) --
@@ -608,9 +520,7 @@ public class Scanner implements FileScanner {
             Path folder = Path.of(folderPath).toAbsolutePath();
             if (!Files.exists(folder)) {
                 log.warn("Target folder does not exist: {}", folderPath);
-                if (onErrorCallback != null) {
-                    onErrorCallback.accept("Target folder does not exist: " + folderPath);
-                }
+                observer.recordError(effectiveAgentId, "Target folder does not exist: " + folderPath);
                 return;
             }
 
@@ -627,9 +537,7 @@ public class Scanner implements FileScanner {
         } catch (IOException e) {
             String errorMsg = "Failed to walk folder during full scan: " + e.getMessage();
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
-            if (onErrorCallback != null) {
-                onErrorCallback.accept(errorMsg);
-            }
+            observer.recordError(effectiveAgentId, errorMsg);
         }
 
         notifyStatusChange(ScannerStatus.EMITTING_UPDATES);

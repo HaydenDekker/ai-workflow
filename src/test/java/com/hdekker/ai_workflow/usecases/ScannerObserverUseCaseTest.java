@@ -173,7 +173,7 @@ public class ScannerObserverUseCaseTest {
         useCase.recordEmission("agent-1");
 
         assertThat(events).hasSize(1);
-        assertThat(events.get(0).getType()).isEqualTo("file_count");
+        assertThat(events.get(0).getType()).isEqualTo("emitted");
     }
 
     @Test

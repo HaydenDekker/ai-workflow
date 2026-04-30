@@ -21,12 +21,9 @@ import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.usecases.ScannerStatus;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
-
-import java.util.function.Consumer;
 
 /**
  * Scanner registry — thin collection + orchestration layer.
@@ -52,19 +49,15 @@ public class ScannerRegistry implements DisposableBean {
     private final FileMetadataDatabase fileMetadataDatabase;
     private final ScannerObserverUseCase observer;
     private final EmissionDelayConfig emissionDelayConfig;
-    // Transient reference — passed to Scanner instances, not used directly
-    private transient Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
 
     /**
      * Creates a new ScannerRegistry with the required Spring dependencies.
      * <p>
      * Uses the default emission delay if {@code emissionDelayConfig} is null.
-     * The metrics event publisher is passed through to each Scanner but not stored.
      *
      * @param applicationContext            Spring application context
      * @param fileMetadataDatabase          Database for file metadata change detection
-     * @param observer                      scanner observer use case for metrics tracking
-     * @param metricsEventPublisher         Callback to publish metrics change events (passed to Scanner)
+     * @param observer                      scanner observer use case for metrics and UI push
      * @param emissionDelayConfig           Configuration for emission delay behaviour (nullable)
      */
     @Autowired
@@ -72,12 +65,10 @@ public class ScannerRegistry implements DisposableBean {
             ApplicationContext applicationContext,
             FileMetadataDatabase fileMetadataDatabase,
             ScannerObserverUseCase observer,
-            Consumer<ScannerMetricsChangedEvent> metricsEventPublisher,
             EmissionDelayConfig emissionDelayConfig) {
         this.applicationContext = applicationContext;
         this.fileMetadataDatabase = fileMetadataDatabase;
         this.observer = observer;
-        this.metricsEventPublisher = metricsEventPublisher;
         this.emissionDelayConfig = emissionDelayConfig != null
                 ? emissionDelayConfig
                 : new EmissionDelayConfig(EmissionDelayConfig.DEFAULT_DELAY_SECONDS);
@@ -91,15 +82,13 @@ public class ScannerRegistry implements DisposableBean {
      *
      * @param applicationContext            Spring application context
      * @param fileMetadataDatabase          Database for file metadata change detection
-     * @param observer                      scanner observer use case for metrics tracking
-     * @param metricsEventPublisher         Callback to publish metrics change events (passed to Scanner)
+     * @param observer                      scanner observer use case for metrics and UI push
      */
     public ScannerRegistry(
             ApplicationContext applicationContext,
             FileMetadataDatabase fileMetadataDatabase,
-            ScannerObserverUseCase observer,
-            Consumer<ScannerMetricsChangedEvent> metricsEventPublisher) {
-        this(applicationContext, fileMetadataDatabase, observer, metricsEventPublisher, null);
+            ScannerObserverUseCase observer) {
+        this(applicationContext, fileMetadataDatabase, observer, null);
     }
 
     /**
@@ -138,40 +127,14 @@ public class ScannerRegistry implements DisposableBean {
         Duration delay = Duration.ofSeconds(delaySeconds);
         Duration emissionDelay = Duration.ofSeconds(emissionDelayConfig.getEmissionDelaySeconds());
 
-        // Create the scanner (pass agentId for metric tagging + observer + event publisher)
-        final String agentIdForAdapter = agentId;
+        // Create the scanner — it uses the observer for metrics and UI push
         Scanner scanner = new Scanner(
                 agentId,
                 targetDirectory,
                 delay,
                 emissionDelay,
                 fileMetadataDatabase,
-                observer,
-                metricsEventPublisher,
-                errMsg -> transitionToError(agentIdForAdapter, errMsg),
-                newStatus -> {
-                    // String callback — for registry logging only
-                    log.debug("Scanner {} status changed to {}", agentIdForAdapter, newStatus);
-                },
-                newStatus -> {
-                    // Enum callback — update scanner status and publish metrics event
-                    Scanner s = scanners.get(agentIdForAdapter);
-                    if (s != null) {
-                        s.updateStatus(newStatus);
-                        s.pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(agentIdForAdapter, newStatus.name()));
-                    }
-                },
-                aId -> {
-                    // A file was emitted — update idle timer so the scanner stays active
-                    recordEmission(aId);
-                    // Briefly transition to EMITTING_UPDATES if currently IDLE
-                    updateStatus(aId, ScannerStatus.EMITTING_UPDATES);
-                    // Publish metrics event so the UI refreshes the status column
-                    Scanner s = scanners.get(aId);
-                    if (s != null) {
-                        s.pushMetricsEvent(ScannerMetricsChangedEvent.fileEmitted(aId));
-                    }
-                });
+                observer);
 
         // Put in map BEFORE initSource() so callbacks can find it
         scanners.put(agentId, scanner);
@@ -273,7 +236,8 @@ public class ScannerRegistry implements DisposableBean {
 
     /**
      * Update the status of a scanner.
-     * Delegates to the Scanner's own status management and metrics publishing.
+     * Delegates to the Scanner's own status management.
+     * The observer handles UI push notifications.
      *
      * @param scannerId the agent ID or scanner ID
      * @param status    the new status enum
@@ -282,14 +246,15 @@ public class ScannerRegistry implements DisposableBean {
         Scanner scanner = scanners.get(scannerId);
         if (scanner != null) {
             scanner.updateStatus(status);
+            observer.recordStatusChange(scannerId, status);
             log.debug("Updated scanner {} status to {}", scannerId, status);
-            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.statusChanged(scannerId, status.name()));
         }
     }
 
     /**
      * Transition a scanner to the ERROR state.
      * Delegates to the Scanner's own error handling.
+     * The observer handles UI push notifications.
      *
      * @param agentId the owning agent's ID
      * @param reason  human-readable description of the error
@@ -298,8 +263,6 @@ public class ScannerRegistry implements DisposableBean {
         Scanner scanner = scanners.get(agentId);
         if (scanner != null) {
             scanner.transitionToError(reason);
-            // Notify UI
-            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.errorOccurred(agentId, reason));
         } else {
             log.warn("Cannot transition to error: no scanner found for agent {}", agentId);
         }
@@ -308,6 +271,7 @@ public class ScannerRegistry implements DisposableBean {
     /**
      * Recover a scanner from the ERROR state.
      * Delegates to the Scanner's own recovery.
+     * The observer handles UI push notifications.
      *
      * @param agentId the owning agent's ID
      */
@@ -317,7 +281,6 @@ public class ScannerRegistry implements DisposableBean {
             scanner.recover();
             // Trigger a full rescan
             scanner.resetToFullScan();
-            scanner.pushMetricsEvent(ScannerMetricsChangedEvent.recoveredFromError(agentId));
         } else {
             log.warn("Cannot recover: no scanner found for agent {}", agentId);
         }

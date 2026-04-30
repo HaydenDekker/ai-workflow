@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,8 +32,7 @@ public class ScannerRegistryTest {
     private ApplicationContext appContext;
     private ScannerObserverUseCase observer;
     private Path tempDir;
-    private CopyOnWriteArrayList<ScannerMetricsChangedEvent> capturedEvents;
-    private Consumer<ScannerMetricsChangedEvent> metricsEventPublisher;
+    private List<ScannerMetricsChangedEvent> capturedEvents;
 
     @BeforeEach
     public void init() throws Exception {
@@ -45,11 +43,11 @@ public class ScannerRegistryTest {
         appContext = mock(ApplicationContext.class);
         observer = new ScannerObserverUseCase();
 
-        // Capture events pushed by the registry
+        // Capture events pushed by the observer
         capturedEvents = new CopyOnWriteArrayList<>();
-        metricsEventPublisher = capturedEvents::add;
+        observer.registerRefreshCallback(capturedEvents::add);
 
-        registry = new ScannerRegistry(appContext, fileMetadataDb, observer, metricsEventPublisher);
+        registry = new ScannerRegistry(appContext, fileMetadataDb, observer);
     }
 
     @Test
