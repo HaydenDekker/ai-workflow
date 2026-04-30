@@ -13,6 +13,8 @@ The project expects JDK 21. Ensure `java -version` reports 21.x before running.
 ## Test Commands
 Run unit or integration tests via the wrapper:
 
+> **Prefer specific tests** — run targeted test classes or methods (`-Dtest=ClassName` or `-Dtest=ClassName#methodName`) for faster feedback. The full test suite (`./mvnw verify`) runs in the background for comprehensive coverage.
+
 ### Unit Tests
 - `./mvnw test` – all unit tests with verbose output.
 - `./mvnw test -q` – all unit tests with minimal output (recommended for LLM context).
@@ -27,6 +29,14 @@ Run unit or integration tests via the wrapper:
 ### All Tests
 - `./mvnw verify` – run all tests (unit + integration).
 - `./mvnw verify -q` – run all tests with minimal output.
+
+> **Concise output for LLM context** — pipe through `grep` to extract only the summary lines:
+> ```bash
+> cd /c/Users/hayde/workspace_25/ai-workflow && ./mvnw test 2>&1 | grep -E "Tests run:|BUILD SUCCESS|BUILD FAILURE|Failures:" | tail -10
+> ```
+> This shows per-class results and the final BUILD status without the surrounding Maven noise.
+>
+> **⚠️ Do not combine `-q` with `grep` piping** — the `-q` (quiet) flag suppresses the Maven output that `grep` needs to filter. Use `-q` alone for minimal output, or pipe verbose output (no `-q`) through `grep` for summaries.
 
 ### E2E Tests (Playwright)
 End-to-end tests for the Vaadin/Hilla UI using real Chromium:
@@ -118,6 +128,19 @@ When debugging framework-level issues, consult the local source repositories:
 | **Vaadin / Hilla** | `C:\Users\hayde\workspace_26\libraries\vaadin\docs` | Vaadin components, UI rendering, routing, Hilla integration, browserless testing |
 
 If you encounter errors or unexpected behavior in any of these frameworks, **search the local source** — the implementation details, migration guides, and test examples will be there.
+
+## Document Management
+
+The project tracks architectural decisions and design patterns through two durable document types:
+
+- **ADRs** (Architecture Decision Records) — `project/adrs/adr-NNN-<slug>.md` — capture *why* a decision was made, alternatives considered, and consequences.
+- **DPRs** (Design Pattern Records) — `project/docs/dpr-<slug>.md` — capture *how* a concept works, with implementation details, code examples, and tutorials.
+
+Both are managed through the central index:
+
+| Resource | Path | Purpose |
+|----------|------|---------|
+| Design Principles (master index) | `project/docs/design-principles.md` | Catalog of all ADRs and DPRs, naming conventions, cross-reference rules, ADR/DPR structure, and how to create new documents |
 
 ## LLM Adapters
 

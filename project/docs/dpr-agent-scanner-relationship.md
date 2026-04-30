@@ -1,309 +1,217 @@
 # DPR: Agent-Scanner Relationship
 
----
-
-## Purpose
-
-This document describes how agents subscribe to scanners, the `ScannerRegistry` and `ScannerFactory` APIs, how `RegexParser` extracts folder patterns from agent definitions, and the dynamic lifecycle of scanner-subscription relationships.
+> **Purpose**: This document describes how agents are associated with scanners, the `ScannerRegistry` API, and the dynamic lifecycle of scanner instances. Each scanner is owned by exactly one agent (one-to-one mapping).
 
 ---
 
-## Agent Subscription Model
+## Overview
 
-### Relationship Types
+In the current architecture, **each agent owns exactly one scanner**. This is a one-to-one relationship — a scanner is created when an agent is created and destroyed when the agent is removed. This simplifies the model compared to the previous many-to-one subscription approach.
 
-| Type | Description | Example |
-|------|-------------|---------|
-| **One-to-one** | One agent subscribes to one scanner | Agent watches `/projectA/src` only |
-| **One-to-many** | One agent subscribes to multiple scanners | Agent watches `/projectA/src` and `/projectB/src` |
-| **Many-to-one** | Multiple agents share one scanner | Two agents both watch `/projectA/src` |
+---
 
-### Subscription Flow
+## Relationship Model
 
-```
-Agent Created (POST /api/agents)
-        │
-        ▼
-RegexParser extracts folderPattern group
-        │
-        ▼
-For each unique folder path:
-        │
-        ├── ScannerRegistry.getOrCreateScanner(path)
-        │       ├── Scanner exists? → Return existing flux
-        │       └── Scanner doesn't exist? → Factory creates it
-        │
-        ├── Register agent subscription
-        │       ├── Add agent ID to subscribedAgentIds
-        │       └── Track agent → scanner mapping
-        │
-        └── Agent subscribes to filtered Flux<FileHistory>
-```
+### One-to-One Mapping
 
-### Unsubscription Flow
+| Relationship | Description |
+|-------------|-------------|
+| **One-to-one** | One agent owns one scanner | Agent watches `/project/src` via its own scanner |
 
 ```
-Agent Removed (DELETE /api/agents/{id})
-        │
-        ▼
-For each scanner path the agent was subscribed to:
-        │
-        ├── Unsubscribe agent from ScannerRegistry
-        │       └── Remove agent ID from subscribedAgentIds
-        │
-        ├── Check subscription count
-        │       ├── count > 0 → Keep scanner alive
-        │       └── count == 0 → Destroy scanner
-        │
-        └── Dispose agent's subscription
+Agent-1 ──► Scanner-1 (folder: /data/inbox)
+Agent-2 ──► Scanner-2 (folder: /data/output)
+Agent-3 ──► Scanner-3 (folder: /data/inbox)   ← Same folder, separate scanner
 ```
+
+### Why One-to-One?
+
+- **Isolation**: Each agent has its own scanner lifecycle — one agent's errors don't affect others
+- **Simplicity**: No subscription tracking, no shared flux complexity
+- **Independent refresh**: Each scanner can be reset to full-scan mode independently
+- **Clear ownership**: `agentId` is both the scanner key and the ownership identifier
 
 ---
 
 ## ScannerRegistry API
 
-The `ScannerRegistry` manages scanner instances and tracks agent subscriptions per scanner:
+The `ScannerRegistry` manages scanner instances and tracks metadata per agent:
 
 ```java
-public interface ScannerRegistry {
+@Component
+public class ScannerRegistry {
 
-    /**
-     * Get an existing scanner's flux or create a new one.
-     * Registers the agent subscription if not already registered.
-     *
-     * @param folderPath absolute folder path to watch
-     * @param agentId    ID of the subscribing agent
-     * @return shared Flux<FileHistory> for this scanner
-     */
-    Flux<FileHistory> getOrCreateScanner(String folderPath, String agentId);
+    // Lifecycle
+    ScannerInfo createForAgent(String agentId, String targetDirectory, int delaySeconds);
+    void destroyForAgent(String scannerId);
+    void refreshAgent(String scannerId);
 
-    /**
-     * Unregister an agent subscription.
-     * Destroys the scanner if this was the last subscription.
-     *
-     * @param folderPath absolute folder path
-     * @param agentId    ID of the unsubscribing agent
-     */
-    void unsubscribeAgent(String folderPath, String agentId);
+    // Queries
+    Flux<FileHistory> getScannerFlux(String scannerId);
+    List<ScannerInfo> listAll();
+    Optional<ScannerInfo> getById(String agentId);
 
-    /**
-     * Get metadata for an active scanner.
-     */
-    Optional<ScannerMetadata> getScanner(String folderPath);
+    // Status management
+    void updateStatus(String scannerId, String status);
+    void transitionToError(String agentId, String reason);
+    void recoverFromError(String agentId);
+    void recordEmission(String agentId);
 
-    /**
-     * List all active scanners with summary info.
-     */
-    List<ScannerSummary> listScanners();
-
-    /**
-     * Shutdown all scanners gracefully.
-     */
-    void shutdown();
+    // Internal (for testing)
+    Optional<ScannerMetadata> getMetadata(String scannerId);
 }
 ```
 
-### ScannerMetadata
+### ScannerInfo DTO
 
 ```java
-public record ScannerMetadata(
-    FileScanner fileScanner,
-    Set<String> subscribedAgentIds,
-    Disposable disposable,
-    Flux<FileHistory> flux
+public record ScannerInfo(
+    String id,                     // Unique scanner ID (same as agentId)
+    String agentId,                // Owning agent ID
+    String targetDirectory,        // Directory being watched
+    String status,                 // IDLE, EMITTING_INITIAL, EMITTING_UPDATES, FILTERED, ERROR
+    LocalDateTime createdAt,       // When the scanner was created
+    LocalDateTime lastEmittedAt,   // Last time a file was emitted
+    String errorMessage            // Error message, if in ERROR state
 ) {}
 ```
 
-### ScannerSummary
+### ScannerMetadata (Internal)
 
 ```java
-public record ScannerSummary(
+private record ScannerMetadata(
+    FileSystemScannerAdapter scanner,
+    String agentId,
     String folderPath,
-    int subscriptionCount,
-    boolean isActive
-) {}
+    String status,
+    LocalDateTime createdAt,
+    LocalDateTime lastEmittedAt,
+    String errorMessage
+) {
+    ScannerMetadata withStatus(String newStatus) { ... }
+    ScannerMetadata withError(String errorMsg) { ... }
+}
 ```
 
 ---
 
-## ScannerFactory API
+## Scanner Lifecycle
 
-The `ScannerFactory` creates and destroys scanner instances:
-
-```java
-public interface ScannerFactory {
-
-    Duration DEFAULT_DELAY_BETWEEN_READS = Duration.ofSeconds(5);
-
-    /**
-     * Create a scanner with default delay.
-     *
-     * @param folderPath absolute folder path to watch
-     * @param scannerId  unique identifier for this scanner
-     * @return configured FileScanner instance
-     */
-    FileScanner createScanner(String folderPath, String scannerId);
-
-    /**
-     * Create a scanner with custom delay.
-     */
-    FileScanner createScanner(String folderPath, String scannerId, Duration delayBetweenReads);
-
-    /**
-     * Destroy a scanner, disposing its WatchService and Spring Integration flow.
-     */
-    void destroyScanner(String scannerId);
-}
-```
-
-### Scanner Creation Steps
-
-1. **Initialize WatchService** on the target folder
-2. **Create Spring Integration flow** with unique ID:
-   - File inbound adapter → message channel
-   - Channel converted to `Flux<FileHistory>`
-3. **Apply rate limiting** via `delayElements()`
-4. **Share the flux** for multi-agent subscription
-5. **Register in ScannerRegistry** with metadata
-
-### Scanner Destruction Steps
-
-1. **Dispose Spring Integration flow** (unregisters inbound adapter)
-2. **Close WatchService** (releases OS-level file handle)
-3. **Remove from ScannerRegistry** (clears metadata)
-
----
-
-## RegexParser
-
-The `RegexParser` extracts the `folderPattern` named group from an agent's `fileInputRegex`:
-
-```java
-public interface RegexParser {
-
-    /**
-     * Check if the regex contains a folderPattern named group.
-     */
-    boolean hasFolderPattern(String regex);
-
-    /**
-     * Extract all unique folder paths matched by the folderPattern group.
-     * For agent creation, returns the group definition (not resolved paths).
-     */
-    Set<String> extractFolderPaths(String regex);
-
-    /**
-     * Validate that the regex has a valid folderPattern group.
-     * Returns error message if invalid, null if valid.
-     */
-    String validateFolderPattern(String regex);
-}
-```
-
-### Regex Format Specification
-
-Agents **must** define a `folderPattern` named group in their `fileInputRegex`:
-
-```json
-{
-  "fileInputRegex": "(?P<folderPattern>.*/src)/(?P<path>.*)/(?P<name>[^/]+)\\.(?P<ext>java)",
-  "title": "JavaProcessor",
-  "body": "Process Java files...",
-  "agentType": "Map",
-  "outputStructure": "Generate documentation...",
-  "outputFilenameTemplate": "docs/${name}.md"
-}
-```
-
-### Requirements
-
-- `folderPattern` named group is **mandatory** — agent creation fails without it
-- `folderPattern` must match a valid absolute or relative folder path
-- The full regex is still used for filtering events after scanner subscription
-
-### Examples
-
-| Regex | folderPattern Match | Resulting Scanner |
-|-------|---------------------|-------------------|
-| `(?P<folderPattern>/home/user/projectA)/.*\.java` | `/home/user/projectA` | One scanner at `/home/user/projectA` |
-| `(?P<folderPattern>.*/src)/.*\.java` | Multiple matches | One scanner per unique `/project/src` found |
-| `(?P<folderPattern>/shared)/.*\.java` | `/shared` | One scanner at `/shared` |
-
-### Dynamic Lifecycle with Regex
-
-When a regex matches multiple folders, the agent subscribes to **one scanner per unique folder**:
+### Creation Flow
 
 ```
-Regex: (?P<folderPattern>.*/src)/.*\.java
+Agent Created (POST /api/agents)
         │
         ▼
-RegexParser extracts folderPattern group
+AgentLifecycleUseCase.addDynamicAgent(agent, targetDir)
         │
         ▼
-Matches found at runtime:
-  - /projectA/src
-  - /projectB/src
-  - /projectC/src
+ScannerRegistry.createForAgent(agentId, targetDir, delaySeconds)
+        │
+        ├── Validate directory exists and is readable
+        │
+        ├── Check for duplicate (return existing if agentId already registered)
+        │
+        ├── Create FileSystemScannerAdapter
+        │     ├── Initialize NativeFileWatcher
+        │     ├── Set up callbacks: onStatusChanged, onError, onEmission
+        │     └── Start filtered reset scheduler
+        │
+        ├── Register in ConcurrentHashMap<agentId, ScannerMetadata>
+        │
+        ├── Call adapter.initSource(agentId)
+        │     ├── Transition to EMITTING_INITIAL
+        │     ├── Start NativeFileWatcher (initial full scan)
+        │     ├── Hash filter processes all existing files
+        │     │     ├── New/changed → recordDiscovery, emit FileHistory
+        │     │     └── Unchanged → recordUnchanged, STATUS_FILTERED
+        │     ├── Transition to EMITTING_UPDATES (if files buffered)
+        │     │     or stays IDLE (if all files unchanged)
+        │     └── Update fileCount
+        │
+        └── Return ScannerInfo DTO
+```
+
+### Destruction Flow
+
+```
+Agent Removed (DELETE /api/agents/{id})
         │
         ▼
-Agent subscribes to 3 scanners:
-  - Scanner-1: /projectA/src
-  - Scanner-2: /projectB/src
-  - Scanner-3: /projectC/src
+AgentLifecycleUseCase.removeAgent(agentId)
+        │
+        ▼
+ScannerRegistry.destroyForAgent(scannerId)
+        │
+        ├── Remove from ConcurrentHashMap
+        │
+        ├── Call adapter.destroy()
+        │     ├── Stop NativeFileWatcher (closes WatchService)
+        │     ├── Cancel pending FILTERED reset task
+        │     └── Shut down filteredResetScheduler
+        │
+        └── Log destruction
+```
+
+### Refresh Flow
+
+```
+Agent Refreshed (POST /api/agents/{id}/refresh)
+        │
+        ▼
+AgentLifecycleUseCase.refreshAgent(agentId)
+        │
+        ▼
+ScannerRegistry.refreshAgent(scannerId)
+        │
+        ├── Find scanner by agentId
+        │
+        ├── Call adapter.resetToFullScan()
+        │     ├── Transition to EMITTING_INITIAL
+        │     ├── scanAllFiles() — walk directory, emit new files
+        │     │     ├── Hash mismatch → emit FileHistory
+        │     │     └── Hash match → STATUS_FILTERED
+        │     └── Transition to EMITTING_UPDATES
+        │
+        └── Log refresh complete
 ```
 
 ---
 
-## DynamicAgentManager Integration
+## AgentLifecycleUseCase Integration
 
-The `DynamicAgentManager` coordinates between agents, scanners, and the registry:
+The `AgentLifecycleUseCase` coordinates between agents and the scanner registry:
 
 ```java
-public class DynamicAgentManager {
+public class AgentLifecycleUseCase {
 
     private final ScannerRegistry scannerRegistry;
-    private final AgentRegistry agentRegistry;
-    private final RegexParser regexParser;
+    private final FileWriter fileWriter;
+    private final Path outputDir;
+    private final ChatClient chatClient;
 
-    public AgentInfo addDynamicAgent(AgentDefinition def) {
-        // 1. Validate regex has folderPattern
-        String validationError = regexParser.validateFolderPattern(def.fileInputRegex());
-        if (validationError != null) {
-            throw new IllegalArgumentException("Invalid regex: " + validationError);
-        }
+    public AgentInfo addDynamicAgent(AgentDefinition def, String targetDir) {
+        // Create scanner (or get existing)
+        ScannerInfo scannerInfo = scannerRegistry.createForAgent(
+            def.id(), targetDir, 5);
 
-        // 2. Extract folder paths from regex
-        Set<String> scannerPaths = regexParser.extractFolderPaths(def.fileInputRegex());
+        // Create agent with scanner flux
+        Flux<FileHistory> flux = scannerRegistry.getScannerFlux(def.id());
 
-        // 3. Subscribe to each scanner
-        List<Flux<FileHistory>> scannerFluxes = new ArrayList<>();
-        for (String path : scannerPaths) {
-            scannerFluxes.add(scannerRegistry.getOrCreateScanner(path, def.id()));
-        }
+        // Build agent pipeline...
+        // ...
 
-        // 4. Create agent with combined flux
-        // ... (agent creation logic)
-
-        // 5. Track agent → scanner mappings
-        AgentRegistryEntry entry = new AgentRegistryEntry(
-            def, scannerFluxes, scannerPaths
-        );
-        agentRegistry.put(def.id(), entry);
-
-        return entry.toInfo();
+        return agentInfo;
     }
 
     public void removeAgent(String id) {
-        AgentRegistryEntry entry = agentRegistry.get(id);
-        if (entry == null) return;
+        scannerRegistry.destroyForAgent(id);
+        // Remove agent from pipeline...
+    }
 
-        // 6. Unsubscribe from each scanner
-        entry.scannerPaths().forEach(path ->
-            scannerRegistry.unsubscribeAgent(path, id)
-        );
-
-        // 7. Dispose agent subscription
-        // ...
+    public AgentInfo refreshAgent(String id) {
+        scannerRegistry.refreshAgent(id);
+        // Return updated agent info...
     }
 }
 ```
@@ -314,28 +222,113 @@ public class DynamicAgentManager {
 
 ### Inaccessible Folders
 
-**Decision**: Fail fast with a clear error message during agent creation.
+**Fail fast** with a clear error message during agent creation:
 
 ```java
-if (!Files.isDirectory(Paths.get(folderPath))) {
-    throw new IllegalArgumentException(
-        "Folder does not exist or is not accessible: " + folderPath
-    );
+if (!Files.exists(folderPath)) {
+    throw new IllegalArgumentException("Target directory does not exist: " + targetDirectory);
+}
+if (!Files.isDirectory(folderPath)) {
+    throw new IllegalArgumentException("Target path is not a directory: " + targetDirectory);
+}
+if (!Files.isReadable(folderPath)) {
+    throw new IllegalArgumentException("Target directory is not readable: " + targetDirectory);
 }
 ```
 
-### Scanner Creation Failure
+### Scanner Error Recovery
 
-If a scanner cannot be created (e.g., permission denied), the agent creation fails with an error. The agent is **not** partially subscribed.
+If a scanner encounters an unrecoverable error (e.g., directory becomes inaccessible):
 
-### Agent Re-subscription After Scanner Destruction
+1. `FileSystemScannerAdapter` calls the error callback: `onErrorCallback.accept(errorMsg)`
+2. `ScannerRegistry.transitionToError(agentId, reason)` transitions the scanner to `ERROR` status
+3. The error is logged and a `ScannerMetricsChangedEvent.errorOccurred()` event is published
+4. Recovery is manual: `ScannerRegistry.recoverFromError(agentId)` resets to `EMITTING_INITIAL` and triggers a full rescan
 
-If an agent is removed (destroying its scanner) and then re-added, a **new scanner instance** is created. All file metadata is preserved from the database, so hash-based change detection continues correctly.
+```java
+// Recovery flow
+public void recoverFromError(String agentId) {
+    ScannerMetadata updated = meta.withStatus(STATUS_EMITTING_INITIAL)
+                                   .withError(null);
+    scanners.put(key, updated);
+    meta.scanner().resetToFullScan();
+    pushMetricsEvent(ScannerMetricsChangedEvent.recoveredFromError(agentId));
+}
+```
+
+---
+
+## Idle Detection
+
+A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners for inactivity:
+
+```java
+private void checkAllScannersForIdle() {
+    LocalDateTime now = LocalDateTime.now();
+    for (Map.Entry<String, ScannerMetadata> entry : scanners.entrySet()) {
+        ScannerMetadata meta = entry.getValue();
+
+        // Only check scanners that are actively emitting
+        if (!STATUS_EMITTING_UPDATES.equals(meta.status())) {
+            continue;
+        }
+
+        // If no emission for IDLE_TIMEOUT (30s), transition to IDLE
+        LocalDateTime lastEmit = meta.lastEmittedAt();
+        if (lastEmit != null) {
+            Duration sinceLastEmission = Duration.between(lastEmit, now);
+            if (sinceLastEmission.compareTo(IDLE_TIMEOUT) >= 0) {
+                updateStatus(meta.agentId(), STATUS_IDLE);
+                pushMetricsEvent(ScannerMetricsChangedEvent.idleReached(meta.agentId()));
+            }
+        }
+    }
+}
+```
+
+---
+
+## Test Coverage
+
+The agent-scanner relationship is covered by the following test classes:
+
+| Test | Type | What it verifies |
+|------|------|-----------------|
+| `ScannerRegistryTest` | Unit | CRUD operations, status updates, duplicate handling |
+| `ScannerRegistryIntegrationTest` | Integration | Full agent-scanner lifecycle, flux connectivity, multiple agents, refresh, delete |
+| `FileSystemScannerAdapterTest` | Integration | Adapter lifecycle, flux behavior, watch service events |
+| `FileSystemScannerAdapterFilteredStatusTest` | Unit | FILTERED status emission for unchanged files |
+
+### Example: Integration Test
+
+```java
+@Test
+void givenAgentAdded_WhenScannerCreated_ThenScannerExistsAndIsListed() {
+    AgentDefinition agent = createAgentDefinition("AGENT-CREATE-TEST");
+    AgentInfo agentInfo = agentManager.addDynamicAgent(agent, inputDir.toString());
+
+    // Scanner is listed in registry
+    List<ScannerInfo> scanners = scannerRegistry.listAll();
+    assertThat(scanners).hasSize(1);
+    assertThat(scanners.get(0).agentId()).isEqualTo(agentInfo.id());
+    assertThat(scanners.get(0).status()).isEqualTo("IDLE");
+}
+
+@Test
+void givenAgentAdded_WhenAgentRemoved_ThenScannerDestroyed() {
+    AgentInfo agentInfo = agentManager.addDynamicAgent(agent, inputDir.toString());
+    assertThat(scannerRegistry.listAll()).hasSize(1);
+
+    agentManager.removeAgent(agentInfo.id());
+
+    assertThat(scannerRegistry.listAll()).hasSize(0);
+}
+```
 
 ---
 
 ## See Also
 
-- [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, rate limiting, architecture
-- [DPR: File History Model](dpr-file-history-model.md) — FileHistory event model, hashing
-- [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, rate limiting, architecture
+- [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, status transitions, hash-based change detection
+- [DPR: Scanner Observability](dpr-scanner-observability.md) — Metrics tracking and real-time UI updates
+- [DPR: File History Model](dpr-file-history-model.md) — FileHistory event model, hashing, and metadata storage
