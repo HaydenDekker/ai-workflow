@@ -83,6 +83,10 @@ public class ScannerObserverUseCase {
         AgentMetrics withLastEmission(LocalDateTime timestamp) {
             return new AgentMetrics(fileCount, totalDiscovered, unchanged, timestamp);
         }
+
+        AgentMetrics withFileCountIncrement() {
+            return new AgentMetrics(fileCount + 1, totalDiscovered, unchanged, lastEmissionTimestamp);
+        }
     }
 
     /**
@@ -96,6 +100,22 @@ public class ScannerObserverUseCase {
                 return new AgentMetrics(0, 1, 0);
             }
             return existing.withDiscovered();
+        });
+        pushToUI(ScannerMetricsChangedEvent.fileDiscovered(agentId));
+    }
+
+    /**
+     * Record a new file discovery event for the given agent.
+     * Increments both the discovered count and the file count.
+     *
+     * @param agentId the owning agent's ID
+     */
+    public void recordDiscoveryNewFile(String agentId) {
+        metricsStore.compute(agentId, (key, existing) -> {
+            if (existing == null) {
+                return new AgentMetrics(1, 1, 0);
+            }
+            return existing.withDiscovered().withFileCountIncrement();
         });
         pushToUI(ScannerMetricsChangedEvent.fileDiscovered(agentId));
     }

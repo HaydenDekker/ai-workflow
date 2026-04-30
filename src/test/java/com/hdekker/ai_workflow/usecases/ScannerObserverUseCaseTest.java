@@ -309,4 +309,76 @@ public class ScannerObserverUseCaseTest {
         assertThat(snapshot.totalDiscovered()).isEqualTo(1);
         assertThat(snapshot.unchanged()).isEqualTo(1);
     }
+
+    @Test
+    void givenNewFileDiscovery_WhenRecorded_ThenBothFileCountAndDiscoveredIncrement() {
+        // Simulate initial scan setting the file count
+        useCase.updateFileCount("agent-1", 3);
+
+        // A new file is discovered during incremental watching
+        useCase.recordDiscoveryNewFile("agent-1");
+
+        ScannerMetricsSnapshot snapshot = useCase.getMetrics("agent-1");
+
+        assertThat(snapshot.fileCount()).isEqualTo(4);
+        assertThat(snapshot.totalDiscovered()).isEqualTo(1);
+        assertThat(snapshot.unchanged()).isZero();
+    }
+
+    @Test
+    void givenNewFileDiscoveryOnEmptyAgent_WhenRecorded_ThenFileCountStartsAtOne() {
+        useCase.recordDiscoveryNewFile("agent-1");
+
+        ScannerMetricsSnapshot snapshot = useCase.getMetrics("agent-1");
+
+        assertThat(snapshot.fileCount()).isEqualTo(1);
+        assertThat(snapshot.totalDiscovered()).isEqualTo(1);
+    }
+
+    @Test
+    void givenMultipleNewFiles_WhenRecorded_ThenFileCountAccumulates() {
+        useCase.updateFileCount("agent-1", 5);
+        useCase.recordDiscoveryNewFile("agent-1");
+        useCase.recordDiscoveryNewFile("agent-1");
+        useCase.recordDiscoveryNewFile("agent-1");
+
+        ScannerMetricsSnapshot snapshot = useCase.getMetrics("agent-1");
+
+        assertThat(snapshot.fileCount()).isEqualTo(8);
+        assertThat(snapshot.totalDiscovered()).isEqualTo(3);
+    }
+
+    @Test
+    void givenChangedFileDiscovery_WhenRecorded_ThenOnlyDiscoveredIncrements() {
+        // Simulate initial scan setting the file count
+        useCase.updateFileCount("agent-1", 3);
+
+        // A changed file is discovered (existing file with different hash)
+        useCase.recordDiscovery("agent-1");
+
+        ScannerMetricsSnapshot snapshot = useCase.getMetrics("agent-1");
+
+        // fileCount should NOT change for changed files
+        assertThat(snapshot.fileCount()).isEqualTo(3);
+        assertThat(snapshot.totalDiscovered()).isEqualTo(1);
+    }
+
+    @Test
+    void givenMixedNewAndChangedFiles_WhenRecorded_ThenMetricsCorrect() {
+        useCase.updateFileCount("agent-1", 10);
+
+        // 2 new files
+        useCase.recordDiscoveryNewFile("agent-1");
+        useCase.recordDiscoveryNewFile("agent-1");
+        // 1 changed file
+        useCase.recordDiscovery("agent-1");
+        // 1 unchanged file
+        useCase.recordUnchanged("agent-1");
+
+        ScannerMetricsSnapshot snapshot = useCase.getMetrics("agent-1");
+
+        assertThat(snapshot.fileCount()).isEqualTo(12);  // 10 + 2 new
+        assertThat(snapshot.totalDiscovered()).isEqualTo(3);  // 2 new + 1 changed
+        assertThat(snapshot.unchanged()).isEqualTo(1);
+    }
 }

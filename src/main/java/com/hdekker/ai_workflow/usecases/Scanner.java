@@ -259,8 +259,13 @@ public class Scanner implements FileScanner {
 
             if (!history.hashMatches()) {
                 // File is new or changed
-                observer.recordDiscovery(effectiveAgentId);
-                log.debug("New or changed file: {}", relativePath);
+                boolean isNewFile = history.previousFile().isEmpty();
+                if (isNewFile) {
+                    observer.recordDiscoveryNewFile(effectiveAgentId);
+                } else {
+                    observer.recordDiscovery(effectiveAgentId);
+                }
+                log.debug("{} file: {}", isNewFile ? "New" : "Changed", relativePath);
                 fileMetadataStore.save(metadata);
                 emitWithDelay(history);
             } else {
