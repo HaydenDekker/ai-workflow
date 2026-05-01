@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
+import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 import com.hdekker.ai_workflow.usecases.ScannerStatus;
 
@@ -35,7 +36,7 @@ public class ScannerRegistryTest {
 
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
-        observer = new ScannerObserverUseCase();
+        observer = new ScannerObserverUseCase(path -> 0L);
 
         // Capture events pushed by the observer
         capturedEvents = new CopyOnWriteArrayList<>();

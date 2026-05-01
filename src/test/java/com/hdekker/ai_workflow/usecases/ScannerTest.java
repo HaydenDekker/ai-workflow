@@ -61,16 +61,16 @@ public class ScannerTest {
         inputDir = Files.createDirectory(tempDir.resolve("input"));
         Files.createDirectory(tempDir.resolve("output"));
         fileMetadataDatabase = mock(FileMetadataDatabase.class);
-        observer = new ScannerObserverUseCase();
+        observer = new ScannerObserverUseCase(path -> 0L);
         // Mock save to store files for comparison checks
         doAnswer(invocation -> {
             invocation.getArgument(0);
             return null;
         }).when(fileMetadataDatabase).save(any(FileMetadata.class));
 
-        observer = new ScannerObserverUseCase();
+        observer = new ScannerObserverUseCase(path -> 0L);
         statusChanges = new CopyOnWriteArrayList<>();
-        testObserver = new ScannerObserverUseCase();
+        testObserver = new ScannerObserverUseCase(path -> 0L);
         testObserver.registerRefreshCallback(e -> {
             // Status change events have eventType == null and a ScannerStatus
             if (e.getEventType() == null && e.getStatus() != null) {

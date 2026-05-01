@@ -24,6 +24,7 @@ import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
@@ -66,7 +67,7 @@ public class ScannerRegistryIntegrationTest {
         // Create real (non-mocked) dependencies for scanner integration
         fileMetadataDb = mock(FileMetadataDatabase.class);
         appContext = mock(ApplicationContext.class);
-        observer = new ScannerObserverUseCase();
+        observer = new ScannerObserverUseCase(path -> 0L);
 
         // Create the real scanner registry
         scannerRegistry = new ScannerRegistry(appContext, fileMetadataDb, observer, null);

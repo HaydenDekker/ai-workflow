@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.TestConstants;
 import com.hdekker.ai_workflow.usecases.Scanner;
+import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
@@ -67,7 +68,7 @@ public class FileSystemSimplePollerFluxAdapterTest {
      * Returns the Scanner's flux of FileHistory events.
      */
     public Flux<FileHistory> createFluxWithScanner(File folder, FileMetadataStore database) {
-        ScannerObserverUseCase observer = new ScannerObserverUseCase();
+        ScannerObserverUseCase observer = new ScannerObserverUseCase(path -> 0L);
         scanner = new Scanner(
                 folder.toString(),
                 folder.toString(),

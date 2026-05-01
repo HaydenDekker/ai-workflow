@@ -7,9 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -57,6 +54,20 @@ public class ScannerObserverUseCase {
      */
     private final CopyOnWriteArrayList<Consumer<ScannerMetricsChangedEvent>> refreshCallbacks
             = new CopyOnWriteArrayList<>();
+
+    /**
+     * Adapter for counting files in a watched directory.
+     */
+    private final FileCounter fileCounter;
+
+    /**
+     * Construct the use case with the given file counter.
+     *
+     * @param fileCounter the adapter for counting files on the filesystem
+     */
+    public ScannerObserverUseCase(FileCounter fileCounter) {
+        this.fileCounter = fileCounter;
+    }
 
     /**
      * Internal record holding per-agent metric counters.
@@ -199,14 +210,7 @@ public class ScannerObserverUseCase {
         if (folderPath == null) {
             return 0;
         }
-        try {
-            return Files.walk(Path.of(folderPath).toAbsolutePath())
-                    .filter(Files::isRegularFile)
-                    .count();
-        } catch (IOException e) {
-            log.warn("Failed to count files for agent {}: {}", agentId, e.getMessage());
-            return 0;
-        }
+        return fileCounter.countFiles(folderPath);
     }
 
     /**

@@ -22,6 +22,7 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
 import com.hdekker.ai_workflow.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import org.mockito.Mockito;
@@ -72,7 +73,7 @@ public class AgentPipelineTest {
      */
     private SetupResult setupPipeline(Path inputDir, Path outputDir) throws Exception {
         FileMetadataDatabase db = createSmartDb();
-        ScannerObserverUseCase observer = new ScannerObserverUseCase();
+        ScannerObserverUseCase observer = new ScannerObserverUseCase(path -> 0L);
         Scanner scanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
@@ -244,7 +245,7 @@ public class AgentPipelineTest {
         Files.createDirectory(tempDir.resolve("output"));
 
         FileMetadataDatabase modDb = createSmartDb();
-        ScannerObserverUseCase modObserver = new ScannerObserverUseCase();
+        ScannerObserverUseCase modObserver = new ScannerObserverUseCase(path -> 0L);
         Scanner modScanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
@@ -333,7 +334,7 @@ public class AgentPipelineTest {
         Files.createDirectory(tempDir.resolve("output"));
 
         FileMetadataDatabase multiDb = createSmartDb();
-        ScannerObserverUseCase multiObserver = new ScannerObserverUseCase();
+        ScannerObserverUseCase multiObserver = new ScannerObserverUseCase(path -> 0L);
         Scanner multiScanner = new Scanner("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
