@@ -18,6 +18,7 @@ import com.hdekker.ai_workflow.files.domain.FileMetadata;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileScanner;
 import com.hdekker.ai_workflow.files.NativeFileWatcherAdapter;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -149,7 +150,9 @@ public class Scanner implements FileScanner {
                 error -> {
                     log.error("Error in raw event subscription for agent {}: {}",
                             effectiveAgentId, error.getMessage());
-                    observer.recordError(effectiveAgentId, "Error processing raw event: " + error.getMessage());
+                    observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                            effectiveAgentId, ScannerStatus.ERROR, null, null,
+                            "Error processing raw event: " + error.getMessage()));
                 }
         );
     }
@@ -164,7 +167,8 @@ public class Scanner implements FileScanner {
         try {
             // Handle DELETE events — content is not available
             if (rawEvent.eventType() == RawFileEvent.RawFileEventType.DELETE) {
-                observer.recordScannerEvent(ScannerEventType.DELETION, effectiveAgentId, folderPath);
+                observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                        effectiveAgentId, ScannerStatus.EMITTING_UPDATES, ScannerEventType.DELETION, folderPath, null));
                 log.debug("Deleted file: {}", path);
                 return;
             }
@@ -178,18 +182,22 @@ public class Scanner implements FileScanner {
             if (!history.hashMatches()) {
                 ScannerEventType eventType = history.previousFile().isEmpty()
                         ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
-                observer.recordScannerEvent(eventType, effectiveAgentId, folderPath);
+                observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                        effectiveAgentId, ScannerStatus.EMITTING_UPDATES, eventType, folderPath, null));
                 log.debug("{} file: {}", eventType == ScannerEventType.CREATION ? "New" : "Changed", relativePath);
                 fileMetadataStore.save(metadata);
                 emitWithDelay(history);
             } else {
-                observer.recordScannerEvent(ScannerEventType.UNCHANGED, effectiveAgentId, folderPath);
+                observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                        effectiveAgentId, ScannerStatus.FILTERED, ScannerEventType.UNCHANGED, folderPath, null));
                 cancelAndScheduleFilteredReset();
                 log.debug("Unchanged file (skipped): {}", relativePath);
             }
         } catch (Exception e) {
             log.warn("Failed to process raw event for path {}: {}", path, e.getMessage());
-            observer.recordError(effectiveAgentId, "Failed to process raw event: " + e.getMessage());
+            observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                    effectiveAgentId, ScannerStatus.ERROR, null, null,
+                    "Failed to process raw event: " + e.getMessage()));
         }
     }
 
@@ -278,7 +286,8 @@ public class Scanner implements FileScanner {
      */
     private void onEmitCallback() {
         this.lastEmittedAt = LocalDateTime.now();
-        observer.recordEmission(effectiveAgentId);
+        observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                effectiveAgentId, ScannerStatus.EMITTING_UPDATES, null, null, null));
     }
 
     /**
@@ -320,7 +329,8 @@ public class Scanner implements FileScanner {
         } catch (Exception e) {
             String errorMsg = "Failed to initialise scanner: " + e.getMessage();
             log.error("Failed to initialise scanner for folder: {}", folderPath, e);
-            observer.recordError(effectiveAgentId, errorMsg);
+            observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                    effectiveAgentId, ScannerStatus.ERROR, null, null, errorMsg));
         }
     }
 
@@ -354,7 +364,8 @@ public class Scanner implements FileScanner {
      */
     public void transitionToError(String reason) {
         this.errorMessage = reason;
-        observer.recordError(effectiveAgentId, reason);
+        observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                effectiveAgentId, ScannerStatus.ERROR, null, null, reason));
         notifyStatusChange(ScannerStatus.ERROR);
         log.error("Scanner for agent {} entered ERROR state: {}", effectiveAgentId, reason);
     }
@@ -365,7 +376,8 @@ public class Scanner implements FileScanner {
      */
     public void recover() {
         this.errorMessage = null;
-        observer.recordRecovery(effectiveAgentId);
+        observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                effectiveAgentId, ScannerStatus.IDLE, null, null, null));
         notifyStatusChange(ScannerStatus.IDLE);
         log.info("Recovered scanner for agent {} from ERROR state", effectiveAgentId);
     }
@@ -384,6 +396,8 @@ public class Scanner implements FileScanner {
      */
     public void recordEmission() {
         this.lastEmittedAt = LocalDateTime.now();
+        observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                effectiveAgentId, ScannerStatus.EMITTING_UPDATES, null, null, null));
         log.debug("Recorded emission for agent {} – resetting idle timer", effectiveAgentId);
     }
 
@@ -449,7 +463,8 @@ public class Scanner implements FileScanner {
      */
     private void notifyStatusChange(ScannerStatus newStatus) {
         this.status = newStatus;
-        observer.recordStatusChange(effectiveAgentId, newStatus);
+        observer.pushToUI(new ScannerMetricsChangedEvent(
+                effectiveAgentId, newStatus, null, null, null));
     }
 
     // -- Backward-compatible string constants (aliased to enum values) --
@@ -490,7 +505,9 @@ public class Scanner implements FileScanner {
             Path folder = Path.of(folderPath).toAbsolutePath();
             if (!Files.exists(folder)) {
                 log.warn("Target folder does not exist: {}", folderPath);
-                observer.recordError(effectiveAgentId, "Target folder does not exist: " + folderPath);
+                observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                        effectiveAgentId, ScannerStatus.ERROR, null, null,
+                        "Target folder does not exist: " + folderPath));
                 return;
             }
 
@@ -507,7 +524,8 @@ public class Scanner implements FileScanner {
         } catch (IOException e) {
             String errorMsg = "Failed to walk folder during full scan: " + e.getMessage();
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
-            observer.recordError(effectiveAgentId, errorMsg);
+            observer.recordScannerEvent(new ScannerMetricsChangedEvent(
+                    effectiveAgentId, ScannerStatus.ERROR, null, null, errorMsg));
         }
 
         notifyStatusChange(ScannerStatus.EMITTING_UPDATES);

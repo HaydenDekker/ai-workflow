@@ -72,8 +72,9 @@ public class ScannerTest {
         statusChanges = new CopyOnWriteArrayList<>();
         testObserver = new ScannerObserverUseCase();
         testObserver.registerRefreshCallback(e -> {
-            if ("status_change".equals(e.getType())) {
-                statusChanges.add(e.getErrorMessage());
+            // Status change events have eventType == null and a ScannerStatus
+            if (e.getEventType() == null && e.getStatus() != null) {
+                statusChanges.add(e.getStatus().name());
             }
         });
     }

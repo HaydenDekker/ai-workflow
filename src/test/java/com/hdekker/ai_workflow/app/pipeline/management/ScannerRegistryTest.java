@@ -203,10 +203,11 @@ public class ScannerRegistryTest {
 
         registry.recoverFromError(agentId);
 
-        // May also emit status_change events from resetToFullScan() status transitions
+        // Recovery pushes an event with ScannerStatus.IDLE and eventType == null
+        // getType() returns the status name ("idle") for lifecycle events
         assertThat(capturedEvents).anySatisfy(event -> {
             assertThat(event.getAgentId()).isEqualTo(agentId);
-            assertThat(event.getType()).isEqualTo("recovered");
+            assertThat(event.getStatus()).isEqualTo(ScannerStatus.IDLE);
         });
     }
 
@@ -274,7 +275,7 @@ public class ScannerRegistryTest {
 
         assertThat(capturedEvents).anySatisfy(event -> {
             assertThat(event.getAgentId()).isEqualTo(agentId);
-            assertThat(event.getType()).isEqualTo("status_change");
+            assertThat(event.getStatus()).isEqualTo(ScannerStatus.EMITTING_UPDATES);
         });
     }
 }

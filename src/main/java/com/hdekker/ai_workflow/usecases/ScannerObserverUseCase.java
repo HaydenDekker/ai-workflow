@@ -14,7 +14,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -28,7 +27,7 @@ import java.util.function.Consumer;
  * <p>
  * Core responsibilities:
  * <ul>
- *   <li>Accept a single event type via {@link #recordScannerEvent(ScannerEventType, String, String)}</li>
+ *   <li>Accept a single event via {@link #recordScannerEvent(ScannerMetricsChangedEvent)}</li>
  *   <li>Track per-agent discovered count and last emission timestamp</li>
  *   <li>Compute file count on-demand from the filesystem in {@link #getMetrics(String)}</li>
  *   <li>Expose query methods for the UI layer</li>
@@ -87,91 +86,62 @@ public class ScannerObserverUseCase {
     /**
      * Record a scanner event for the given agent.
      * <p>
-     * {@code CREATION} and {@code MODIFICATION} increment the discovered counter.
-     * {@code DELETION} and {@code UNCHANGED} do not.
-     * The folder path is stored so {@link #getMetrics(String)} can walk the directory
-     * to compute the current file count on-demand.
+     * Dispatch logic on {@code event.getEventType()}:
+     * <ul>
+     *   <li>{@code CREATION} / {@code MODIFICATION} — store folder, increment discovered, update emission timestamp, push to UI</li>
+     *   <li>{@code DELETION} / {@code UNCHANGED} — store folder, push to UI (no discovered increment)</li>
+     *   <li>{@code null} (emission, error, recovery) — update emission timestamp if status is EMITTING_UPDATES, push to UI</li>
+     * </ul>
      *
-     * @param eventType the type of event
-     * @param agentId   the owning agent's ID
-     * @param folderPath the watched directory path
+     * @param event the scanner metrics changed event
      */
-    public void recordScannerEvent(ScannerEventType eventType, String agentId, String folderPath) {
-        agentFolders.put(agentId, folderPath);
-        metricsStore.compute(agentId, (key, existing) -> {
-            if (existing == null) {
-                long discovered = (eventType == ScannerEventType.CREATION
-                        || eventType == ScannerEventType.MODIFICATION) ? 1 : 0;
-                return new AgentMetrics(discovered);
+    public void recordScannerEvent(ScannerMetricsChangedEvent event) {
+        String agentId = event.getAgentId();
+        ScannerEventType eventType = event.getEventType();
+        ScannerStatus status = event.getStatus();
+
+        if (eventType == ScannerEventType.CREATION || eventType == ScannerEventType.MODIFICATION) {
+            agentFolders.put(agentId, event.getFolderPath());
+            metricsStore.compute(agentId, (key, existing) -> {
+                if (existing == null) {
+                    return new AgentMetrics(1);
+                }
+                return existing.withDiscovered();
+            });
+        } else if (eventType == ScannerEventType.DELETION || eventType == ScannerEventType.UNCHANGED) {
+            agentFolders.put(agentId, event.getFolderPath());
+        } else if (eventType == null) {
+            // Lifecycle events (emission, error, recovery)
+            if (status == ScannerStatus.EMITTING_UPDATES) {
+                LocalDateTime now = LocalDateTime.now();
+                metricsStore.compute(agentId, (key, existing) -> {
+                    if (existing == null) {
+                        return new AgentMetrics(0, now);
+                    }
+                    return existing.withLastEmission(now);
+                });
             }
-            return (eventType == ScannerEventType.CREATION
-                    || eventType == ScannerEventType.MODIFICATION)
-                    ? existing.withDiscovered()
-                    : existing;
-        });
-        pushToUI(ScannerMetricsChangedEvent.scannerEvent(eventType, agentId));
+        }
+
+        pushToUI(event);
     }
 
     /**
-     * Record a file emission event for the given agent.
+     * Push a metrics event directly to all registered UI callbacks.
      * <p>
-     * Updates the last emission timestamp, which is used by the idle checker
-     * to determine when a scanner should transition to IDLE.
+     * Used by {@code notifyStatusChange} for direct status push, bypassing metrics logic.
      *
-     * @param agentId the owning agent's ID
+     * @param event the metrics change event
      */
-    public void recordEmission(String agentId) {
-        LocalDateTime now = LocalDateTime.now();
-        metricsStore.compute(agentId, (key, existing) -> {
-            if (existing == null) {
-                return new AgentMetrics(0, now);
+    public void pushToUI(ScannerMetricsChangedEvent event) {
+        for (Consumer<ScannerMetricsChangedEvent> callback : refreshCallbacks) {
+            try {
+                callback.accept(event);
+            } catch (Exception e) {
+                log.warn("Error in metrics refresh callback for agent {}: {}",
+                        event.getAgentId(), e.getMessage());
             }
-            return existing.withLastEmission(now);
-        });
-        pushToUI(ScannerMetricsChangedEvent.fileEmitted(agentId));
-    }
-
-    /**
-     * Record a scanner status change for the given agent.
-     * <p>
-     * Pushes a status change event to the UI so the grid can reflect
-     * the new scanner state (e.g. IDLE → EMITTING_UPDATES, FILTERED → IDLE).
-     *
-     * @param agentId the owning agent's ID
-     * @param status  the new scanner status
-     */
-    public void recordStatusChange(String agentId, ScannerStatus status) {
-        pushToUI(ScannerMetricsChangedEvent.statusChanged(agentId, status.name()));
-    }
-
-    /**
-     * Record a scanner error for the given agent.
-     * <p>
-     * Pushes an error event to the UI so the grid can display the error state.
-     *
-     * @param agentId the owning agent's ID
-     * @param message human-readable description of the error
-     */
-    public void recordError(String agentId, String message) {
-        pushToUI(ScannerMetricsChangedEvent.errorOccurred(agentId, message));
-    }
-
-    /**
-     * Record a scanner recovery from error for the given agent.
-     *
-     * @param agentId the owning agent's ID
-     */
-    public void recordRecovery(String agentId) {
-        pushToUI(ScannerMetricsChangedEvent.recoveredFromError(agentId));
-    }
-
-    /**
-     * Record that a scanner reached idle for the given agent.
-     *
-     * @param agentId the owning agent's ID
-     */
-    public void recordIdle(String agentId) {
-        pushToUI(ScannerMetricsChangedEvent.idleReached(agentId));
+        }
     }
 
     /**
@@ -273,21 +243,5 @@ public class ScannerObserverUseCase {
     public void unregisterRefreshCallback(Consumer<ScannerMetricsChangedEvent> callback) {
         refreshCallbacks.remove(callback);
         log.debug("Scanner metrics refresh callback unregistered");
-    }
-
-    /**
-     * Push a metrics event to all registered UI callbacks.
-     *
-     * @param event the metrics change event
-     */
-    public void pushToUI(ScannerMetricsChangedEvent event) {
-        for (Consumer<ScannerMetricsChangedEvent> callback : refreshCallbacks) {
-            try {
-                callback.accept(event);
-            } catch (Exception e) {
-                log.warn("Error in metrics refresh callback for agent {}: {}",
-                        event.getAgentId(), e.getMessage());
-            }
-        }
     }
 }

@@ -19,6 +19,7 @@ import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.usecases.ScannerStatus;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;
@@ -242,7 +243,7 @@ public class ScannerRegistry implements DisposableBean {
         Scanner scanner = scanners.get(scannerId);
         if (scanner != null) {
             scanner.updateStatus(status);
-            observer.recordStatusChange(scannerId, status);
+            observer.pushToUI(new ScannerMetricsChangedEvent(scannerId, status, null, null, null));
             log.debug("Updated scanner {} status to {}", scannerId, status);
         }
     }
