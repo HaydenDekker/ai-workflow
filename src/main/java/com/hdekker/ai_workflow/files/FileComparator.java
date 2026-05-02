@@ -1,25 +1,27 @@
 package com.hdekker.ai_workflow.files;
 
-import java.util.Optional;
-
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
+import java.util.Optional;
+
 /**
- * To access the local file system database
- * and compare previous to new.
+ * Re-export of {@link com.hdekker.ai_workflow.application.file.FileComparator} for backward compatibility.
+ * <p>
+ * The canonical definition has moved to {@code application.file.FileComparator}.
+ *
+ * @deprecated Use {@link com.hdekker.ai_workflow.application.file.FileComparator} directly.
  */
-public class FileComparator implements InputStreamHashChangedMatcher {
+@Deprecated
+public class FileComparator {
 
-	FileMetadataStore repository;
+    private final FileMetadataStore repository;
 
-	public FileComparator(FileMetadataStore repository) {
-		this.repository = repository;
-	}
+    public FileComparator(FileMetadataStore repository) {
+        this.repository = repository;
+    }
 
-	@Override
-	public FileHistory matches(FileMetadata file) {
-		Optional<FileMetadata> previousFile = repository.findById(file.url());
-		return new FileHistory(file, previousFile);
-	}
-
+    public FileHistory matches(FileMetadata file) {
+        Optional<FileMetadata> previousFile = repository.findById(file.url());
+        return new FileHistory(file, previousFile);
+    }
 }

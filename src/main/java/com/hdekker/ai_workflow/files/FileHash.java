@@ -1,32 +1,17 @@
 package com.hdekker.ai_workflow.files;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+/**
+ * Re-export of {@link com.hdekker.ai_workflow.domain.shared.FileHash} for backward compatibility.
+ * <p>
+ * The canonical definition has moved to {@code domain.shared.FileHash}.
+ *
+ * @deprecated Use {@link com.hdekker.ai_workflow.domain.shared.FileHash} directly.
+ */
+@Deprecated
+public final class FileHash {
+    private FileHash() {}
 
-public class FileHash {
-
-	public static String hash(String file) {
-		
-		MessageDigest instance = null;
-		try {
-			instance = MessageDigest.getInstance("SHA-256");
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		byte[] hashBytes = instance.digest(file.getBytes());
-		
-		StringBuilder hexString = new StringBuilder();
-        for (byte b : hashBytes) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
-        }
-        return hexString.toString();
-	
-	}
-	
-	
-
+    public static String hash(String content) {
+        return com.hdekker.ai_workflow.domain.shared.FileHash.hash(content);
+    }
 }
