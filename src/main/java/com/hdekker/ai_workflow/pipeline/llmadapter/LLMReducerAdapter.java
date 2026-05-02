@@ -4,9 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptRequest;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 

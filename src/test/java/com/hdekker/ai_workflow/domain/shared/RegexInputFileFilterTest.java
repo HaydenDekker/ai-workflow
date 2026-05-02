@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline;
+package com.hdekker.ai_workflow.domain.shared;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -6,7 +6,7 @@ import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
+import com.hdekker.ai_workflow.domain.shared.RegexInputFileFilter.FilterResult;
 
 /***
  *  To configure the rang of files this prompt accepts.

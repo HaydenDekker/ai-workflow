@@ -26,7 +26,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files.domain;
+package com.hdekker.ai_workflow.domain.file;
 
 public record FileMetadata(String url, String body, String hash) {
 

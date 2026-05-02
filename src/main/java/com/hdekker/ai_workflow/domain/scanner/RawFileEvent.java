@@ -1,12 +1,13 @@
-package com.hdekker.ai_workflow.usecases;
+package com.hdekker.ai_workflow.domain.scanner;
 
 import java.nio.file.Path;
 
 /**
- * Raw file event emitted by {@link com.hdekker.ai_workflow.files.NativeFileWatcherAdapter}.
+ * Raw file event emitted by {@link com.hdekker.ai_workflow.adapter.outbound.file.NativeFileWatcher}.
  * <p>
  * Contains the file path, content, and event type. Business logic (hashing, comparison,
- * history creation) is applied by {@link Scanner} when subscribing to these events.
+ * history creation) is applied by {@link com.hdekker.ai_workflow.application.scanner.ScannerService}
+ * when subscribing to these events.
  */
 public record RawFileEvent(Path path, String content, RawFileEventType eventType) {
 

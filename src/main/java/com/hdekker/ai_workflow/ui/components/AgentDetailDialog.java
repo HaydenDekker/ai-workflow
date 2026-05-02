@@ -20,7 +20,7 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 
 
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 

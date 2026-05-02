@@ -10,9 +10,9 @@ import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import reactor.core.publisher.Flux;
 import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptRequest;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 public class AgentBuilderTest {

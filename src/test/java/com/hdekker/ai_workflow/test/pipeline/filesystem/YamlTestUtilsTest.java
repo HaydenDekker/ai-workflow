@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.test.pipeline.filesystem;
 
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 
 import org.junit.jupiter.api.Test;

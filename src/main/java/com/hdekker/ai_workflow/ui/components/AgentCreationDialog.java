@@ -13,7 +13,7 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.notification.Notification;
 
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 
 import org.slf4j.Logger;

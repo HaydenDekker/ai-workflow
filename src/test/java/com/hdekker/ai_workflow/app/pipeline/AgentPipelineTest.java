@@ -18,9 +18,9 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.usecases.Scanner;
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;

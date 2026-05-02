@@ -27,8 +27,8 @@ import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
 import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
 import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.prompt.PromptRequest;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
   
 import reactor.core.publisher.Flux;
 

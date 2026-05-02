@@ -1,9 +1,7 @@
-package com.hdekker.ai_workflow.app.pipeline;
+package com.hdekker.ai_workflow.domain.shared;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
 
 public class OutputFilenameTemplate {
 	
@@ -11,7 +9,7 @@ public class OutputFilenameTemplate {
 	     * Replaces placeholders in the format ${groupName} with 
 	     * corresponding values from the FilterResult.
 	     */
-	    public static String getName(String template, FilterResult matchResult) {
+	    public static String getName(String template, RegexInputFileFilter.FilterResult matchResult) {
 	        String result = template;
 	        
 	        // Regex to find placeholders like ${name} or ${path}

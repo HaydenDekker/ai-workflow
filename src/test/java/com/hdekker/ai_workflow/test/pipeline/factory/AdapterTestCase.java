@@ -1,7 +1,7 @@
 package com.hdekker.ai_workflow.test.pipeline.factory;
 
 import java.util.List;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
 import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
 

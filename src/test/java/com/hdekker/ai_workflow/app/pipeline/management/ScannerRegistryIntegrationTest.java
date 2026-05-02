@@ -20,7 +20,7 @@ import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;

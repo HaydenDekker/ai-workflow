@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 public class PromptResponseFileSystemAdapter {
 

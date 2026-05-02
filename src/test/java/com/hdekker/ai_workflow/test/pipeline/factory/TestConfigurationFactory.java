@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.test.pipeline.factory;
 
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 /**
  * Factory for creating test configurations for different LLM adapter types.

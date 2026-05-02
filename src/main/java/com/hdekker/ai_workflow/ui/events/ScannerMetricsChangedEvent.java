@@ -1,7 +1,7 @@
 package com.hdekker.ai_workflow.ui.events;
 
-import com.hdekker.ai_workflow.usecases.ScannerEventType;
-import com.hdekker.ai_workflow.usecases.ScannerStatus;
+import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 /**
  * Fired when scanner metrics change (file discovered, file count updated, etc).

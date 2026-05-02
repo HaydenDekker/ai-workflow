@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline;
+package com.hdekker.ai_workflow.domain.shared;
 
 import java.util.HashMap;
 import java.util.Map;

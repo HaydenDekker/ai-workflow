@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.files;
 
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
 /***
  * To determine if a resource has changes warranting 

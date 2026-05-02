@@ -13,9 +13,9 @@ import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;

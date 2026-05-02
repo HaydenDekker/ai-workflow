@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.usecases;
+package com.hdekker.ai_workflow.domain.scanner;
 
 /**
  * Scanner status enum — replaces the string constants for type-safe status handling.

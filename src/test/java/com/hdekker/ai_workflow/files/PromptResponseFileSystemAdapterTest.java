@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 public class PromptResponseFileSystemAdapterTest {
 	

@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.usecases;
 
+import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 

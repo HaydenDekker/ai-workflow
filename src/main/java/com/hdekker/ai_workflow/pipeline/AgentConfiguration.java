@@ -14,11 +14,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 
 /**

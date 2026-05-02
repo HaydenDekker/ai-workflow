@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
 @RestController

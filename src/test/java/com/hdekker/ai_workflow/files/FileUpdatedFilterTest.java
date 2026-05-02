@@ -10,7 +10,7 @@ import java.util.Scanner;
 
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
 public class FileUpdatedFilterTest {
 

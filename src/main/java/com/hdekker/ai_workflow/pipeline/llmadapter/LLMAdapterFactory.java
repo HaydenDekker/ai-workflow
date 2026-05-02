@@ -2,7 +2,7 @@ package com.hdekker.ai_workflow.pipeline.llmadapter;
 
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 public class LLMAdapterFactory {
 

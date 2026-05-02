@@ -4,8 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public class SplitterLLMAdapter implements LLMAdapter {
     }
 
     @Override
-    public Flux<PromptResponse> call(Flux<com.hdekker.ai_workflow.prompt.PromptRequest> request) {
+    public Flux<PromptResponse> call(Flux<PromptRequest> request) {
         return request.flatMap(fpe -> {
             log.info("Sending prompt to LLM for file: {}", fpe.fileURL());
             return chatClient.prompt(agentDefinition.body() + "\n\r" + "```code" + fpe.file() + "\n\r" + "```" + "\n\r" + agentDefinition.outputStructure())
@@ -35,7 +36,7 @@ public class SplitterLLMAdapter implements LLMAdapter {
         });
     }
 
-    private Flux<PromptResponse> parseAndEmitResponses(com.hdekker.ai_workflow.prompt.PromptRequest fpe, String fullResponse) {
+    private Flux<PromptResponse> parseAndEmitResponses(PromptRequest fpe, String fullResponse) {
         List<PromptResponse> responses = new ArrayList<>();
 
         // Use a simple approach: split the entire response by the --- KEY --- markers

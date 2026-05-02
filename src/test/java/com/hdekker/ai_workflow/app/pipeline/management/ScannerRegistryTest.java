@@ -17,7 +17,7 @@ import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
-import com.hdekker.ai_workflow.usecases.ScannerStatus;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 public class ScannerRegistryTest {
 

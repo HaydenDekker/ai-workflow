@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.usecases;
+package com.hdekker.ai_workflow.domain.scanner;
 
 /**
  * Types of file system events the scanner can observe.

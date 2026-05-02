@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
 import com.hdekker.ai_workflow.files.EmissionDelayConfig;
 import com.hdekker.ai_workflow.usecases.Scanner;
-import com.hdekker.ai_workflow.usecases.ScannerStatus;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;

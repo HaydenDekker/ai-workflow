@@ -23,7 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import reactor.core.publisher.Flux;

@@ -1,7 +1,7 @@
 package com.hdekker.ai_workflow.pipeline;
 
-import com.hdekker.ai_workflow.prompt.PromptRequest;
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 import reactor.core.publisher.Flux;
 

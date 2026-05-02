@@ -1,6 +1,6 @@
-package com.hdekker.ai_workflow.pipeline.domain;
+package com.hdekker.ai_workflow.domain.agent;
 
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
+import com.hdekker.ai_workflow.domain.shared.RegexInputFileFilter;
 
 /**
  *  To capture configuration of a prompt for

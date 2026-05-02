@@ -2,8 +2,8 @@ package com.hdekker.ai_workflow.files;
 
 import java.util.Optional;
 
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
-import com.hdekker.ai_workflow.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 
 public record FileHistory(
 		FileMetadata currentFile,

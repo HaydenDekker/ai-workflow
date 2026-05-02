@@ -22,8 +22,8 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.domain.AgentWorkflow;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentWorkflow;
 
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;

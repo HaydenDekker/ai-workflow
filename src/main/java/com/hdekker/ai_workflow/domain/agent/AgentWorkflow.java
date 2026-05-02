@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.domain;
+package com.hdekker.ai_workflow.domain.agent;
 
 import java.util.List;
 

@@ -2,7 +2,7 @@ package com.hdekker.ai_workflow.pipeline;
 
 import java.util.List;
 
-import com.hdekker.ai_workflow.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 /**
  * Highly likely a prompt could return 

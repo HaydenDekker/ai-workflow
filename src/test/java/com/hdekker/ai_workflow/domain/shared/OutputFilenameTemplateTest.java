@@ -1,10 +1,10 @@
-package com.hdekker.ai_workflow.app.pipeline;
+package com.hdekker.ai_workflow.domain.shared;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
+import com.hdekker.ai_workflow.domain.shared.RegexInputFileFilter.FilterResult;
 
 /***
  * To configure the destination for the output of the prompt

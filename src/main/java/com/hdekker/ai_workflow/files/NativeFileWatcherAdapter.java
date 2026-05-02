@@ -7,7 +7,7 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.usecases.RawFileEvent;
+import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;

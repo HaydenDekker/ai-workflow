@@ -1,9 +1,9 @@
-package com.hdekker.ai_workflow.prompt;
+package com.hdekker.ai_workflow.domain.prompt;
 
-import com.hdekker.ai_workflow.app.pipeline.OutputFilenameTemplate;
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter;
-import com.hdekker.ai_workflow.app.pipeline.RegexInputFileFilter.FilterResult;
-import com.hdekker.ai_workflow.pipeline.domain.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.shared.OutputFilenameTemplate;
+import com.hdekker.ai_workflow.domain.shared.RegexInputFileFilter;
+import com.hdekker.ai_workflow.domain.shared.RegexInputFileFilter.FilterResult;
 
 public record PromptResponse(AgentDefinition prompt, String fileName, String fileContents, String response) {
 

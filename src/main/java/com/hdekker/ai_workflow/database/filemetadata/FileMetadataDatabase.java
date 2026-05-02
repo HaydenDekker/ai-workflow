@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.hdekker.ai_workflow.files.FileMetaDatabaseSearcher;
 import com.hdekker.ai_workflow.files.FileMetadataStore;
-import com.hdekker.ai_workflow.files.domain.FileMetadata;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
 @Service
 public class FileMetadataDatabase implements FileMetaDatabaseSearcher, FileMetadataStore {
