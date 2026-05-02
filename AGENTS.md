@@ -13,7 +13,7 @@ The project expects JDK 21. Ensure `java -version` reports 21.x before running.
 ## Test Commands
 Run unit or integration tests via the wrapper:
 
-> **Prefer specific tests** — run targeted test classes or methods (`-Dtest=ClassName` or `-Dtest=ClassName#methodName`) for faster feedback. The full test suite (`./mvnw verify`) runs in the background for comprehensive coverage.
+> **⚠️ Never run the full test suite** (`./mvnw verify`) unless the user explicitly asks for it. Always run relative explicit tests (`-Dtest=ClassName` or `-Dtest=ClassName#methodName`) instead. The full suite is slow, noisy, and rarely needed for routine development.
 
 ### Unit Tests
 - `./mvnw test` – all unit tests with verbose output.
