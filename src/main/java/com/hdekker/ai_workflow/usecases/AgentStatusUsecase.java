@@ -13,8 +13,8 @@ import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusE
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;

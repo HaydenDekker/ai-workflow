@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.rest.dto;
+package com.hdekker.ai_workflow.adapter.inbound.rest.dto;
 
 /**
  * Snapshot of scanner metrics for a specific agent.

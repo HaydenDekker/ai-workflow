@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.rest;
+package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -11,8 +11,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.controller.ObservabilityController;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +23,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@WebMvcTest(ObservabilityRestController.class)
-public class ObservabilityRestControllerTest {
+@WebMvcTest(ObservabilityController.class)
+public class ObservabilityControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

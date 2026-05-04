@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.rest;
+package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
 
@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,14 +22,14 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/scanners")
-public class ScannerRestController {
+public class ScannerController {
 
-    private static final Logger log = LoggerFactory.getLogger(ScannerRestController.class);
+    private static final Logger log = LoggerFactory.getLogger(ScannerController.class);
 
     private final ScannerRegistry scannerRegistry;
 
     @Autowired
-    public ScannerRestController(ScannerRegistry scannerRegistry) {
+    public ScannerController(ScannerRegistry scannerRegistry) {
         this.scannerRegistry = scannerRegistry;
     }
 

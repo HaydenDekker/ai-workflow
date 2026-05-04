@@ -14,7 +14,7 @@ import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMet
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.adapter.outbound.file.EmissionDelayConfig;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;

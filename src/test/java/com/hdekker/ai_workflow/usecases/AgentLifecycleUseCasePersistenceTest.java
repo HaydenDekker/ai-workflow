@@ -21,8 +21,8 @@ import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileWriter;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import org.springframework.ai.chat.client.ChatClient;

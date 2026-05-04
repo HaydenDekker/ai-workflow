@@ -21,8 +21,8 @@ import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMet
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileWriter;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;

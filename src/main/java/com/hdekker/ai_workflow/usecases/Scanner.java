@@ -591,8 +591,8 @@ public class Scanner implements FileScanner {
      *
      * @return a ScannerInfo DTO
      */
-    public com.hdekker.ai_workflow.rest.dto.ScannerInfo toInfo() {
-        return new com.hdekker.ai_workflow.rest.dto.ScannerInfo(
+    public com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo toInfo() {
+        return new com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo(
                 effectiveAgentId,
                 effectiveAgentId,
                 folderPath,

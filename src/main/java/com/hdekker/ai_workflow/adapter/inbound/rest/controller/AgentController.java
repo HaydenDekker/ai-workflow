@@ -1,11 +1,11 @@
-package com.hdekker.ai_workflow.rest;
+package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/agents")
-public class AgentRestController {
+public class AgentController {
 
     @Autowired
     private AgentLifecycleUseCase dynamicAgentManager;

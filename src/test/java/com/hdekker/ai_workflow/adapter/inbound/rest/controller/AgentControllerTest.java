@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.rest;
+package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -15,9 +15,10 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.hdekker.ai_workflow.adapter.inbound.rest.controller.AgentController;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * 
  * Verifies create, list, delete, enable, disable, and refresh agent operations.
  */
-@WebMvcTest(AgentRestController.class)
-public class AgentRestControllerTest {
+@WebMvcTest(AgentController.class)
+public class AgentControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;

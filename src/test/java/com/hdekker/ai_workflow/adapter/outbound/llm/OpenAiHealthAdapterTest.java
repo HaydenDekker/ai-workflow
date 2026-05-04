@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 
 /**
  * Tests for OpenAiHealthAdapter.

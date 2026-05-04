@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.rest.dto.OpenAiModelsResponse;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.OpenAiModelsResponse;
 
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;

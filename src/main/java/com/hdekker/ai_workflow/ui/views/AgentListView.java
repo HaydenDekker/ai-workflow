@@ -9,8 +9,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
 import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
 import com.hdekker.ai_workflow.ui.components.LlmStatusBadge;
@@ -252,7 +252,7 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
                 llmStatusBadge.updateStatus(statuses.get(0).status());
             }
         } catch (Exception e) {
-            llmStatusBadge.updateStatus(com.hdekker.ai_workflow.rest.dto.AdapterStatus.UNKNOWN);
+            llmStatusBadge.updateStatus(com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus.UNKNOWN);
         }
     }
 

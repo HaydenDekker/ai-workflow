@@ -11,8 +11,8 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.ui.service.ScannerService;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;

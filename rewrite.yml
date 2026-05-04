@@ -24,3 +24,64 @@ recipeList:
   - org.openrewrite.java.DeleteCommentLine
   - org.openrewrite.java.ExhaustiveSwitchDefault
   - org.openrewrite.java.migrate.lang.ReplaceUnusedVariablesWithUnderscore
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.rest-move-and-rename
+displayName: Phase 4.4 — Move rest/* to adapter/inbound/rest/* and rename controllers
+description: |
+  Move all REST types from rest.* into adapter/inbound/rest.*.
+  Controllers land in adapter/inbound/rest/controller/ and DTOs in
+  adapter/inbound/rest/dto/.
+
+  How it works:
+    1. ChangePackage (recursive:true) moves rest/*.java to adapter/inbound/rest/
+       and rest/dto/*.java to adapter/inbound/rest/dto/. The recursive flag
+       preserves subpackage structure — imports like
+       com.hdekker.ai_workflow.rest.dto.X become
+       com.hdekker.ai_workflow.adapter.inbound.rest.dto.X (correct!).
+       Test files follow automatically.
+
+    2. ChangeType renames controllers (AgentRestController → AgentController,
+       etc.) and moves them into the controller/ subpackage.
+
+    3. ChangeType renames test classes to match.
+
+recipeList:
+  # Step 1: Move ALL rest/* to adapter/inbound/rest/
+  #
+  # recursive:true preserves subpackage structure:
+  #   rest/*.java      → adapter/inbound/rest/
+  #   rest/dto/*.java  → adapter/inbound/rest/dto/
+  # Test files follow automatically.
+  # All imports across the codebase are updated.
+
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.rest
+      newPackageName: com.hdekker.ai_workflow.adapter.inbound.rest
+      recursive: true
+
+  # Step 2: Rename controllers (ChangeType)
+  # Moves source files to controller/ subpackage and updates all references.
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.AgentRestController
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.controller.AgentController
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.ObservabilityRestController
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.controller.ObservabilityController
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.ScannerRestController
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.controller.ScannerController
+
+  # Step 3: Rename test classes (ChangeType)
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.AgentRestControllerTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.controller.AgentControllerTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.ObservabilityRestControllerTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.controller.ObservabilityControllerTest

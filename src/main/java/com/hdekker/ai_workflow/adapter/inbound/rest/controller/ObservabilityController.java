@@ -1,8 +1,8 @@
-package com.hdekker.ai_workflow.rest;
+package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
 
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/observability")
-public class ObservabilityRestController {
+public class ObservabilityController {
 
     @Autowired
     private AgentStatusUsecase llmStatusService;
