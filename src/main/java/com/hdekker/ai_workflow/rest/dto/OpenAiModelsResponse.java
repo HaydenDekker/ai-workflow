@@ -1,7 +1,8 @@
 package com.hdekker.ai_workflow.rest.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * DTO for OpenAI-compatible /v1/models API response.

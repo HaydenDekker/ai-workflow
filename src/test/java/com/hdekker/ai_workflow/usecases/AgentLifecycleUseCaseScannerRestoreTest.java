@@ -1,32 +1,31 @@
 package com.hdekker.ai_workflow.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClient;
+
 import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentEntity;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
+import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
 /**

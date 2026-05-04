@@ -1,14 +1,17 @@
 package com.hdekker.ai_workflow.ui.service;
 
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import java.util.List;
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 /**
  * UI-layer service for scanner operations.

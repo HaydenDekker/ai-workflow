@@ -1,11 +1,11 @@
 package com.hdekker.ai_workflow.application.scanner.port;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * Port interface for scanner metrics observation.

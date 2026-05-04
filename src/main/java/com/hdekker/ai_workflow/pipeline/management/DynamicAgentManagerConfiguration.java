@@ -3,16 +3,16 @@ package com.hdekker.ai_workflow.pipeline.management;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileSystemFileWriter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuration for AgentLifecycleUseCase.

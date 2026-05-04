@@ -1,9 +1,10 @@
 package com.hdekker.ai_workflow.llm;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Tests for OpenAiHealthClient.

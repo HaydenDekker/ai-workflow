@@ -1,10 +1,11 @@
 package com.hdekker.ai_workflow.ui.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;

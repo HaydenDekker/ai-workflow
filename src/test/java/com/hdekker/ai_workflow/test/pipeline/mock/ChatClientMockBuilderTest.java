@@ -2,7 +2,9 @@ package com.hdekker.ai_workflow.test.pipeline.mock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 import org.junit.jupiter.api.Test;
+
 import org.springframework.ai.chat.client.ChatClient;
 
 /**

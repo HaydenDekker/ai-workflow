@@ -2,16 +2,16 @@ package com.hdekker.ai_workflow.database.filemetadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.hdekker.ai_workflow.TestProfiles;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Tests {@link FileMetadataEntity} CRUD operations.

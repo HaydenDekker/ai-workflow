@@ -1,8 +1,8 @@
 package com.hdekker.ai_workflow.files;
 
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
-
 import java.util.Optional;
+
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
 /**
  * Re-export of {@link com.hdekker.ai_workflow.application.file.FileComparator} for backward compatibility.

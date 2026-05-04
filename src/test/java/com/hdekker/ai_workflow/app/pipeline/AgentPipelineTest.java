@@ -1,5 +1,7 @@
 package com.hdekker.ai_workflow.app.pipeline;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,25 +13,23 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
-import com.hdekker.ai_workflow.usecases.Scanner;
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.usecases.FileCounter;
+import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import org.mockito.Mockito;
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pipeline integration test: real scanner flux -> AgentConfigurator pipeline -> LLM mock -> output file.

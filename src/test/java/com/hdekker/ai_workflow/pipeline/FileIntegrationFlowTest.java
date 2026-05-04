@@ -5,13 +5,20 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.TestProfiles;
+import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,11 +27,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
-import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 
 /**
  * Full integration test for the file polling → agent → LLM call flow.
@@ -40,10 +42,10 @@ import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
  */
 @Disabled("Architecture changed to direct FileReadingMessageSource - needs rework")
 @SpringBootTest(
-    properties = {
-        "spring.ai.openai.api-key=no_key_required",
-        "spring.ai.chat.client.enabled=false"
-    }
+        properties = {
+                "spring.ai.openai.api-key=no_key_required",
+                "spring.ai.chat.client.enabled=false"
+        }
 )
 @Import(ChatClientTestConfig.class)
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)

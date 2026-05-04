@@ -1,22 +1,24 @@
 package com.hdekker.ai_workflow.usecases;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
 import com.hdekker.ai_workflow.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Use case for managing LLM endpoint health status.

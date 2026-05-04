@@ -1,8 +1,9 @@
 package com.hdekker.ai_workflow.database.llmstatus;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import java.time.LocalDateTime;
 
 /**
  * Entity for storing LLM endpoint health status.

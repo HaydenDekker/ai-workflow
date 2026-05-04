@@ -2,6 +2,7 @@ package com.hdekker.ai_workflow.domain.shared;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.shared.RegexInputFileFilter.FilterResult;

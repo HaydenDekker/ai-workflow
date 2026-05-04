@@ -4,10 +4,10 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;

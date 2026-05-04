@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.ui.components;
 
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
+
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 

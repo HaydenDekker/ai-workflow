@@ -1,14 +1,17 @@
 package com.hdekker.ai_workflow.llm;
 
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+
+import reactor.core.publisher.Mono;
 
 /**
  * Adapter for checking OpenAI-compatible endpoint health.

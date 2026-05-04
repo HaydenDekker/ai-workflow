@@ -3,23 +3,26 @@ package com.hdekker.ai_workflow.pipeline;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Configuration;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
+import com.hdekker.ai_workflow.prompt.PromptConfiguration;
+import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils;
-import com.hdekker.ai_workflow.prompt.PromptConfiguration;
-import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
 
 /**
  *  To build the configured agents ready for file processing.

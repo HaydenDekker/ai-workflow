@@ -1,19 +1,5 @@
 package com.hdekker.ai_workflow.ui.components;
 
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
-import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Hr;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.DetachEvent;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,8 +7,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+
+import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Hr;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
 
 /**
  * Reusable component displaying a single LLM endpoint's health status.

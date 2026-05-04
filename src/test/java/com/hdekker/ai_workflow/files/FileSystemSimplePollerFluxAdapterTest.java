@@ -13,14 +13,14 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.TestConstants;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.usecases.Scanner;
-import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import reactor.core.publisher.Flux;

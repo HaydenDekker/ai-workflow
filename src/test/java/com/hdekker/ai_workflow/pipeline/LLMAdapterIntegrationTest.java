@@ -1,35 +1,36 @@
 package com.hdekker.ai_workflow.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.TestProfiles;
+import com.hdekker.ai_workflow.app.pipeline.AgentBuilder;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
+import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.app.pipeline.AgentBuilder;
-import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
-import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;
-import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
-import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-  
 import reactor.core.publisher.Flux;
 
 /**

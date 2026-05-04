@@ -1,9 +1,11 @@
 package com.hdekker.ai_workflow.prompt;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

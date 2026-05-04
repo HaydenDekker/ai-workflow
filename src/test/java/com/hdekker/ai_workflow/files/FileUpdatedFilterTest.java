@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Scanner;
 
+
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
@@ -50,16 +51,6 @@ public class FileUpdatedFilterTest {
 		FileComparator fc = new FileComparator(searcher);
 		FileHistory optUpdated = fc.matches(new FileMetadata(dummyURL, new String(stubFileData1), currentFileHash));
 		assertThat(optUpdated.previousFile()).isPresent();
-
-	}
-
-	@Test
-	public void givenPreviousFileUnchanged_ExpectFileFilteredOut() {
-
-	}
-
-	@Test
-	public void givenPreviousFileChanged_ExpectFileEmitted() {
 
 	}
 

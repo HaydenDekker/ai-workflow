@@ -1,0 +1,26 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.ApplyAllCleanup
+displayName: AI Workflow code cleanup
+description: Run every cleanup recipe in this project.
+
+recipeList:
+  # ── Import hygiene ──────────────────────────────────────────
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports
+
+  # ── Testing best practices ──────────────────────────────────
+  - org.openrewrite.java.testing.cleanup.RemoveEmptyTests
+  - org.openrewrite.java.testing.cleanup.AssertionsArgumentOrder
+  - org.openrewrite.java.testing.cleanup.AssertTrueNegationToAssertFalse
+  - org.openrewrite.java.testing.cleanup.AssertFalseNegationToAssertTrue
+  - org.openrewrite.java.testing.cleanup.AssertEqualsNullToAssertNull
+
+  # ── Spring / JPA best practices ─────────────────────────────
+  - org.openrewrite.java.spring.DataJpaExposePersistenceContextToFalse
+  - org.openrewrite.java.spring.security.AuthenticateRequestDto
+
+  # ── General cleanup ─────────────────────────────────────────
+  - org.openrewrite.java.DeleteCommentLine
+  - org.openrewrite.java.ExhaustiveSwitchDefault
+  - org.openrewrite.java.migrate.lang.ReplaceUnusedVariablesWithUnderscore

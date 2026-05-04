@@ -1,14 +1,5 @@
 package com.hdekker.ai_workflow.usecases;
 
-import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
-import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,6 +7,17 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
+
+import org.springframework.stereotype.Service;
 
 /**
  * Central use case for scanner metrics observation.

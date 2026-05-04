@@ -2,22 +2,23 @@ package com.hdekker.ai_workflow.ui.components;
 
 import java.util.function.Consumer;
 
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.ui.service.AgentInfoService;
+
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.component.notification.Notification;
-
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Reusable modal dialog for creating new agents from the Agent ListView.

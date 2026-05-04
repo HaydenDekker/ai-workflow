@@ -2,10 +2,10 @@ package com.hdekker.ai_workflow.llm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @ConfigurationProperties(value = "app.ai")

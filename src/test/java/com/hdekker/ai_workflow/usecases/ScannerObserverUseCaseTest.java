@@ -1,25 +1,27 @@
 package com.hdekker.ai_workflow.usecases;
 
-import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
-import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+import com.hdekker.ai_workflow.rest.dto.ScannerMetricsSnapshot;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
+
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Unit tests for {@link ScannerObserverUseCase}.

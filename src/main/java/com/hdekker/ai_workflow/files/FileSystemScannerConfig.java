@@ -2,11 +2,11 @@ package com.hdekker.ai_workflow.files;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-
-import jakarta.annotation.PostConstruct;
 
 @Configuration
 @ConfigurationProperties("scanner")

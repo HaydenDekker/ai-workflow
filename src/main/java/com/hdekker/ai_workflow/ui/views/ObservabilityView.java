@@ -1,8 +1,15 @@
 package com.hdekker.ai_workflow.ui.views;
 
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 import com.hdekker.ai_workflow.ui.components.AdapterStatusComponent;
+import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Hr;
@@ -16,13 +23,6 @@ import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.component.DetachEvent;
-
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**

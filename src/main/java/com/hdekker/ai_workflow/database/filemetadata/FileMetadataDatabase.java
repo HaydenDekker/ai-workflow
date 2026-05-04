@@ -2,12 +2,12 @@ package com.hdekker.ai_workflow.database.filemetadata;
 
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.files.FileMetaDatabaseSearcher;
 import com.hdekker.ai_workflow.files.FileMetadataStore;
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class FileMetadataDatabase implements FileMetaDatabaseSearcher, FileMetadataStore {

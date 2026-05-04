@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
@@ -16,6 +16,8 @@ import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+
+import org.springframework.stereotype.Service;
 
 /**
  * Central service for scanner metrics observation.

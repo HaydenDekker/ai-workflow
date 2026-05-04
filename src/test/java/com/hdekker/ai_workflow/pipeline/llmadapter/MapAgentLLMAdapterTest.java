@@ -1,15 +1,17 @@
 package com.hdekker.ai_workflow.pipeline.llmadapter;
 
-import org.springframework.ai.chat.client.ChatClient;
-import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import static org.assertj.core.api.Assertions.assertThat;
 
+
+import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+
+import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
-import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.assertThat;
 
 
 public class MapAgentLLMAdapterTest {

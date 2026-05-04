@@ -1,27 +1,30 @@
 package com.hdekker.ai_workflow.usecases;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
 import com.hdekker.ai_workflow.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for AgentStatusUsecase.

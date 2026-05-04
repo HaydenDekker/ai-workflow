@@ -2,8 +2,10 @@ package com.hdekker.ai_workflow.files;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
-import org.springframework.stereotype.Component;
+
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+
+import org.springframework.stereotype.Component;
 
 @Component
 public class FileSystemFileWriter implements FileWriter {

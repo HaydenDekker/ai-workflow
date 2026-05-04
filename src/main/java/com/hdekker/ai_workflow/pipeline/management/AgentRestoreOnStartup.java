@@ -2,11 +2,12 @@ package com.hdekker.ai_workflow.pipeline.management;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 /**
  * Restores persisted agents from the database when the application starts.

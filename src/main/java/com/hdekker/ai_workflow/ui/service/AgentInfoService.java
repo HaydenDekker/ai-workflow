@@ -2,18 +2,19 @@ package com.hdekker.ai_workflow.ui.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
-import reactor.core.publisher.Mono;
-
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 @Service
 public class AgentInfoService {

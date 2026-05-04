@@ -1,16 +1,20 @@
 package com.hdekker.ai_workflow.pipeline.llmadapter;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+import org.junit.jupiter.api.Test;
+
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
-import reactor.core.publisher.Flux;
-import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
-import java.util.ArrayList;
-import java.util.List;
-import static org.assertj.core.api.Assertions.assertThat;
+import reactor.core.publisher.Flux;
 
 /**
  * Test for {@link LLMReducerAdapter}. It verifies two main behaviors:

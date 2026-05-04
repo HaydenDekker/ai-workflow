@@ -6,18 +6,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Optional;
 
+
 import org.junit.jupiter.api.Test;
+
+import com.hdekker.ai_workflow.TestProfiles;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 /**
  * Unit tests for AgentPersistenceUsecase — verifies entity↔domain mapping.
@@ -26,7 +28,7 @@ import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
  */
 @DataJpaTest
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
-@Import({ AgentPersistenceUsecase.class, AgentPersistenceServiceTest.TestConfig.class })
+@Import({AgentPersistenceUsecase.class, AgentPersistenceServiceTest.TestConfig.class})
 public class AgentPersistenceServiceTest {
 
 	static class TestConfig {

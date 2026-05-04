@@ -2,17 +2,18 @@ package com.hdekker.ai_workflow.application.pipeline;
 
 import java.util.function.Consumer;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
 
 import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
-import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.pipeline.LLMAdapter;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory;
 
+import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
 /**

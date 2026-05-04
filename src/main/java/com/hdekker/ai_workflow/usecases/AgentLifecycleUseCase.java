@@ -2,28 +2,26 @@ package com.hdekker.ai_workflow.usecases;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
 
 import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.database.agent.AgentEntity;
 import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
 import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+
+import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 

@@ -1,13 +1,16 @@
 package com.hdekker.ai_workflow.llm;
 
-import com.hdekker.ai_workflow.rest.dto.OpenAiModelsResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.client.RestClient;
-import reactor.core.publisher.Mono;
-
 import java.util.List;
 import java.util.stream.Collectors;
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.rest.dto.OpenAiModelsResponse;
+
+import org.springframework.web.client.RestClient;
+import reactor.core.publisher.Mono;
 
 /**
  * REST client for OpenAI-compatible health checking.

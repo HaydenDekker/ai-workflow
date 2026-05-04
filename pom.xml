@@ -226,6 +226,44 @@
 					</includes>
 				</configuration>
 			</plugin>
+
+			<!-- OpenRewrite: AST-aware refactoring & automation -->
+			<plugin>
+				<groupId>org.openrewrite.maven</groupId>
+				<artifactId>rewrite-maven-plugin</artifactId>
+				<version>6.38.0</version>
+				<configuration>
+					<activeRecipes>
+						<recipe>com.hdekker.ai-workflow.ApplyAllCleanup</recipe>
+					</activeRecipes>
+				</configuration>
+				<dependencies>
+					<!-- Core Java modernization recipes -->
+					<dependency>
+						<groupId>org.openrewrite</groupId>
+						<artifactId>rewrite-java</artifactId>
+						<version>8.81.4</version>
+					</dependency>
+					<!-- Spring Boot & Spring framework recipes -->
+					<dependency>
+						<groupId>org.openrewrite.recipe</groupId>
+						<artifactId>rewrite-spring</artifactId>
+						<version>6.30.3</version>
+					</dependency>
+					<!-- JUnit 5 & testing framework recipes -->
+					<dependency>
+						<groupId>org.openrewrite.recipe</groupId>
+						<artifactId>rewrite-testing-frameworks</artifactId>
+						<version>3.35.2</version>
+					</dependency>
+					<!-- Logging framework recipes (SLF4J/Logback) -->
+					<dependency>
+						<groupId>org.openrewrite.recipe</groupId>
+						<artifactId>rewrite-logging-frameworks</artifactId>
+						<version>3.27.2</version>
+					</dependency>
+				</dependencies>
+			</plugin>
 		</plugins>
 	</build>
 	

@@ -1,12 +1,13 @@
 package com.hdekker.ai_workflow.test.pipeline.filesystem;
 
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 /**
  * Utilities to create AgentDefinition files and directory structures for testing.

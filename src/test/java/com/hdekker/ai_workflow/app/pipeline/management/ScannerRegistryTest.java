@@ -3,21 +3,23 @@ package com.hdekker.ai_workflow.app.pipeline.management;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationContext;
 
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.usecases.FileCounter;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
-import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+
+import org.springframework.context.ApplicationContext;
 
 public class ScannerRegistryTest {
 

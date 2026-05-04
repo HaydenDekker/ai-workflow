@@ -1,14 +1,17 @@
 package com.hdekker.ai_workflow.rest;
 
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import java.util.List;
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * REST controller for scanner management.

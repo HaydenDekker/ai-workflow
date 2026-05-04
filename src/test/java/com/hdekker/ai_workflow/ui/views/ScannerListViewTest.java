@@ -1,8 +1,9 @@
 package com.hdekker.ai_workflow.ui.views;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for ScannerListView.

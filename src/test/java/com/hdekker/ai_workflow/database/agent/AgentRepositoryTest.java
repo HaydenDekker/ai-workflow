@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDateTime;
 import java.util.List;
 
+
 import org.junit.jupiter.api.Test;
+
+import com.hdekker.ai_workflow.TestProfiles;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
-
-import com.hdekker.ai_workflow.TestProfiles;
 
 /**
  * Repository test for AgentEntity CRUD operations.

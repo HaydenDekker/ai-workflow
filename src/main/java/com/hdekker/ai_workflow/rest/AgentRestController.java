@@ -2,6 +2,12 @@ package com.hdekker.ai_workflow.rest;
 
 import java.util.List;
 
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,12 +18,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
 @RestController
 @RequestMapping("/api/agents")

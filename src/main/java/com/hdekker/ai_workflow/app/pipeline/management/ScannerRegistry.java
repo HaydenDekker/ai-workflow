@@ -6,22 +6,23 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+import com.hdekker.ai_workflow.files.EmissionDelayConfig;
+import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
+import com.hdekker.ai_workflow.usecases.Scanner;
+import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
+
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
-import com.hdekker.ai_workflow.files.EmissionDelayConfig;
-import com.hdekker.ai_workflow.usecases.Scanner;
-import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.files.FileHistory;
-import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
-
 import reactor.core.publisher.Flux;
 
 /**

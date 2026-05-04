@@ -1,11 +1,13 @@
 package com.hdekker.ai_workflow.llm;
 
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import static org.junit.jupiter.api.Assertions.*;
+
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.rest.dto.LLMStatus;
 
 /**
  * Tests for OpenAiHealthAdapter.

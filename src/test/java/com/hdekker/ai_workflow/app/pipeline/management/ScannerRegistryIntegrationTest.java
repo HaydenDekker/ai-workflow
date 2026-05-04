@@ -8,25 +8,26 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.usecases.FileCounter;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
+import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Flux;
 
 /**

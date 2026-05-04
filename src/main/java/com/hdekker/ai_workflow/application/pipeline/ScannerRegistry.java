@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
 
 import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
@@ -17,6 +17,7 @@ import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
+import org.springframework.beans.factory.DisposableBean;
 import reactor.core.publisher.Flux;
 
 /**

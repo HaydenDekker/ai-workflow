@@ -1,15 +1,5 @@
 package com.hdekker.ai_workflow.test.pipeline.harness;
 
-import com.hdekker.ai_workflow.pipeline.LLMAdapter;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory;
-import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
-import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.test.pipeline.filesystem.FileSystemTestBuilder;
-
-import org.springframework.ai.chat.client.ChatClient;
-import reactor.core.publisher.Flux;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +9,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.pipeline.LLMAdapter;
+import com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory;
+import com.hdekker.ai_workflow.test.pipeline.filesystem.FileSystemTestBuilder;
+
+import org.springframework.ai.chat.client.ChatClient;
+import reactor.core.publisher.Flux;
 
 /**
  * Execute and verify complete workflow scenarios.

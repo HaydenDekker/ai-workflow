@@ -4,16 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.Consumer;
 
+
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClient;
+
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.pipeline.LLMAdapter;
-import reactor.core.publisher.Flux;
-import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.pipeline.LLMAdapter;
+import com.hdekker.ai_workflow.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+
+import org.springframework.ai.chat.client.ChatClient;
+import reactor.core.publisher.Flux;
 
 public class AgentBuilderTest {
 	

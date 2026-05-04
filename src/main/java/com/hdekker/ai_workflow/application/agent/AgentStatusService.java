@@ -5,17 +5,19 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort.LLMStatus;
 import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort.LLMStatus.HealthStatus;
 import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
 /**
  * Application service for managing LLM endpoint health status.

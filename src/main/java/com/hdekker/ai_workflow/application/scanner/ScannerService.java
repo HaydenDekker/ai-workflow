@@ -1,12 +1,12 @@
 package com.hdekker.ai_workflow.application.scanner;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +18,6 @@ import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
-import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
 

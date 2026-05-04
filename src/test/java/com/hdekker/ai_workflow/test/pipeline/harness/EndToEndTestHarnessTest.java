@@ -1,15 +1,6 @@
 package com.hdekker.ai_workflow.test.pipeline.harness;
 
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.springframework.ai.chat.client.ChatClient;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,7 +8,18 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+
+import org.springframework.ai.chat.client.ChatClient;
 
 /**
  * Integration test for EndToEndTestHarness functionality.

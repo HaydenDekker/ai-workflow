@@ -4,14 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.TextReader;
-import org.springframework.core.io.ByteArrayResource;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+
+import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.TextReader;
+import org.springframework.core.io.ByteArrayResource;
 
 public class TestData {
 	

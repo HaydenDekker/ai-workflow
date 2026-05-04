@@ -7,31 +7,32 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
+import com.hdekker.ai_workflow.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+
+import com.vaadin.browserless.SpringBrowserlessTest;
+import com.vaadin.browserless.TreeOnFailureExtension;
+import com.vaadin.browserless.ViewPackages;
+import com.vaadin.browserless.internal.MockVaadin;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.grid.Grid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import com.vaadin.browserless.SpringBrowserlessTest;
-import com.vaadin.browserless.TreeOnFailureExtension;
-import com.vaadin.browserless.ViewPackages;
-import com.vaadin.browserless.internal.MockVaadin;
-import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.dialog.Dialog;
-
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 
 /**
  * Browserless test for AgentListView delete flow.
@@ -52,9 +53,9 @@ import com.hdekker.ai_workflow.ui.service.AgentInfoService;
  * @see AgentListView
  * @see AgentDetailDialog
  */
-@ExtendWith({ SpringExtension.class, TreeOnFailureExtension.class })
+@ExtendWith({SpringExtension.class, TreeOnFailureExtension.class})
 @SpringBootTest(classes = AgentListViewDeleteTest.Config.class)
-@ViewPackages(classes = { AgentListView.class })
+@ViewPackages(classes = {AgentListView.class})
 class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
     @Autowired

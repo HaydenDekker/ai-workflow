@@ -1,9 +1,9 @@
 package com.hdekker.ai_workflow.files;
 
+import java.util.Optional;
+
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
-
-import java.util.Optional;
 
 /**
  * Re-export of {@link com.hdekker.ai_workflow.domain.file.FileHistory} for backward compatibility.

@@ -1,9 +1,9 @@
 package com.hdekker.ai_workflow.application.agent.port;
 
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-
 import java.util.List;
 import java.util.Optional;
+
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 /**
  * Port interface for agent persistence.
