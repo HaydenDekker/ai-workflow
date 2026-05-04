@@ -3,22 +3,24 @@ package com.hdekker.ai_workflow.pipeline.management;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemFileWriter;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
+import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
+import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration for AgentLifecycleUseCase.
+ * Configuration for {@link AgentLifecycleService}.
  * <p>
- * The use case accepts a ScannerRegistry so each dynamic agent
+ * The service accepts a {@link ScannerRegistry} so each dynamic agent
  * gets its own scanner instance managed by the registry.
+ * Depends on port interfaces rather than concrete infrastructure.
  */
 @Configuration
 public class DynamicAgentManagerConfiguration {
@@ -29,20 +31,20 @@ public class DynamicAgentManagerConfiguration {
 	}
 
 	@Bean
-	public AgentLifecycleUseCase dynamicAgentManager(
+	public AgentLifecycleService agentLifecycleService(
 			ScannerRegistry scannerRegistry,
+			FileWritePort fileWritePort,
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
-			FileSystemFileWriter fileWriter,
-			AgentRepositoryAdapter agentPersistenceUsecase,
-			TargetDirectoryValidator targetDirectoryValidator) throws IOException {
+			AgentRepository agentRepository,
+			DirectoryValidationPort directoryValidationPort) throws IOException {
 		Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
-		return new AgentLifecycleUseCase(
+		return new AgentLifecycleService(
 				scannerRegistry,
-				fileWriter,
+				fileWritePort,
 				outputFolderPath,
 				chatClient,
-				agentPersistenceUsecase,
-				targetDirectoryValidator);
+				agentRepository,
+				directoryValidationPort);
 	}
 }

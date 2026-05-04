@@ -23,6 +23,7 @@ import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.stereotype.Service;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
@@ -44,6 +45,7 @@ import reactor.core.publisher.Flux;
  * @see DirectoryValidationPort
  * @see ScannerRegistry
  */
+@Service
 public class AgentLifecycleService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentLifecycleService.class);

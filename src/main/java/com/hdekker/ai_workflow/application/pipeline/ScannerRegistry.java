@@ -18,6 +18,7 @@ import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
 /**
@@ -35,6 +36,7 @@ import reactor.core.publisher.Flux;
  *
  * @see ScannerService
  */
+@Component
 public class ScannerRegistry implements DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(ScannerRegistry.class);
