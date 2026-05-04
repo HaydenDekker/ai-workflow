@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-        basePackages = "com.hdekker.ai_workflow.database",
+        basePackages = "com.hdekker.ai_workflow.adapter.outbound.persistence",
         entityManagerFactoryRef = "entityManagerFactory",
         transactionManagerRef = "transactionManager"
 )
@@ -54,7 +54,7 @@ public class DatabaseConfig {
         LocalContainerEntityManagerFactoryBean emf = new LocalContainerEntityManagerFactoryBean();
         emf.setDataSource(dataSource());
         emf.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        emf.setPackagesToScan("com.hdekker.ai_workflow.database");
+        emf.setPackagesToScan("com.hdekker.ai_workflow.adapter.outbound.persistence");
         emf.setJpaProperties(jpaProperties());
         return emf;
     }

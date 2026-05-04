@@ -27,6 +27,23 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.6.4-update-database-config-scan-paths
+displayName: Phase 4.6.4 — Update DatabaseConfig package scans to adapter/outbound/persistence
+description: |
+  Change the two string literals in DatabaseConfig.java from
+  "com.hdekker.ai_workflow.database" to
+  "com.hdekker.ai_workflow.adapter.outbound.persistence".
+  One is in @EnableJpaRepositories(basePackages = ...), the other in
+  entityManagerFactory().setPackagesToScan(...).
+
+recipeList:
+  - org.openrewrite.text.ReplaceText:
+      filePattern: src/main/java/com/hdekker/ai_workflow/config/DatabaseConfig.java
+      oldValue: com.hdekker.ai_workflow.database
+      newValue: com.hdekker.ai_workflow.adapter.outbound.persistence
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: com.hdekker.ai-workflow.phase4.rest-move-and-rename
 displayName: Phase 4.4 — Move rest/* to adapter/inbound/rest/* and rename controllers
 description: |

@@ -3,13 +3,14 @@ package com.hdekker.ai_workflow.adapter.outbound.file;
 import java.nio.file.Path;
 import java.time.Duration;
 
-import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
-import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
+import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
+import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
+
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
 /**

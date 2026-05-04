@@ -12,9 +12,9 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
-import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 
 import org.springframework.beans.factory.annotation.Value;
