@@ -14,10 +14,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.TestProfiles;
+import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.app.pipeline.AgentBuilder;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
 import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;

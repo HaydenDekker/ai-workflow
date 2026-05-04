@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,7 +13,7 @@ public class ScannerListViewTest {
     @Test
     void testViewClassExists() {
         assertDoesNotThrow(() -> {
-            Class.forName("com.hdekker.ai_workflow.ui.views.ScannerListView");
+            Class.forName("com.hdekker.ai_workflow.adapter.inbound.ui.view.ScannerListView");
         });
     }
 
@@ -21,7 +21,7 @@ public class ScannerListViewTest {
     void testViewHasRouteAnnotation() {
         Class<?> viewClass;
         try {
-            viewClass = Class.forName("com.hdekker.ai_workflow.ui.views.ScannerListView");
+            viewClass = Class.forName("com.hdekker.ai_workflow.adapter.inbound.ui.view.ScannerListView");
             assertNotNull(viewClass.getAnnotation(com.vaadin.flow.router.Route.class));
             com.vaadin.flow.router.Route route = viewClass.getAnnotation(com.vaadin.flow.router.Route.class);
             assertEquals("scanners", route.value());
@@ -34,7 +34,7 @@ public class ScannerListViewTest {
     void testViewHasPageTitleAnnotation() {
         Class<?> viewClass;
         try {
-            viewClass = Class.forName("com.hdekker.ai_workflow.ui.views.ScannerListView");
+            viewClass = Class.forName("com.hdekker.ai_workflow.adapter.inbound.ui.view.ScannerListView");
             assertNotNull(viewClass.getAnnotation(com.vaadin.flow.router.PageTitle.class));
             com.vaadin.flow.router.PageTitle pageTitle = viewClass.getAnnotation(com.vaadin.flow.router.PageTitle.class);
             assertEquals("Scanners", pageTitle.value());

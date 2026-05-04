@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -11,10 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
-import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
-import com.hdekker.ai_workflow.ui.components.LlmStatusBadge;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentCreationDialog;
+import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
+import com.hdekker.ai_workflow.adapter.inbound.ui.component.LlmStatusBadge;
+import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 
 import com.vaadin.flow.component.UI;

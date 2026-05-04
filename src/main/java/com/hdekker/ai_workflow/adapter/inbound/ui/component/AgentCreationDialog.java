@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.components;
+package com.hdekker.ai_workflow.adapter.inbound.ui.component;
 
 import java.util.function.Consumer;
 
@@ -6,8 +6,8 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;

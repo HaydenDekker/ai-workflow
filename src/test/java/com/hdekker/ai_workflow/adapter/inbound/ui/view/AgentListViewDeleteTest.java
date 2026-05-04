@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,12 +12,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.ui.components.AgentDetailDialog;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
+import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import com.vaadin.browserless.SpringBrowserlessTest;

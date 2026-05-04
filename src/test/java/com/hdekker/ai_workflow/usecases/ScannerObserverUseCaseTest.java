@@ -15,10 +15,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
+import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;

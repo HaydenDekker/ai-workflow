@@ -8,17 +8,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
-import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentEntity;
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.domain.file.FileHistory;
-import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileWriter;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentEntity;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
+import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.Disposable;

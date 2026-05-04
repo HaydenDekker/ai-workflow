@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.events;
+package com.hdekker.ai_workflow.adapter.inbound.ui.event;
 
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;

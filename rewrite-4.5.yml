@@ -1,0 +1,94 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.ui-adapters-move
+displayName: Phase 4.5 — Move ui/* to adapter/inbound/ui/* (components → component, events → event, service → service, views → view)
+description: |
+  Move all UI infrastructure types from ui.* into adapter/inbound/ui.*.
+  This establishes the inbound (primary) adapter layer for the hexagonal
+  architecture.
+
+  Package mapping (source → target):
+    ui.components      → adapter.inbound.ui.component   (4 files)
+    ui.events          → adapter.inbound.ui.event        (1 file)
+    ui.service         → adapter.inbound.ui.service      (3 files)
+    ui.views           → adapter.inbound.ui.view         (4 files)
+
+  Source files moved:
+    components/AdapterStatusComponent.java    → adapter/inbound/ui/component/
+    components/AgentCreationDialog.java       → adapter/inbound/ui/component/
+    components/AgentDetailDialog.java         → adapter/inbound/ui/component/
+    components/LlmStatusBadge.java            → adapter/inbound/ui/component/
+    events/ScannerMetricsChangedEvent.java    → adapter/inbound/ui/event/
+    service/AgentInfoService.java             → adapter/inbound/ui/service/
+    service/ScannerMetricsPushService.java    → adapter/inbound/ui/service/
+    service/ScannerService.java               → adapter/inbound/ui/service/
+    views/AgentCreationTestView.java          → adapter/inbound/ui/view/
+    views/AgentListView.java                  → adapter/inbound/ui/view/
+    views/ObservabilityView.java              → adapter/inbound/ui/view/
+    views/ScannerListView.java                → adapter/inbound/ui/view/
+
+  Test files moved (same mapping):
+    ui/components/AgentCreationDialogTest.java     → adapter/inbound/ui/component/
+    ui/service/ScannerServiceTest.java              → adapter/inbound/ui/service/
+    ui/views/AgentListViewDeleteTest.java           → adapter/inbound/ui/view/
+    ui/views/AgentListViewTest.java                 → adapter/inbound/ui/view/
+    ui/views/ScannerListViewTest.java               → adapter/inbound/ui/view/
+
+  Cross-package references updated automatically:
+    - app/pipeline/management/ScannerRegistry → ScannerMetricsChangedEvent
+    - usecases/Scanner → ScannerMetricsChangedEvent
+    - usecases/ScannerObserverUseCase → ScannerMetricsChangedEvent
+    - ScannerRegistryTest → ScannerMetricsChangedEvent
+    - ScannerObserverUseCaseTest → ScannerMetricsChangedEvent
+
+  Note: No class renames required — all classes retain their current names.
+  ChangePackage handles: package declaration, file location, and all imports
+  across the entire codebase (main + test).
+
+recipeList:
+  # ── Step 1: Move source packages ─────────────────────────────
+  # ChangePackage moves the source files AND updates all imports/references
+  # in the entire codebase. Each subpackage moves to its target under
+  # adapter/inbound/ui/<subdirectory>.
+
+  # ui/components → adapter/inbound/ui/component (note: singular "component")
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.ui.components
+      newPackageName: com.hdekker.ai_workflow.adapter.inbound.ui.component
+
+  # ui/events → adapter/inbound/ui/event (singular "event")
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.ui.events
+      newPackageName: com.hdekker.ai_workflow.adapter.inbound.ui.event
+
+  # ui/service → adapter/inbound/ui/service
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.ui.service
+      newPackageName: com.hdekker.ai_workflow.adapter.inbound.ui.service
+
+  # ui/views → adapter/inbound/ui/view (singular "view")
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.ui.views
+      newPackageName: com.hdekker.ai_workflow.adapter.inbound.ui.view
+
+  # ── Step 2: Update type references in string literals ────────
+  # ChangePackage updates imports and package declarations, but NOT
+  # string literals (e.g., Class.forName("com.hdekker...ui.views.X")).
+  # ChangeTypeInStringLiteral fixes these.
+  - org.openrewrite.java.ChangeTypeInStringLiteral:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.ui.components
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.ui.component
+  - org.openrewrite.java.ChangeTypeInStringLiteral:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.ui.events
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.ui.event
+  - org.openrewrite.java.ChangeTypeInStringLiteral:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.ui.service
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.ui.service
+  - org.openrewrite.java.ChangeTypeInStringLiteral:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.ui.views
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.ui.view
+
+  # ── Step 3: Import hygiene ───────────────────────────────────
+  # After moves, some files may retain stale imports. Clean up.
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports

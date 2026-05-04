@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -6,9 +6,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentCreationDialog;
+import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.ui.components.AgentCreationDialog;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;

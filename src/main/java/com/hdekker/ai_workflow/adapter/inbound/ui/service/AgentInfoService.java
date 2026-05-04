@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.service;
+package com.hdekker.ai_workflow.adapter.inbound.ui.service;
 
 import java.util.List;
 
@@ -6,10 +6,10 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;

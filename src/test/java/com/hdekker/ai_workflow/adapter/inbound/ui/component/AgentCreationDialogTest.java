@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.components;
+package com.hdekker.ai_workflow.adapter.inbound.ui.component;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -9,9 +9,9 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 import com.vaadin.browserless.BrowserlessTest;
 import com.vaadin.browserless.ViewPackages;

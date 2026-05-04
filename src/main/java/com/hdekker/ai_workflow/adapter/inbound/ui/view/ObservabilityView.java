@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -6,7 +6,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.ui.components.AdapterStatusComponent;
+import com.hdekker.ai_workflow.adapter.inbound.ui.component.AdapterStatusComponent;
 import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
 
 import com.vaadin.flow.component.DetachEvent;

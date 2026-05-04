@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.components;
+package com.hdekker.ai_workflow.adapter.inbound.ui.component;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 

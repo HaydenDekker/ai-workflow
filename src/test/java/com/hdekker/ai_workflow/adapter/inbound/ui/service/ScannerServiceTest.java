@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.service;
+package com.hdekker.ai_workflow.adapter.inbound.ui.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -11,8 +11,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 
 import reactor.core.publisher.Mono;
 

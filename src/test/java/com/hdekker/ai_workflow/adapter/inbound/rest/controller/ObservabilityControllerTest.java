@@ -11,7 +11,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.controller.ObservabilityController;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;

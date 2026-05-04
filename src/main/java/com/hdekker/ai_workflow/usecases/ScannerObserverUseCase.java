@@ -12,10 +12,10 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
+import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import org.springframework.stereotype.Service;
 

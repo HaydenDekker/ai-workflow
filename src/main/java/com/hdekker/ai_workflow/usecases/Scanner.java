@@ -13,6 +13,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
+import com.hdekker.ai_workflow.adapter.outbound.file.FileMetadataStoreAdapter;
+import com.hdekker.ai_workflow.adapter.outbound.file.NativeFileWatcher;
 import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.scanner.FileScanner;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
@@ -21,9 +24,6 @@ import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
-import com.hdekker.ai_workflow.adapter.outbound.file.FileMetadataStoreAdapter;
-import com.hdekker.ai_workflow.adapter.outbound.file.NativeFileWatcher;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;

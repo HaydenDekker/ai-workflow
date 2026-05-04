@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,7 +15,7 @@ public class AgentListViewTest {
         // Basic test to ensure the view class can be instantiated
         // We can't easily test Vaadin components without a full Vaadin environment
         assertDoesNotThrow(() -> {
-            Class.forName("com.hdekker.ai_workflow.ui.views.AgentListView");
+            Class.forName("com.hdekker.ai_workflow.adapter.inbound.ui.view.AgentListView");
         });
     }
 
@@ -24,7 +24,7 @@ public class AgentListViewTest {
         // Verify the view class is properly annotated with @Route
         Class<?> viewClass;
         try {
-            viewClass = Class.forName("com.hdekker.ai_workflow.ui.views.AgentListView");
+            viewClass = Class.forName("com.hdekker.ai_workflow.adapter.inbound.ui.view.AgentListView");
             assertNotNull(viewClass.getAnnotation(com.vaadin.flow.router.Route.class));
         } catch (ClassNotFoundException e) {
             fail("AgentListView class not found");

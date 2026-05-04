@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.views;
+package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
-import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.ui.service.ScannerService;
+import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
+import com.hdekker.ai_workflow.adapter.inbound.ui.service.ScannerService;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
 import com.vaadin.flow.component.DetachEvent;

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.ui.service;
+package com.hdekker.ai_workflow.adapter.inbound.ui.service;
 
 import java.util.List;
 
@@ -6,8 +6,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
