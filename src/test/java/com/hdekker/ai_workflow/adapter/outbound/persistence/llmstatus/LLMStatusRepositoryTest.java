@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.llmstatus;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,7 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 public class LLMStatusRepositoryTest {
 	
 	@Autowired
-	private LLMStatusRepository repository;
+	private LLMStatusJpaRepository repository;
 	
 	@Test
 	public void givenDatabaseConfig_whenEntityCreated_thenReturnEntity() {

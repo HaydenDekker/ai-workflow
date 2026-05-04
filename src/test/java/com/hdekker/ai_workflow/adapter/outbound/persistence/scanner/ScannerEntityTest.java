@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.scanner;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.scanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.agent;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,7 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @DataJpaTest
 @ActiveProfiles(TestProfiles.RESOURCES_TEST_FOLDER)
-@Import({AgentPersistenceUsecase.class, AgentPersistenceServiceTest.TestConfig.class})
+@Import({AgentRepositoryAdapter.class, AgentPersistenceServiceTest.TestConfig.class})
 public class AgentPersistenceServiceTest {
 
 	static class TestConfig {
@@ -41,10 +41,10 @@ public class AgentPersistenceServiceTest {
 	}
 
 	@Autowired
-	private AgentPersistenceUsecase persistenceService;
+	private AgentRepositoryAdapter persistenceService;
 
 	@Autowired
-	private AgentRepository agentRepository;
+	private AgentJpaRepository agentRepository;
 
 	@Test
 	public void givenAgentDefinition_whenSaved_thenReturnEntityWithJson() {

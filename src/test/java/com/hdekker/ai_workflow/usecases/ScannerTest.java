@@ -21,7 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.files.FileHash;
 import com.hdekker.ai_workflow.files.FileHistory;
@@ -49,7 +49,7 @@ public class ScannerTest {
     Path tempDir;
 
     private Path inputDir;
-    private FileMetadataDatabase fileMetadataDatabase;
+    private FileMetadataDatabaseAdapter fileMetadataDatabase;
     private ScannerObserverUseCase observer;
 
     private Scanner adapter;
@@ -60,7 +60,7 @@ public class ScannerTest {
     void setUp() throws Exception {
         inputDir = Files.createDirectory(tempDir.resolve("input"));
         Files.createDirectory(tempDir.resolve("output"));
-        fileMetadataDatabase = mock(FileMetadataDatabase.class);
+        fileMetadataDatabase = mock(FileMetadataDatabaseAdapter.class);
         observer = new ScannerObserverUseCase(path -> 0L);
         // Mock save to store files for comparison checks
         doAnswer(invocation -> {

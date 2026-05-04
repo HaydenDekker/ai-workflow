@@ -3,8 +3,8 @@ package com.hdekker.ai_workflow.pipeline.management;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
 import com.hdekker.ai_workflow.files.FileSystemFileWriter;
 import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
@@ -34,7 +34,7 @@ public class DynamicAgentManagerConfiguration {
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
 			FileSystemFileWriter fileWriter,
-			AgentPersistenceUsecase agentPersistenceUsecase,
+			AgentRepositoryAdapter agentPersistenceUsecase,
 			TargetDirectoryValidator targetDirectoryValidator) throws IOException {
 		Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
 		return new AgentLifecycleUseCase(

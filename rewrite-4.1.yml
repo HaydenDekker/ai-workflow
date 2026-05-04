@@ -1,0 +1,48 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.persistence-move-and-rename
+displayName: Phase 4.1 — Move database/* to adapter/outbound/persistence/* and rename classes
+description: |
+  Move all persistence types from database.* into adapter/outbound/persistence.*
+  Then rename key classes to follow the adapter naming convention:
+    - AgentPersistenceUsecase → AgentRepositoryAdapter
+    - AgentRepository (JPA) → AgentJpaRepository
+    - FileMetadataDatabase → FileMetadataDatabaseAdapter
+    - LLMStatusRepository (JPA) → LLMStatusJpaRepository
+    - ScannerPersistenceUsecase → ScannerPersistenceAdapter
+    - ScannerRepository (JPA) → ScannerJpaRepository
+
+recipeList:
+  # Step 1: Move packages
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.database.agent
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.persistence.agent
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.database.filemetadata
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.database.llmstatus
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.database.scanner
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.persistence.scanner
+
+  # Step 2: Rename types (runs after move within same cycle)
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentPersistenceUsecase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepository
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentJpaRepository
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusRepository
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.scanner.ScannerPersistenceUsecase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.scanner.ScannerPersistenceAdapter
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.scanner.ScannerRepository
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.persistence.scanner.ScannerJpaRepository

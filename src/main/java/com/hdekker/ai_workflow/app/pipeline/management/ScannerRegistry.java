@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.files.EmissionDelayConfig;
 import com.hdekker.ai_workflow.files.FileHistory;
@@ -45,7 +45,7 @@ public class ScannerRegistry implements DisposableBean {
     private static final Logger log = LoggerFactory.getLogger(ScannerRegistry.class);
 
     private final ConcurrentHashMap<String, Scanner> scanners = new ConcurrentHashMap<>();
-    private final FileMetadataDatabase fileMetadataDatabase;
+    private final FileMetadataDatabaseAdapter fileMetadataDatabase;
     private final ScannerObserverUseCase observer;
     private final EmissionDelayConfig emissionDelayConfig;
 
@@ -62,7 +62,7 @@ public class ScannerRegistry implements DisposableBean {
     @Autowired
     public ScannerRegistry(
             ApplicationContext applicationContext,
-            FileMetadataDatabase fileMetadataDatabase,
+            FileMetadataDatabaseAdapter fileMetadataDatabase,
             ScannerObserverUseCase observer,
             EmissionDelayConfig emissionDelayConfig) {
         this.fileMetadataDatabase = fileMetadataDatabase;
@@ -84,7 +84,7 @@ public class ScannerRegistry implements DisposableBean {
      */
     public ScannerRegistry(
             ApplicationContext applicationContext,
-            FileMetadataDatabase fileMetadataDatabase,
+            FileMetadataDatabaseAdapter fileMetadataDatabase,
             ScannerObserverUseCase observer) {
         this(applicationContext, fileMetadataDatabase, observer, null);
     }

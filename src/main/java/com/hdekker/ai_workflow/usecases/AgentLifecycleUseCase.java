@@ -8,11 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
 import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.database.agent.AgentEntity;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentEntity;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.files.FileHistory;
@@ -49,7 +48,7 @@ public class AgentLifecycleUseCase {
     private final FileWriter fileWriter;
     private final Path outputDirectory;
     private final ChatClient chatClient;
-    private final AgentPersistenceUsecase persistenceService;
+    private final AgentRepositoryAdapter persistenceService;
     private final TargetDirectoryValidator targetDirectoryValidator;
 
     /**
@@ -79,7 +78,7 @@ public class AgentLifecycleUseCase {
                                  FileWriter fileWriter,
                                  Path outputDirectory,
                                  ChatClient chatClient,
-                                 AgentPersistenceUsecase persistenceService,
+                                 AgentRepositoryAdapter persistenceService,
                                  TargetDirectoryValidator targetDirectoryValidator) {
         this.scannerRegistry = scannerRegistry;
         this.fileWriter = fileWriter;

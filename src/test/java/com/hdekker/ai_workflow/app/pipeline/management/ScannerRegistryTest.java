@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
@@ -25,7 +25,7 @@ public class ScannerRegistryTest {
 
 
     private ScannerRegistry registry;
-    private FileMetadataDatabase fileMetadataDb;
+    private FileMetadataDatabaseAdapter fileMetadataDb;
     private ApplicationContext appContext;
     private ScannerObserverUseCase observer;
     private Path tempDir;
@@ -36,7 +36,7 @@ public class ScannerRegistryTest {
         // Create a real temp directory for testing
         tempDir = Files.createTempDirectory("scanner-registry-test-");
 
-        fileMetadataDb = mock(FileMetadataDatabase.class);
+        fileMetadataDb = mock(FileMetadataDatabaseAdapter.class);
         appContext = mock(ApplicationContext.class);
         observer = new ScannerObserverUseCase(path -> 0L);
 

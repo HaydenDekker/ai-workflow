@@ -123,11 +123,19 @@ When debugging framework-level issues, consult the local source repositories:
 
 | Framework | Local Source Path | When to Consult |
 |-----------|-------------------|------------------|
+| **OpenRewrite** | `C:\Users\hayde\workspace_26\libraries\rewrite-docs` | Recipe reference, `ChangeType`, `ChangePackage`, available refactorings. Search `docs/recipes/java/` for suitable recipes before writing custom ones. |
 | **Storybook** | `C:\Users\hayde\workspace_26\libraries\storybook` | Storybook config errors, addon issues, v10 migration, `storybook/test` API, preview/manager internals |
 | **Spring Boot** | `C:\Users\hayde\workspace_26\libraries\spring-boot` | Auto-configuration, `@SpringBootTest` behavior, web server lifecycle, property binding, bean resolution |
 | **Vaadin / Hilla** | `C:\Users\hayde\workspace_26\libraries\vaadin\docs` | Vaadin components, UI rendering, routing, Hilla integration, browserless testing |
 
 If you encounter errors or unexpected behavior in any of these frameworks, **search the local source** — the implementation details, migration guides, and test examples will be there.
+
+### OpenRewrite Usage Rules
+
+- **Always dry-run first**: Before applying any recipe, run `./mvnw rewrite:dryRun -Drewrite.activeRecipe=<recipe-name>` to preview the changes without modifying files.
+- **Then apply**: Once the dry-run output is verified, run `./mvnw rewrite:run -Drewrite.activeRecipe=<recipe-name>` to apply the changes.
+- **Verify after**: Compile (`./mvnw compile -q`) and run relevant tests (`-Dtest=ClassName -q`) after every recipe application.
+- **Recipe files**: Phase-specific recipes live in `rewrite-<phase>.yml` at the project root. The default `rewrite.yml` holds general cleanup recipes only.
 
 ## Document Management
 

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.scanner;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.scanner;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,13 +17,13 @@ import org.springframework.stereotype.Service;
  * Handles CRUD operations over {@link ScannerEntity}.
  */
 @Service
-public class ScannerPersistenceUsecase {
+public class ScannerPersistenceAdapter {
 
-    private static final Logger log = LoggerFactory.getLogger(ScannerPersistenceUsecase.class);
+    private static final Logger log = LoggerFactory.getLogger(ScannerPersistenceAdapter.class);
 
-    private final ScannerRepository scannerRepository;
+    private final ScannerJpaRepository scannerRepository;
 
-    public ScannerPersistenceUsecase(ScannerRepository scannerRepository) {
+    public ScannerPersistenceAdapter(ScannerJpaRepository scannerRepository) {
         this.scannerRepository = scannerRepository;
     }
 

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
@@ -52,8 +52,8 @@ public class AgentPipelineTest {
      * Creates a "smart" mock DB that actually stores and retrieves file metadata.
      * This allows FileComparator to properly deduplicate files across poll cycles.
      */
-    private FileMetadataDatabase createSmartDb() {
-        FileMetadataDatabase db = Mockito.mock(FileMetadataDatabase.class);
+    private FileMetadataDatabaseAdapter createSmartDb() {
+        FileMetadataDatabaseAdapter db = Mockito.mock(FileMetadataDatabaseAdapter.class);
         ConcurrentHashMap<String, FileMetadata> store = new ConcurrentHashMap<>();
 
         Mockito.doAnswer(inv -> {
@@ -72,7 +72,7 @@ public class AgentPipelineTest {
      * Sets up a complete scanner + pipeline and returns all the pieces.
      */
     private SetupResult setupPipeline(Path inputDir, Path outputDir) throws Exception {
-        FileMetadataDatabase db = createSmartDb();
+        FileMetadataDatabaseAdapter db = createSmartDb();
         ScannerObserverUseCase observer = new ScannerObserverUseCase(path -> 0L);
         Scanner scanner = new Scanner("test-agent",
                 inputDir.toString(),
@@ -137,7 +137,7 @@ public class AgentPipelineTest {
      */
     private record SetupResult(
             Scanner scanner,
-            FileMetadataDatabase db,
+            FileMetadataDatabaseAdapter db,
             CopyOnWriteArrayList<String> prompts,
             CopyOnWriteArrayList<PromptResponse> responses,
             CountDownLatch latch,
@@ -244,7 +244,7 @@ public class AgentPipelineTest {
         Path inputDir = Files.createDirectory(tempDir.resolve("input"));
         Files.createDirectory(tempDir.resolve("output"));
 
-        FileMetadataDatabase modDb = createSmartDb();
+        FileMetadataDatabaseAdapter modDb = createSmartDb();
         ScannerObserverUseCase modObserver = new ScannerObserverUseCase(path -> 0L);
         Scanner modScanner = new Scanner("test-agent",
                 inputDir.toString(),
@@ -333,7 +333,7 @@ public class AgentPipelineTest {
         Path inputDir = Files.createDirectory(tempDir.resolve("input"));
         Files.createDirectory(tempDir.resolve("output"));
 
-        FileMetadataDatabase multiDb = createSmartDb();
+        FileMetadataDatabaseAdapter multiDb = createSmartDb();
         ScannerObserverUseCase multiObserver = new ScannerObserverUseCase(path -> 0L);
         Scanner multiScanner = new Scanner("test-agent",
                 inputDir.toString(),

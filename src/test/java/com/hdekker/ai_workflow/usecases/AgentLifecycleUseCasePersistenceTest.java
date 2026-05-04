@@ -13,9 +13,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.TestData;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.database.agent.AgentEntity;
-import com.hdekker.ai_workflow.database.agent.AgentPersistenceUsecase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentEntity;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.files.FileHash;
@@ -35,7 +35,7 @@ import reactor.core.publisher.Flux;
 public class AgentLifecycleUseCasePersistenceTest {
 
 	AgentLifecycleUseCase manager;
-	AgentPersistenceUsecase mockPersistenceService;
+	AgentRepositoryAdapter mockPersistenceService;
 	ScannerRegistry mockScannerRegistry;
 
 	String expectedMockResult = "This is the expected result";
@@ -60,7 +60,7 @@ public class AgentLifecycleUseCasePersistenceTest {
 
 		Path outputDirectory = Path.of("/test/output");
 
-		mockPersistenceService = mock(AgentPersistenceUsecase.class);
+		mockPersistenceService = mock(AgentRepositoryAdapter.class);
 		when(mockPersistenceService.findAllActive()).thenReturn(List.of());
 		when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
 

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.llmstatus;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus;
 
 import java.time.LocalDateTime;
 

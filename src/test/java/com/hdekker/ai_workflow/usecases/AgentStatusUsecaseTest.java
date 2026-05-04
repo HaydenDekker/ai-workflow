@@ -13,8 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
-import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
@@ -40,7 +40,7 @@ import reactor.core.publisher.Mono;
 class AgentStatusUsecaseTest {
 
     @Mock
-    private LLMStatusRepository repository;
+    private LLMStatusJpaRepository repository;
 
     @Mock
     private OpenAiHealthAdapter healthAdapter;

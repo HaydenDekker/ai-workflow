@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.agent;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,14 +19,14 @@ import org.springframework.stereotype.Service;
  * Handles JSON serialization of AgentDefinition and CRUD operations.
  */
 @Service
-public class AgentPersistenceUsecase {
+public class AgentRepositoryAdapter {
 
-	private static final Logger log = LoggerFactory.getLogger(AgentPersistenceUsecase.class);
+	private static final Logger log = LoggerFactory.getLogger(AgentRepositoryAdapter.class);
 
-	private final AgentRepository agentRepository;
+	private final AgentJpaRepository agentRepository;
 	private final ObjectMapper objectMapper;
 
-	public AgentPersistenceUsecase(AgentRepository agentRepository, ObjectMapper objectMapper) {
+	public AgentRepositoryAdapter(AgentJpaRepository agentRepository, ObjectMapper objectMapper) {
 		this.agentRepository = agentRepository;
 		this.objectMapper = objectMapper;
 	}

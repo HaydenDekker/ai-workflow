@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.agent;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
  * Auto-creates table: agent
  */
 @Repository
-public interface AgentRepository extends JpaRepository<AgentEntity, String> {
+public interface AgentJpaRepository extends JpaRepository<AgentEntity, String> {
 
 	List<AgentEntity> findAllByOrderByCreatedAtDesc();
 

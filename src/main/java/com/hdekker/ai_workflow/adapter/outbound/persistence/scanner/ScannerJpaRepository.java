@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.scanner;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.scanner;
 
 import java.util.Optional;
 
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
  * JPA repository for scanner entities.
  */
 @Repository
-public interface ScannerRepository extends JpaRepository<ScannerEntity, String> {
+public interface ScannerJpaRepository extends JpaRepository<ScannerEntity, String> {
 
     /**
      * Find a scanner by its ID.

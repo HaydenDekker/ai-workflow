@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.filemetadata;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata;
 
 import java.util.Optional;
 
@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class FileMetadataDatabase implements FileMetaDatabaseSearcher, FileMetadataStore {
+public class FileMetadataDatabaseAdapter implements FileMetaDatabaseSearcher, FileMetadataStore {
 	
 	@Autowired
 	FileMetaRepository fileMetaRepository;

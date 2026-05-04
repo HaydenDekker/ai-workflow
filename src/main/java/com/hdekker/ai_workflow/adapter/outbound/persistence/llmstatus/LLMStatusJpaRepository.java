@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.llmstatus;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
  * Auto-creates table: llm_status
  */
 @Repository
-public interface LLMStatusRepository extends JpaRepository<LLMStatusEntity, String> {
+public interface LLMStatusJpaRepository extends JpaRepository<LLMStatusEntity, String> {
 	
 	Optional<LLMStatusEntity> findByEndpoint(String endpoint);
 	

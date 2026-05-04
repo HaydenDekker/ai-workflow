@@ -9,8 +9,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.database.llmstatus.LLMStatusEntity;
-import com.hdekker.ai_workflow.database.llmstatus.LLMStatusRepository;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
@@ -34,14 +34,14 @@ public class AgentStatusUsecase {
 
     private static final Logger log = LoggerFactory.getLogger(AgentStatusUsecase.class);
 
-    private final LLMStatusRepository repository;
+    private final LLMStatusJpaRepository repository;
     private final OpenAiHealthAdapter healthAdapter;
     private final ObservabilityProperties observabilityProperties;
 
     @Value("${app.observability.warn-after-hours:1}")
     private long warnAfterHours;
 
-    public AgentStatusUsecase(LLMStatusRepository repository,
+    public AgentStatusUsecase(LLMStatusJpaRepository repository,
                               OpenAiHealthAdapter healthAdapter,
                               ObservabilityProperties observabilityProperties) {
         this.repository = repository;

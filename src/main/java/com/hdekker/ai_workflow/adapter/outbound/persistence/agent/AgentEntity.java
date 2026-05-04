@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.agent;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 
 import java.time.LocalDateTime;
 

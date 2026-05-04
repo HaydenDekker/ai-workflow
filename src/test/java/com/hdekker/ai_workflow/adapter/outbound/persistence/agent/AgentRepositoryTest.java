@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.database.agent;
+package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,7 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 public class AgentRepositoryTest {
 
 	@Autowired
-	private AgentRepository repository;
+	private AgentJpaRepository repository;
 
 	@Test
 	public void givenAgent_whenSaved_thenReturnAgentWithId() {

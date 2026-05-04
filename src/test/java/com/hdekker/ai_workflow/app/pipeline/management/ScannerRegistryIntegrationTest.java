@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.database.filemetadata.FileMetadataDatabase;
+import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.files.FileHistory;
 import com.hdekker.ai_workflow.files.FileWriter;
@@ -55,7 +55,7 @@ public class ScannerRegistryIntegrationTest {
 
     private ScannerRegistry scannerRegistry;
     private AgentLifecycleUseCase agentManager;
-    private FileMetadataDatabase fileMetadataDb;
+    private FileMetadataDatabaseAdapter fileMetadataDb;
     private ApplicationContext appContext;
     private ScannerObserverUseCase observer;
 
@@ -66,7 +66,7 @@ public class ScannerRegistryIntegrationTest {
         outputDir = Files.createDirectory(tempDir.resolve("output"));
 
         // Create real (non-mocked) dependencies for scanner integration
-        fileMetadataDb = mock(FileMetadataDatabase.class);
+        fileMetadataDb = mock(FileMetadataDatabaseAdapter.class);
         appContext = mock(ApplicationContext.class);
         observer = new ScannerObserverUseCase(path -> 0L);
 
