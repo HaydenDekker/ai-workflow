@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
-import com.hdekker.ai_workflow.llm.OpenAiHealthAdapter;
+import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 import com.hdekker.ai_workflow.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.rest.dto.LLMStatus;

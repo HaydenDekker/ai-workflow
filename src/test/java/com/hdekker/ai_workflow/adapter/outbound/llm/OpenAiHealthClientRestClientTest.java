@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.llm;
+package com.hdekker.ai_workflow.adapter.outbound.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;

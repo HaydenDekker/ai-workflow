@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.llm.output;
+package com.hdekker.ai_workflow.adapter.outbound.llm;
 
 public class LLMOutputParsingUtils {
 	

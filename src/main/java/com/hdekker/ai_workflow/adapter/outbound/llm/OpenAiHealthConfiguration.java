@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.llm;
+package com.hdekker.ai_workflow.adapter.outbound.llm;
 
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
 

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.llm;
+package com.hdekker.ai_workflow.adapter.outbound.llm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

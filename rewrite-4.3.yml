@@ -1,0 +1,40 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.llm-move
+displayName: Phase 4.3 — Move llm/* to adapter/outbound/llm/* and flatten llm.output
+description: |
+  Move all LLM infrastructure types from llm.* into adapter/outbound/llm.*.
+  The llm.output subpackage is flattened (merged into adapter/outbound/llm).
+
+  Files moved:
+    llm/OpenAiHealthAdapter.java              → adapter/outbound/llm/
+    llm/OpenAiHealthClient.java               → adapter/outbound/llm/
+    llm/OpenAiHealthConfiguration.java         → adapter/outbound/llm/
+    llm/OpenAiInstanceAdapterUtils.java        → adapter/outbound/llm/
+    llm/OpenAiInstanceConfiguration.java       → adapter/outbound/llm/
+    llm/OpenAiInstanceConfigurationProperties.java → adapter/outbound/llm/
+    llm/output/LLMOutputParsingUtils.java      → adapter/outbound/llm/  (flattened)
+
+  Test files follow the same pattern.
+  All imports across the codebase are updated automatically.
+
+recipeList:
+  # Step 1: Move com.hdekker.ai_workflow.llm → com.hdekker.ai_workflow.adapter.outbound.llm
+  # Moves the 6 source files directly in the llm/ package (not llm/output/)
+  # ChangePackage updates: package declaration, file location, and all imports
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.llm
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.llm
+      recursive: false
+
+  # Step 2: Flatten com.hdekker.ai_workflow.llm.output → com.hdekker.ai_workflow.adapter.outbound.llm
+  # ChangePackage (with recursive:false) in Step 1 only matches files with exact package
+  # declaration "com.hdekker.ai_workflow.llm" — NOT its subpackages like .llm.output.
+  # So LLMOutputParsingUtils stays in place after Step 1, and Step 2 handles it.
+  #
+  # ChangeType updates: file location, package declaration, imports, and all type references
+  # to point to the flattened location. The file moves from llm/output/ to adapter/outbound/llm/
+  # (no output/ subdirectory).
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.llm.output.LLMOutputParsingUtils
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.llm.LLMOutputParsingUtils
