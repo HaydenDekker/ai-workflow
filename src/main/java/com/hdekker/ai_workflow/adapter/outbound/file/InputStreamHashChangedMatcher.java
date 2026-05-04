@@ -1,5 +1,6 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
 /***

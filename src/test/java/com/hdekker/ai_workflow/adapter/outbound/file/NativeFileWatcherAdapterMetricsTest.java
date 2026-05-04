@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 
 /**
- * Unit tests for {@link NativeFileWatcherAdapter} raw event emission.
+ * Unit tests for {@link NativeFileWatcher} raw event emission.
  * <p>
  * The adapter is a pure infrastructure component — it emits {@link RawFileEvent}
  * (path + content) for CREATE, MODIFY, and initial scan. No business rules
@@ -37,7 +37,7 @@ public class NativeFileWatcherAdapterMetricsTest {
     @TempDir
     Path tempDir;
 
-    private NativeFileWatcherAdapter watcher;
+    private NativeFileWatcher watcher;
 
     @AfterEach
     void tearDown() {
@@ -48,7 +48,7 @@ public class NativeFileWatcherAdapterMetricsTest {
 
     @Test
     void givenEmptyDirectory_WhenWatcherStarted_ThenNoRawEventsEmitted() throws Exception {
-        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
+        watcher = new NativeFileWatcher(tempDir, Duration.ofMillis(500));
 
         CountDownLatch latch = new CountDownLatch(1);
         CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
@@ -73,7 +73,7 @@ public class NativeFileWatcherAdapterMetricsTest {
         Path testFile = tempDir.resolve("initial.txt");
         Files.writeString(testFile, "initial content");
 
-        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
+        watcher = new NativeFileWatcher(tempDir, Duration.ofMillis(500));
 
         new CountDownLatch(1);
         CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
@@ -98,7 +98,7 @@ public class NativeFileWatcherAdapterMetricsTest {
         Files.writeString(tempDir.resolve("file2.txt"), "content 2");
         Files.writeString(tempDir.resolve("file3.txt"), "content 3");
 
-        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
+        watcher = new NativeFileWatcher(tempDir, Duration.ofMillis(500));
 
         CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
         watcher.flux().subscribe(events::add, e -> {}, () -> {});
@@ -119,7 +119,7 @@ public class NativeFileWatcherAdapterMetricsTest {
 
     @Test
     void givenWatcherStarted_WhenFileCreated_ThenRawEventEmitted() throws Exception {
-        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
+        watcher = new NativeFileWatcher(tempDir, Duration.ofMillis(500));
 
         CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
         CountDownLatch latch = new CountDownLatch(1);
@@ -157,7 +157,7 @@ public class NativeFileWatcherAdapterMetricsTest {
         Files.writeString(tempDir.resolve("scan1.txt"), "scan content 1");
         Files.writeString(tempDir.resolve("scan2.txt"), "scan content 2");
 
-        watcher = new NativeFileWatcherAdapter(tempDir, Duration.ofMillis(500));
+        watcher = new NativeFileWatcher(tempDir, Duration.ofMillis(500));
 
         CopyOnWriteArrayList<RawFileEvent> events = new CopyOnWriteArrayList<>();
         watcher.flux().subscribe(events::add, e -> {}, () -> {});

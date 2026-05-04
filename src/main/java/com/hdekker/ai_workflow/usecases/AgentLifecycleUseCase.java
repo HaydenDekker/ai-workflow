@@ -13,11 +13,11 @@ import com.hdekker.ai_workflow.app.pipeline.AgentConfigurator;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentEntity;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.files.FileHistory;
-import com.hdekker.ai_workflow.files.FileWriter;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
+import com.hdekker.ai_workflow.adapter.outbound.file.FileWriter;
+import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 
 import org.springframework.ai.chat.client.ChatClient;

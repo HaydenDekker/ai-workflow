@@ -11,9 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.files.EmissionDelayConfig;
-import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.adapter.outbound.file.EmissionDelayConfig;
 import com.hdekker.ai_workflow.rest.dto.ScannerInfo;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 import com.hdekker.ai_workflow.usecases.Scanner;

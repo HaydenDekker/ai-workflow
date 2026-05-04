@@ -1,0 +1,94 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.file-adapters-move-and-rename
+displayName: Phase 4.2 — Move files/* and infrastructure/files/* to adapter/outbound/file/* and rename adapters
+description: |
+  Move all file-adapter types from files.* and infrastructure.files.* into
+  adapter/outbound/file.*
+
+  Three phases:
+    1. Redirect deprecated stub references to canonical classes (ChangeType with ignoreDefinition)
+       — Stub files are NOT deleted here; manual cleanup after recipe run is required.
+       — Stub test files (FileHashTest.java, FileUpdatedFilterTest.java) reference stubs
+         and will need manual review/deletion after recipe run.
+    2. Rename adapter classes to follow naming convention (ChangeType)
+    3. Move packages to target adapter/outbound/file (ChangePackage)
+
+  Post-recipe manual cleanup:
+    - Delete: adapter/outbound/file/FileHash.java (deprecated re-export)
+    - Delete: adapter/outbound/file/FileHistory.java (deprecated re-export)
+    - Delete: adapter/outbound/file/FileComparator.java (deprecated re-export)
+    - Delete: adapter/outbound/file/FileScanner.java (deprecated re-export)
+    - Delete: src/test/java/.../files/FileHashTest.java (tests deprecated stub)
+    - Delete: src/test/java/.../files/FileUpdatedFilterTest.java (tests deprecated stub)
+
+recipeList:
+
+  # ═══════════════════════════════════════════════════════════
+  # Phase 1: Redirect deprecated stub references to canonical
+  # ═══════════════════════════════════════════════════════════
+  #
+  # These ChangeType operations use ignoreDefinition: true so that
+  # the stub source files are NOT renamed — only REFERENCES to them
+  # are redirected to the canonical class.
+  #
+  # After Phase 3 (ChangePackage), the stub files will live in
+  # adapter/outbound/file/ with NO references → safe to delete manually.
+
+  # FileHash (files/) → domain.shared.FileHash
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.files.FileHash
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.domain.shared.FileHash
+      ignoreDefinition: true
+
+  # FileHistory (files/) → domain.file.FileHistory
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.files.FileHistory
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.domain.file.FileHistory
+      ignoreDefinition: true
+
+  # FileComparator (files/) → application.file.FileComparator
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.files.FileComparator
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.file.FileComparator
+      ignoreDefinition: true
+
+  # FileScanner (files/) → application.scanner.FileScanner
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.files.FileScanner
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.scanner.FileScanner
+      ignoreDefinition: true
+
+  # ═══════════════════════════════════════════════════════════
+  # Phase 2: Rename adapter classes (ChangeType, no ignoreDefinition)
+  # ═══════════════════════════════════════════════════════════
+  #
+  # These rename the class AND all references. Runs BEFORE ChangePackage
+  # so the old FQN is used as the source for renaming.
+
+  # NativeFileWatcherAdapter → NativeFileWatcher
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.files.NativeFileWatcherAdapter
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.files.NativeFileWatcher
+
+  # FileMetadataStore → FileMetadataStoreAdapter
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.files.FileMetadataStore
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.files.FileMetadataStoreAdapter
+
+  # ═══════════════════════════════════════════════════════════
+  # Phase 3: Move packages to adapter/outbound/file
+  # ═══════════════════════════════════════════════════════════
+  #
+  # ChangePackage moves the source files AND updates all imports/references
+  # in the entire codebase. Both packages merge into the same target.
+
+  # Move files/* → adapter/outbound/file/*
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.files
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.file
+
+  # Move infrastructure/files/* → adapter/outbound/file/*
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.infrastructure.files
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.file

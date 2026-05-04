@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.hdekker.ai_workflow.TestConstants;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.usecases.Scanner;
 import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
@@ -28,7 +29,7 @@ import reactor.core.publisher.Flux;
 /**
  * Tests for the end-to-end file watching flow using {@link Scanner}.
  * <p>
- * The Scanner composes {@link NativeFileWatcherAdapter} (raw events) and applies
+ * The Scanner composes {@link NativeFileWatcher} (raw events) and applies
  * business logic (hashing, comparison, history creation). These tests verify the
  * complete flow from file system events to FileHistory emission.
  */
@@ -47,7 +48,7 @@ public class FileSystemSimplePollerFluxAdapterTest {
         }
     }
 
-    static class InMemoryFileMetaDatabase implements FileMetadataStore {
+    static class InMemoryFileMetaDatabase implements FileMetadataStoreAdapter {
         List<FileMetadata> stored = new ArrayList<>();
 
         @Override
@@ -67,7 +68,7 @@ public class FileSystemSimplePollerFluxAdapterTest {
      * Create a Scanner that watches the given folder.
      * Returns the Scanner's flux of FileHistory events.
      */
-    public Flux<FileHistory> createFluxWithScanner(File folder, FileMetadataStore database) {
+    public Flux<FileHistory> createFluxWithScanner(File folder, FileMetadataStoreAdapter database) {
         ScannerObserverUseCase observer = new ScannerObserverUseCase(path -> 0L);
         scanner = new Scanner(
                 folder.toString(),

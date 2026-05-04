@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult;
+import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult;
 
 public class TargetDirectoryValidatorTest {
 

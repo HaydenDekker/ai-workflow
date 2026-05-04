@@ -226,7 +226,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         @Bean
         @Primary
         public AgentInfoService agentInfoService() {
-            return new AgentInfoService(dynamicAgentManager(), new com.hdekker.ai_workflow.files.TargetDirectoryValidator());
+            return new AgentInfoService(dynamicAgentManager(), new com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator());
         }
 
         @Bean

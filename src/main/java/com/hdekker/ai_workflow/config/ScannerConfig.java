@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.config;
 
-import com.hdekker.ai_workflow.files.EmissionDelayConfig;
+import com.hdekker.ai_workflow.adapter.outbound.file.EmissionDelayConfig;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;

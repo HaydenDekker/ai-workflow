@@ -22,9 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
-import com.hdekker.ai_workflow.files.FileHash;
-import com.hdekker.ai_workflow.files.FileHistory;
+import com.hdekker.ai_workflow.domain.shared.FileHash;
 
 import reactor.core.publisher.Flux;
 

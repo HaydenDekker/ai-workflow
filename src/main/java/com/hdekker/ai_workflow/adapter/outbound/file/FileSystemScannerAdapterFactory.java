@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -6,7 +6,7 @@ import java.time.Duration;
 import org.springframework.stereotype.Component;
 
 /**
- * Factory for creating {@link NativeFileWatcherAdapter} instances.
+ * Factory for creating {@link NativeFileWatcher} instances.
  * <p>
  * Encapsulates the adapter construction so that {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}
  * doesn't need to know the adapter's constructor details. The adapter is a pure
@@ -22,7 +22,7 @@ public class FileSystemScannerAdapterFactory {
      * @param delayBetweenReads poll interval for the watch service
      * @return a new adapter instance
      */
-    public NativeFileWatcherAdapter create(String folderPath, Duration delayBetweenReads) {
-        return new NativeFileWatcherAdapter(Path.of(folderPath), delayBetweenReads);
+    public NativeFileWatcher create(String folderPath, Duration delayBetweenReads) {
+        return new NativeFileWatcher(Path.of(folderPath), delayBetweenReads);
     }
 }

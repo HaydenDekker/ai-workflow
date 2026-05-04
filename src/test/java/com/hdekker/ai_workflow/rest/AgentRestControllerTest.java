@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
@@ -60,9 +60,9 @@ public class AgentRestControllerTest {
 				.thenAnswer(invocation -> {
 					String path = invocation.getArgument(0);
 					if (path == null || path.isBlank()) {
-						return com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult.failure("targetDirectory is required");
+						return com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult.failure("targetDirectory is required");
 					}
-					return com.hdekker.ai_workflow.files.TargetDirectoryValidator.ValidationResult.success();
+					return com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult.success();
 				});
 	}
 

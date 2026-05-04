@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,7 +11,10 @@ import java.util.Scanner;
 
 import org.junit.jupiter.api.Test;
 
+import com.hdekker.ai_workflow.application.file.FileComparator;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.shared.FileHash;
 
 public class FileUpdatedFilterTest {
 
@@ -36,7 +39,7 @@ public class FileUpdatedFilterTest {
 		String previousFileHash = FileHash.hash(getString(data1IS));
 		String currentFileHash = FileHash.hash(getString(data2IS));
 
-		FileMetadataStore searcher = new FileMetadataStore() {
+		FileMetadataStoreAdapter searcher = new FileMetadataStoreAdapter() {
 			@Override
 			public Optional<FileMetadata> findById(String url) {
 				return Optional.of(new FileMetadata(url, "", previousFileHash));

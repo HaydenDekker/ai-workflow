@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -24,9 +24,9 @@ import reactor.core.publisher.Sinks;
  * Lifecycle is managed externally: call {@link #start()} to begin watching
  * and {@link #stop()} to clean up resources.
  */
-public class NativeFileWatcherAdapter {
+public class NativeFileWatcher {
 
-    private static final Logger log = LoggerFactory.getLogger(NativeFileWatcherAdapter.class);
+    private static final Logger log = LoggerFactory.getLogger(NativeFileWatcher.class);
 
     private final Path directory;
     private final Duration pollInterval;
@@ -42,7 +42,7 @@ public class NativeFileWatcherAdapter {
      * @param directory    absolute path to watch
      * @param pollInterval interval for polling the watch service
      */
-    public NativeFileWatcherAdapter(Path directory, Duration pollInterval) {
+    public NativeFileWatcher(Path directory, Duration pollInterval) {
         this.directory = directory.toAbsolutePath().normalize();
         this.pollInterval = pollInterval;
         this.sink = Sinks.many().multicast().directBestEffort();

@@ -13,11 +13,16 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hdekker.ai_workflow.application.file.FileComparator;
+import com.hdekker.ai_workflow.application.scanner.FileScanner;
+import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.files.*;
+import com.hdekker.ai_workflow.domain.shared.FileHash;
+import com.hdekker.ai_workflow.adapter.outbound.file.FileMetadataStoreAdapter;
+import com.hdekker.ai_workflow.adapter.outbound.file.NativeFileWatcher;
 import com.hdekker.ai_workflow.ui.events.ScannerMetricsChangedEvent;
 
 import reactor.core.publisher.Flux;
@@ -27,14 +32,14 @@ import reactor.core.publisher.Sinks;
  * Domain scanner — the central concept for file watching.
  * <p>
  * Owns status, idle timer, error handling, metrics publishing, DTO conversion,
- * and the FileHash/FileHistory business rules. Composes {@link NativeFileWatcherAdapter}.
+ * and the FileHash/FileHistory business rules. Composes {@link NativeFileWatcher}.
  * <p>
  * Subscribes to raw {@link RawFileEvent} from the adapter and applies business logic:
  * <ul>
  *   <li>Computes hash via {@link FileHash#hash(String)}</li>
  *   <li>Creates {@link FileMetadata} and compares via {@link FileComparator}</li>
  *   <li>Produces {@link FileHistory} and decides whether to emit</li>
- *   <li>Saves metadata to {@link FileMetadataStore} on discovery</li>
+ *   <li>Saves metadata to {@link FileMetadataStoreAdapter} on discovery</li>
  *   <li>Tracks metrics via {@link ScannerObserverUseCase}</li>
  *   <li>Applies emission delay throttling</li>
  * </ul>
@@ -46,10 +51,10 @@ public class Scanner implements FileScanner {
     private final String folderPath;
     private final String effectiveAgentId;
     private final Duration emissionDelay;
-    private final FileMetadataStore fileMetadataStore;
+    private final FileMetadataStoreAdapter fileMetadataStore;
     private final FileComparator fileComparator;
 
-    private final NativeFileWatcherAdapter nativeFileWatcher;
+    private final NativeFileWatcher nativeFileWatcher;
     private final ScannerObserverUseCase observer;
     private volatile boolean disposed = false;
 
@@ -92,7 +97,7 @@ public class Scanner implements FileScanner {
                                      String folderPath,
                                      Duration delayBetweenReads,
                                      Duration emissionDelay,
-                                     FileMetadataStore fileMetadataStore,
+                                     FileMetadataStoreAdapter fileMetadataStore,
                                      ScannerObserverUseCase observer) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
@@ -122,7 +127,7 @@ public class Scanner implements FileScanner {
         this.fileHistorySink = Sinks.many().multicast().directBestEffort();
 
         // Create the native file watcher adapter (pure infrastructure — no business rules)
-        this.nativeFileWatcher = new NativeFileWatcherAdapter(
+        this.nativeFileWatcher = new NativeFileWatcher(
                 Path.of(folderPath), delayBetweenReads);
 
         // Subscribe to raw events from the adapter and apply business logic

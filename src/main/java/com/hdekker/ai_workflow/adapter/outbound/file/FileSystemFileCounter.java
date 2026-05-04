@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.infrastructure.files;
+package com.hdekker.ai_workflow.adapter.outbound.file;
 
 import java.io.IOException;
 import java.nio.file.Files;

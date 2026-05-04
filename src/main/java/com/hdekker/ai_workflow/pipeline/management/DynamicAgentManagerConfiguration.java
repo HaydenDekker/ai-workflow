@@ -5,9 +5,9 @@ import java.nio.file.Path;
 
 import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
 import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
-import com.hdekker.ai_workflow.files.FileSystemFileWriter;
-import com.hdekker.ai_workflow.files.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.files.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemFileWriter;
+import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.ai.chat.client.ChatClient;
