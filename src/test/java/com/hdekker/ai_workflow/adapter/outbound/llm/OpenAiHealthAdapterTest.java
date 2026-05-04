@@ -6,8 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 
 /**
  * Tests for OpenAiHealthAdapter.
@@ -34,10 +33,10 @@ class OpenAiHealthAdapterTest {
         String endpoint = "http://localhost:19999";
         String configuredModel = "test-model";
         
-        LLMStatus status = adapter.checkHealth(endpoint, configuredModel).block();
-        
+        LLMHealthPort.LLMStatus status = adapter.checkHealth(endpoint, configuredModel).block();
+
         assertNotNull(status);
-        assertEquals(AdapterStatus.DOWN, status.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.DOWN, status.status());
         assertEquals(endpoint, status.endpoint());
         assertEquals(configuredModel, status.configuredModel());
         assertEquals(0, status.modelCount());
@@ -51,10 +50,10 @@ class OpenAiHealthAdapterTest {
         
         OpenAiHealthAdapter fastAdapter = new OpenAiHealthAdapter(500);
         
-        LLMStatus status = fastAdapter.checkHealth(endpoint, configuredModel).block();
-        
+        LLMHealthPort.LLMStatus status = fastAdapter.checkHealth(endpoint, configuredModel).block();
+
         assertNotNull(status);
-        assertEquals(AdapterStatus.DOWN, status.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.DOWN, status.status());
         assertTrue(status.errorMessage().contains("Timeout") || 
                    status.errorMessage().contains("nonexistent") ||
                    status.errorMessage().contains("Connection"));

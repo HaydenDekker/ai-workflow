@@ -4,13 +4,14 @@ import java.util.Optional;
 
 import com.hdekker.ai_workflow.adapter.outbound.file.FileMetaDatabaseSearcher;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileMetadataStoreAdapter;
+import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class FileMetadataDatabaseAdapter implements FileMetaDatabaseSearcher, FileMetadataStoreAdapter {
+public class FileMetadataDatabaseAdapter implements FileMetaDatabaseSearcher, FileMetadataStoreAdapter, FileMetadataRepository {
 	
 	@Autowired
 	FileMetaRepository fileMetaRepository;
@@ -21,6 +22,7 @@ public class FileMetadataDatabaseAdapter implements FileMetaDatabaseSearcher, Fi
 					.map(e->new FileMetadata(e.url, "", e.hash));
 	}
 
+	@Override
 	public void save(FileMetadata file) {
 		
 		FileMetadataEntity entity = new FileMetadataEntity();

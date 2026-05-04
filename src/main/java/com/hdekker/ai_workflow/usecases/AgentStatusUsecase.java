@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
@@ -68,14 +69,15 @@ public class AgentStatusUsecase {
             return;
         }
 
-        LLMStatus status = healthAdapter.checkHealth(endpoint, model)
+        LLMHealthPort.LLMStatus portStatus = healthAdapter.checkHealth(endpoint, model)
                 .block();
 
-        if (status == null) {
+        if (portStatus == null) {
             log.error("Health check returned null status for endpoint: {}", endpoint);
             return;
         }
 
+        LLMStatus status = portStatusToDto(portStatus);
         LLMStatus finalStatus = checkWarnCondition(status);
         persistStatus(finalStatus);
 
@@ -188,16 +190,37 @@ public class AgentStatusUsecase {
             return statuses;
         }
 
-        LLMStatus status = healthAdapter.checkHealth(endpoint, model)
+        LLMHealthPort.LLMStatus portStatus = healthAdapter.checkHealth(endpoint, model)
                 .block();
 
-        if (status != null) {
+        if (portStatus != null) {
+            LLMStatus status = portStatusToDto(portStatus);
             LLMStatus finalStatus = checkWarnCondition(status);
             persistStatus(finalStatus);
             statuses.add(finalStatus);
         }
 
         return statuses;
+    }
+
+    /**
+     * Convert port LLMStatus to DTO LLMStatus.
+     */
+    private LLMStatus portStatusToDto(LLMHealthPort.LLMStatus portStatus) {
+        AdapterStatus dtoStatus = switch (portStatus.status()) {
+            case UP -> AdapterStatus.UP;
+            case DOWN -> AdapterStatus.DOWN;
+            case WARN -> AdapterStatus.WARN;
+        };
+        return new LLMStatus(
+                portStatus.endpoint(),
+                portStatus.configuredModel(),
+                dtoStatus,
+                portStatus.lastChecked(),
+                portStatus.modelCount(),
+                portStatus.modelNames(),
+                portStatus.errorMessage()
+        );
     }
 
     /**

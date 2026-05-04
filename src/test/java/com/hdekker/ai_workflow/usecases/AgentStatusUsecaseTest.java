@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.observability.ObservabilityProperties;
@@ -79,8 +80,8 @@ class AgentStatusUsecaseTest {
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
         
-        LLMStatus healthStatus = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.UP,
+        LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1", "model2", "model3"), null
         );
         when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
@@ -105,9 +106,9 @@ class AgentStatusUsecaseTest {
         // Arrange
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
-        
-        LLMStatus healthStatus = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.DOWN,
+
+        LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.DOWN,
             LocalDateTime.now(), 0, List.of(), "Connection refused"
         );
         when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
@@ -155,8 +156,8 @@ class AgentStatusUsecaseTest {
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
         
-        LLMStatus healthStatus = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.DOWN,
+        LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.DOWN,
             LocalDateTime.now(), 0, List.of(), "Adapter error"
         );
         when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
@@ -274,8 +275,8 @@ class AgentStatusUsecaseTest {
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
         
-        LLMStatus healthStatus = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.UP,
+        LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1"), null
         );
         when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));

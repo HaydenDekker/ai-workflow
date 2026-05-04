@@ -8,8 +8,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 
 import reactor.core.publisher.Mono;
 
@@ -22,7 +21,7 @@ import reactor.core.publisher.Mono;
  * - No prompts are sent, so no tokens consumed
  * - No conversation context is affected
  */
-public class OpenAiHealthAdapter {
+public class OpenAiHealthAdapter implements LLMHealthPort {
     
     private static final Logger log = LoggerFactory.getLogger(OpenAiHealthAdapter.class);
     
@@ -45,19 +44,20 @@ public class OpenAiHealthAdapter {
      * @param configuredModel Expected model name
      * @return Mono emitting LLMStatus with current health state
      */
+    @Override
     public Mono<LLMStatus> checkHealth(String endpoint, String configuredModel) {
         log.debug("Starting health check for endpoint: {}", endpoint);
-        
+
         OpenAiHealthClient client = new OpenAiHealthClient(endpoint, timeoutMs);
-        
+
         return client.listModels()
             .map(modelNames -> {
                 log.debug("Health check OK for {}: {} models available", endpoint, modelNames.size());
-                
+
                 return new LLMStatus(
                     endpoint,
                     configuredModel,
-                    AdapterStatus.UP,
+                    LLMHealthPort.LLMStatus.HealthStatus.UP,
                     LocalDateTime.now(),
                     modelNames.size(),
                     modelNames,
@@ -66,11 +66,11 @@ public class OpenAiHealthAdapter {
             })
             .onErrorResume(e -> {
                 log.warn("Health check FAILED for {}: {}", endpoint, e.getMessage());
-                
+
                 return Mono.just(new LLMStatus(
                     endpoint,
                     configuredModel,
-                    AdapterStatus.DOWN,
+                    LLMHealthPort.LLMStatus.HealthStatus.DOWN,
                     LocalDateTime.now(),
                     0,
                     List.of(),
@@ -80,11 +80,11 @@ public class OpenAiHealthAdapter {
             .timeout(Duration.ofMillis(timeoutMs))
             .onErrorResume(timeoutEx -> {
                 log.warn("Health check TIMEOUT for {} after {}ms", endpoint, timeoutMs);
-                
+
                 return Mono.just(new LLMStatus(
                     endpoint,
                     configuredModel,
-                    AdapterStatus.DOWN,
+                    LLMHealthPort.LLMStatus.HealthStatus.DOWN,
                     LocalDateTime.now(),
                     0,
                     List.of(),

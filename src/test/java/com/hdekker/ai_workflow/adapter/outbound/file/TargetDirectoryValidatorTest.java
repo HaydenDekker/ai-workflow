@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
 
 public class TargetDirectoryValidatorTest {
 

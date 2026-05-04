@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.usecases.FileCounter;
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 
 import org.springframework.stereotype.Component;
 
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
  * Production {@link FileCounter} implementation that walks the real filesystem.
  */
 @Component
-public class FileSystemFileCounter implements FileCounter {
+public class FileSystemFileCounter implements FileCounterPort {
 
     private static final Logger log = LoggerFactory.getLogger(FileSystemFileCounter.class);
 
