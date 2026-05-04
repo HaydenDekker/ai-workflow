@@ -16,9 +16,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -27,7 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Tests for AgentRestController REST API endpoints.
+ * Tests for AgentController REST API endpoints.
  * 
  * Verifies create, list, delete, enable, disable, and refresh agent operations.
  */
@@ -38,10 +38,10 @@ public class AgentControllerTest {
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private AgentLifecycleUseCase dynamicAgentManager;
+	private AgentLifecycleService agentLifecycleService;
 
 	@MockitoBean
-	private TargetDirectoryValidator targetDirectoryValidator;
+	private DirectoryValidationPort directoryValidationPort;
 
 	private AgentDefinition testAgent;
 
@@ -56,21 +56,21 @@ public class AgentControllerTest {
 				"output/{filename}",
 				"/tmp/test-dir");
 		// Mock the validator to accept /tmp/test-dir as valid
-		org.mockito.Mockito.when(targetDirectoryValidator.validate(org.mockito.ArgumentMatchers.anyString()))
+		when(directoryValidationPort.validate(anyString()))
 				.thenAnswer(invocation -> {
 					String path = invocation.getArgument(0);
 					if (path == null || path.isBlank()) {
-						return com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult.failure("targetDirectory is required");
+						return DirectoryValidationPort.ValidationResult.failure("targetDirectory is required");
 					}
-					return com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator.ValidationResult.success();
+					return DirectoryValidationPort.ValidationResult.success();
 				});
 	}
 
 	@Test
 	public void givenValidAgent_whenCreateAgent_thenReturnCreatedAgent() throws Exception {
 		// Arrange
-		AgentInfo expectedInfo = new AgentInfo("test-id-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
-		when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(expectedInfo);
+		com.hdekker.ai_workflow.domain.agent.AgentInfo expectedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("test-id-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
+		when(agentLifecycleService.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(expectedInfo);
 
 		String jsonBody = "{"
 				+ "\"fileInputRegex\":\".*\\\\.txt\","
@@ -96,9 +96,9 @@ public class AgentControllerTest {
 	@Test
 	public void givenAgents_whenListAgents_thenReturnAllAgents() throws Exception {
 		// Arrange
-		AgentInfo agent1 = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "YAML");
-		AgentInfo agent2 = new AgentInfo("agent-2", testAgent, LocalDateTime.now().minusDays(1), true, "DYNAMIC");
-		when(dynamicAgentManager.listAgents()).thenReturn(List.of(agent1, agent2));
+		com.hdekker.ai_workflow.domain.agent.AgentInfo agent1 = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "YAML");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo agent2 = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-2", testAgent, LocalDateTime.now().minusDays(1), true, "DYNAMIC");
+		when(agentLifecycleService.listAgents()).thenReturn(List.of(agent1, agent2));
 
 		// Act & Assert
 		mockMvc.perform(get("/api/agents"))
@@ -112,7 +112,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenAgentId_whenDeleteAgent_thenReturnsNoContent() throws Exception {
 		// Arrange
-		doNothing().when(dynamicAgentManager).removeAgent(anyString());
+		doNothing().when(agentLifecycleService).removeAgent(anyString());
 
 		// Act & Assert
 		mockMvc.perform(delete("/api/agents/agent-123"))
@@ -122,8 +122,8 @@ public class AgentControllerTest {
 	@Test
 	public void givenAgentId_whenEnableAgent_thenReturnOkWithUpdatedInfo() throws Exception {
 		// Arrange
-		AgentInfo enabledInfo = new AgentInfo("agent-123", testAgent, LocalDateTime.now(), true, "YAML");
-		when(dynamicAgentManager.enableAgent(anyString())).thenReturn(enabledInfo);
+		com.hdekker.ai_workflow.domain.agent.AgentInfo enabledInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-123", testAgent, LocalDateTime.now(), true, "YAML");
+		when(agentLifecycleService.enableAgent(anyString())).thenReturn(enabledInfo);
 
 		// Act & Assert
 		mockMvc.perform(put("/api/agents/agent-123/enable"))
@@ -135,7 +135,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenNonExistentId_whenEnableAgent_thenReturnNotFound() throws Exception {
 		// Arrange
-		when(dynamicAgentManager.enableAgent(anyString())).thenReturn(null);
+		when(agentLifecycleService.enableAgent(anyString())).thenReturn(null);
 
 		// Act & Assert
 		mockMvc.perform(put("/api/agents/non-existent/enable"))
@@ -145,7 +145,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenAgentId_whenDisableAgent_thenReturnOk() throws Exception {
 		// Arrange
-		doNothing().when(dynamicAgentManager).disableAgent(anyString());
+		doNothing().when(agentLifecycleService).disableAgent(anyString());
 
 		// Act & Assert
 		mockMvc.perform(put("/api/agents/agent-123/disable"))
@@ -155,12 +155,12 @@ public class AgentControllerTest {
 	@Test
 	public void givenCreateAndDisable_whenList_thenReturnInactiveAgent() throws Exception {
 		// Arrange
-		AgentInfo createdInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
-		AgentInfo listedInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), false, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo createdInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo listedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), false, "DYNAMIC");
 
-		when(dynamicAgentManager.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(createdInfo);
-		doNothing().when(dynamicAgentManager).disableAgent(anyString());
-		when(dynamicAgentManager.listAgents()).thenReturn(List.of(listedInfo));
+		when(agentLifecycleService.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(createdInfo);
+		doNothing().when(agentLifecycleService).disableAgent(anyString());
+		when(agentLifecycleService.listAgents()).thenReturn(List.of(listedInfo));
 
 		String jsonBody = "{"
 				+ "\"fileInputRegex\":\".*\\\\.txt\","
@@ -192,8 +192,8 @@ public class AgentControllerTest {
 	@Test
 	public void givenActiveAgent_whenRefreshAgent_thenReturnOkWithUpdatedInfo() throws Exception {
 		// Arrange
-		AgentInfo refreshedInfo = new AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
-		when(dynamicAgentManager.refreshAgent(anyString())).thenReturn(refreshedInfo);
+		com.hdekker.ai_workflow.domain.agent.AgentInfo refreshedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
+		when(agentLifecycleService.refreshAgent(anyString())).thenReturn(refreshedInfo);
 
 		// Act & Assert
 		mockMvc.perform(post("/api/agents/agent-1/refresh"))
@@ -204,7 +204,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenNonExistentAgent_whenRefreshAgent_thenReturnNotFound() throws Exception {
 		// Arrange
-		when(dynamicAgentManager.refreshAgent(anyString())).thenReturn(null);
+		when(agentLifecycleService.refreshAgent(anyString())).thenReturn(null);
 
 		// Act & Assert
 		mockMvc.perform(post("/api/agents/non-existent/refresh"))
@@ -216,8 +216,8 @@ public class AgentControllerTest {
 		// Arrange
 		AgentDefinition updatedDef = new AgentDefinition(
 				".*\\.md", "Updated Agent", "Updated prompt", "Reduction", "Updated structure", "updated/{filename}", "/tmp/updated-dir");
-		AgentInfo updatedInfo = new AgentInfo("agent-1", updatedDef, LocalDateTime.now(), true, "DYNAMIC");
-		when(dynamicAgentManager.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(updatedInfo);
+		com.hdekker.ai_workflow.domain.agent.AgentInfo updatedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", updatedDef, LocalDateTime.now(), true, "DYNAMIC");
+		when(agentLifecycleService.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(updatedInfo);
 
 		String jsonBody = "{" +
 				"\"fileInputRegex\":\".*\\\\.md\"," +
@@ -242,8 +242,8 @@ public class AgentControllerTest {
 	@Test
 	public void givenNonExistentAgent_whenUpdateAgent_thenReturnNotFound() throws Exception {
 		// Arrange - mock both removeAgent (called by updateAgent internally) and updateAgent
-		doNothing().when(dynamicAgentManager).removeAgent(anyString());
-		when(dynamicAgentManager.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(null);
+		doNothing().when(agentLifecycleService).removeAgent(anyString());
+		when(agentLifecycleService.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(null);
 
 		String jsonBody = "{" +
 				"\"fileInputRegex\":\".*\\\\.txt\"," +

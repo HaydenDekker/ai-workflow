@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+import com.hdekker.ai_workflow.application.agent.AgentStatusService;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
+import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -29,21 +31,27 @@ public class ObservabilityControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private AgentStatusUsecase llmStatusService;
+    private AgentStatusService agentStatusService;
+
+    private LLMStatusRecord makeRecord(String endpoint, String model, String status, LocalDateTime lastChecked,
+            int modelCount, String modelNames, String errorMessage) {
+        return new LLMStatusRecord(endpoint, model, status, lastChecked, modelCount, modelNames, errorMessage);
+    }
 
     @Test
     public void givenStatusExists_whenGetLLMStatus_thenReturnsStatusList() throws Exception {
         // Given
-        LLMStatus status = new LLMStatus(
-            "http://192.168.2.108:11434",
-            "gemma3:27b",
-            AdapterStatus.UP,
-            LocalDateTime.now(),
-            3,
-            List.of("qwen3-coder6", "gemma3:27b", "llama3.1"),
-            null
-        );
-        when(llmStatusService.getCurrentStatus()).thenReturn(List.of(status));
+        when(agentStatusService.getCurrentStatus()).thenReturn(List.of(
+                makeRecord(
+                        "http://192.168.2.108:11434",
+                        "gemma3:27b",
+                        "UP",
+                        LocalDateTime.now(),
+                        3,
+                        "qwen3-coder6,gemma3:27b,llama3.1",
+                        null
+                )
+        ));
 
         // When & Then
         mockMvc.perform(get("/api/observability/llm-status")
@@ -58,7 +66,7 @@ public class ObservabilityControllerTest {
     @Test
     public void whenGetLLMStatusNoData_thenReturnsEmptyList() throws Exception {
         // Given
-        when(llmStatusService.getCurrentStatus()).thenReturn(List.of());
+        when(agentStatusService.getCurrentStatus()).thenReturn(List.of());
 
         // When & Then
         mockMvc.perform(get("/api/observability/llm-status")
@@ -70,16 +78,17 @@ public class ObservabilityControllerTest {
     @Test
     public void whenTriggerPoll_thenReturnsUpdatedStatus() throws Exception {
         // Given
-        LLMStatus status = new LLMStatus(
-            "http://192.168.2.108:11434",
-            "gemma3:27b",
-            AdapterStatus.UP,
-            LocalDateTime.now(),
-            1,
-            List.of("qwen3-coder6"),
-            null
-        );
-        when(llmStatusService.triggerPoll()).thenReturn(List.of(status));
+        when(agentStatusService.triggerPoll()).thenReturn(List.of(
+                new LLMHealthPort.LLMStatus(
+                        "http://192.168.2.108:11434",
+                        "gemma3:27b",
+                        LLMHealthPort.LLMStatus.HealthStatus.UP,
+                        LocalDateTime.now(),
+                        1,
+                        List.of("qwen3-coder6"),
+                        null
+                )
+        ));
 
         // When & Then
         MvcResult result = mockMvc.perform(post("/api/observability/llm-status/poll")
@@ -95,7 +104,7 @@ public class ObservabilityControllerTest {
     @Test
     public void whenTriggerPollNoEndpoint_thenReturnsEmptyList() throws Exception {
         // Given
-        when(llmStatusService.triggerPoll()).thenReturn(List.of());
+        when(agentStatusService.triggerPoll()).thenReturn(List.of());
 
         // When & Then
         mockMvc.perform(post("/api/observability/llm-status/poll")
@@ -107,25 +116,26 @@ public class ObservabilityControllerTest {
     @Test
     public void givenMultipleEndpoints_whenGetLLMStatus_thenReturnsAll() throws Exception {
         // Given
-        LLMStatus endpoint1 = new LLMStatus(
-            "http://192.168.2.108:11434",
-            "gemma3:27b",
-            AdapterStatus.UP,
-            LocalDateTime.now(),
-            3,
-            List.of(),
-            null
-        );
-        LLMStatus endpoint2 = new LLMStatus(
-            "http://10.0.0.5:8080",
-            "llama3.1",
-            AdapterStatus.DOWN,
-            LocalDateTime.now().minusHours(2),
-            0,
-            List.of(),
-            "Connection refused"
-        );
-        when(llmStatusService.getCurrentStatus()).thenReturn(List.of(endpoint1, endpoint2));
+        when(agentStatusService.getCurrentStatus()).thenReturn(List.of(
+                makeRecord(
+                        "http://192.168.2.108:11434",
+                        "gemma3:27b",
+                        "UP",
+                        LocalDateTime.now(),
+                        3,
+                        "",
+                        null
+                ),
+                makeRecord(
+                        "http://10.0.0.5:8080",
+                        "llama3.1",
+                        "DOWN",
+                        LocalDateTime.now().minusHours(2),
+                        0,
+                        "",
+                        "Connection refused"
+                )
+        ));
 
         // When & Then
         mockMvc.perform(get("/api/observability/llm-status")

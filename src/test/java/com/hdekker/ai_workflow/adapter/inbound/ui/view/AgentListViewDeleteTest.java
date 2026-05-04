@@ -12,13 +12,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import com.vaadin.browserless.SpringBrowserlessTest;
 import com.vaadin.browserless.TreeOnFailureExtension;
@@ -47,9 +46,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  *   <li>Verify the agent is removed from the grid</li>
  * </ol>
  * 
- * <p>This test uses a mock {@link AgentLifecycleUseCase} that provides
- * a pre-populated agent list and supports deletion.</p>
- * 
  * @see AgentListView
  * @see AgentDetailDialog
  */
@@ -58,8 +54,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ViewPackages(classes = {AgentListView.class})
 class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
-    @Autowired
-    private MockAgentLifecycleUseCase mockManager;
+    static final ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> TEST_AGENTS = new ConcurrentHashMap<>();
 
     @Autowired
     private AgentInfoService agentInfoService;
@@ -68,37 +63,41 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
     // --- Helper methods ---
 
-    private static AgentInfo createAgent(String id, String title, String regex) {
-        return new AgentInfo(
+    private static com.hdekker.ai_workflow.domain.agent.AgentInfo createDomainAgent(String id, String title, String regex) {
+        return new com.hdekker.ai_workflow.domain.agent.AgentInfo(
                 id,
                 new AgentDefinition(regex, title, "Body", "Map", "Output", "out/${name}.md",
                         System.getProperty("java.io.tmpdir")),
                 LocalDateTime.now(), true, "TEST");
     }
 
-    private static AgentInfo createTestAgent() {
-        return createAgent("agent-test-1", "Test Agent", ".*\\.txt");
+    private static com.hdekker.ai_workflow.domain.agent.AgentInfo createTestDomainAgent() {
+        return createDomainAgent("agent-test-1", "Test Agent", ".*\\.txt");
     }
 
     @BeforeEach
     void setUp() {
-        // Reset the mock state before each test
-        mockManager.reset();
+        // Reset the test state before each test
+        TEST_AGENTS.clear();
+        com.hdekker.ai_workflow.domain.agent.AgentInfo agent = createTestDomainAgent();
+        TEST_AGENTS.put(agent.id(), agent);
         view = navigate(AgentListView.class);
     }
 
     /**
-     * Test: Reload data after delete fetches fresh data from the mock manager.
+     * Test: Reload data after delete fetches fresh data from the test store.
      * 
      * <p>Verifies that calling {@code reloadData()} after an agent is removed
-     * from the mock manager correctly updates the grid.</p>
+     * from the test store correctly updates the grid.</p>
      */
     @Test
     void reloadAfterDelete_fetchesFreshData() {
-        // Arrange: Start with 2 agents
-        AgentInfo agent1 = createAgent("agent-1", "Test Agent 1", ".*\\.txt");
-        AgentInfo agent2 = createAgent("agent-2", "Test Agent 2", ".*\\.java");
-        mockManager.setAgents(List.of(agent1, agent2));
+        // Arrange: Start with 2 agents (clear setUp state first)
+        TEST_AGENTS.clear();
+        com.hdekker.ai_workflow.domain.agent.AgentInfo agent1 = createDomainAgent("agent-1", "Test Agent 1", ".*\\.txt");
+        com.hdekker.ai_workflow.domain.agent.AgentInfo agent2 = createDomainAgent("agent-2", "Test Agent 2", ".*\\.java");
+        TEST_AGENTS.put(agent1.id(), agent1);
+        TEST_AGENTS.put(agent2.id(), agent2);
 
         // Act: Navigate and verify 2 agents
         view = navigate(AgentListView.class);
@@ -107,7 +106,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
                 "Grid should show 2 agents");
 
         // Simulate delete of first agent
-        mockManager.removeAgent(agent1.id());
+        TEST_AGENTS.remove(agent1.id());
 
         // Call reload directly (simulates the onDelete callback)
         view.reloadData();
@@ -117,7 +116,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         List<AgentInfo> remaining = grid.getGenericDataView().getItems().toList();
         assertEquals(1, remaining.size(), "Grid should show 1 agent after delete");
         assertEquals(agent2.id(), remaining.get(0).id(),
-                "Remaining agent should be the one that wasn't deleted");
+                "Remaining agent should be the one that wasn't deleted (agents=" + TEST_AGENTS.size() + ")");
     }
 
     /**
@@ -133,9 +132,9 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
      */
     @Test
     void deleteAgent_viaDetailDialog_gridUpdated() {
-        // Arrange: Mock provides one agent
-        AgentInfo agent = createTestAgent();
-        mockManager.setAgents(List.of(agent));
+        // Arrange: Test store has one agent
+        com.hdekker.ai_workflow.domain.agent.AgentInfo agent = createTestDomainAgent();
+        TEST_AGENTS.put(agent.id(), agent);
 
         // Act: Navigate and verify agent is in grid
         view = navigate(AgentListView.class);
@@ -143,10 +142,16 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         assertEquals(1, grid.getGenericDataView().getItems().toList().size(),
                 "Grid should show 1 agent initially");
 
-        // Act: Open detail dialog with the agent, passing the autowired service
+        // Act: Open detail dialog with the agent (convert domain to DTO)
+        AgentInfo dtoAgent = new AgentInfo(
+                agent.id(),
+                agent.definition(),
+                agent.createdAt(),
+                agent.active(),
+                agent.source());
         AgentDetailDialog dialog = new AgentDetailDialog(
                 agentInfoService,
-                agent,
+                dtoAgent,
                 info -> {},  // onSave: no-op
                 id -> {
                     // onDelete: reload data (simulates the callback from AgentListView)
@@ -155,7 +160,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         );
         dialog.open();
 
-        // Verify dialog is open (added to UI)
+        // Verify dialog is open
         assertTrue($(Dialog.class).all().size() >= 1, "Dialog should be open");
 
         // Act: Click the Delete button in the dialog
@@ -166,29 +171,23 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         Button confirmBtn = $(Button.class).withCaption("Delete").single();
         confirmBtn.click();
 
-        // Two-stage queue processing:
-        // 1. Process performDelete() which is queued via UI.access() in the confirm handler.
-        //    This calls the reactive service (Mono.just(id) emits synchronously),
-        //    then queues the reload via another UI.access().
+        // Process UI queue - performDelete() is queued via UI.access() in the confirm handler.
+        // This calls agentInfoService.deleteAgent(id), which calls mock's removeAgent(id),
+        // then queues the reload via another UI.access().
+        MockVaadin.runUIQueue();
+        // Second pass - process the queued reload callback.
         MockVaadin.runUIQueue();
 
-        // Debug: check mock state directly — delete succeeded
-        int mockAgentCount = mockManager.getAgents().size();
-        assertEquals(0, mockAgentCount,
-                "Mock manager should have 0 agents after delete");
-
-        // 2. Process the queued reload callback from the reactive chain.
-        //    The reactive callback fires synchronously (Mono.just emits immediately)
-        //    and queues the reload via UI.access(). This call processes that queue.
-        MockVaadin.runUIQueue();
-
-        // Flush state tree to client (equivalent to ui.push() triggered by session unlock)
+        // Flush state tree to client
         roundTrip();
+
+        // Debug: check test state directly
+        int testAgentCount = TEST_AGENTS.size();
 
         // Verify the agent is removed from the grid
         List<AgentInfo> remainingItems = grid.getGenericDataView().getItems().toList();
         assertEquals(0, remainingItems.size(),
-                "Grid should be empty after deleting the agent (mock has " + mockAgentCount + " agents)");
+                "Grid should be empty after deleting the agent (test agents=" + testAgentCount + ")");
     }
 
     /**
@@ -197,7 +196,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
     @Test
     void emptyGrid_showsNoAgents() {
         // Arrange: No agents
-        mockManager.setAgents(List.of());
+        TEST_AGENTS.clear();
 
         // Act: Navigate
         view = navigate(AgentListView.class);
@@ -219,51 +218,43 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         @Bean
         @Primary
-        public AgentLifecycleUseCase dynamicAgentManager() {
-            return new MockAgentLifecycleUseCase();
+        public AgentLifecycleService agentLifecycleService() {
+            return new MockAgentLifecycleService(TEST_AGENTS);
         }
 
         @Bean
         @Primary
-        public AgentInfoService agentInfoService() {
-            return new AgentInfoService(dynamicAgentManager(), new com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator());
+        public DirectoryValidationPort directoryValidationPort() {
+            return path -> DirectoryValidationPort.ValidationResult.success();
         }
 
         @Bean
         @Primary
-        public com.hdekker.ai_workflow.usecases.AgentStatusUsecase llmStatusService() {
-            return new MockAgentStatusUsecase();
+        public AgentInfoService agentInfoService(AgentLifecycleService agentLifecycleService,
+                                                 DirectoryValidationPort directoryValidationPort) {
+            return new AgentInfoService(agentLifecycleService, directoryValidationPort);
+        }
+
+        @Bean
+        @Primary
+        public com.hdekker.ai_workflow.application.agent.AgentStatusService agentStatusService() {
+            return new MockAgentStatusService();
         }
     }
 
     /**
-     * Mock AgentLifecycleUseCase for browserless testing.
-     * Provides a configurable list of agents that supports deletion.
+     * Mock AgentLifecycleService using a shared test store for deletion.
      */
-    static class MockAgentLifecycleUseCase extends AgentLifecycleUseCase {
-        private final ConcurrentHashMap<String, AgentInfo> agents = new ConcurrentHashMap<>();
+    static class MockAgentLifecycleService extends AgentLifecycleService {
+        private final ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> agents;
 
-        public MockAgentLifecycleUseCase() {
-            super();  // uses no-arg constructor which sets all deps to null
-            reset();
-        }
-
-        public void reset() {
-            agents.clear();
-            agents.put(createTestAgent().id(), createTestAgent());
-        }
-
-        public List<AgentInfo> getAgents() {
-            return List.copyOf(agents.values());
-        }
-
-        public void setAgents(List<AgentInfo> newAgents) {
-            agents.clear();
-            newAgents.forEach(a -> agents.put(a.id(), a));
+        MockAgentLifecycleService(ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> agents) {
+            super();
+            this.agents = agents;
         }
 
         @Override
-        public List<AgentInfo> listAgents() {
+        public List<com.hdekker.ai_workflow.domain.agent.AgentInfo> listAgents() {
             return List.copyOf(agents.values());
         }
 
@@ -274,19 +265,19 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
     }
 
     /**
-     * Mock AgentStatusUsecase for browserless testing.
+     * Mock AgentStatusService for browserless testing.
      */
-    static class MockAgentStatusUsecase extends com.hdekker.ai_workflow.usecases.AgentStatusUsecase {
+    static class MockAgentStatusService extends com.hdekker.ai_workflow.application.agent.AgentStatusService {
 
-        public MockAgentStatusUsecase() {
+        public MockAgentStatusService() {
             super(null, null, null);
         }
 
         @Override
-        public List<LLMStatus> getCurrentStatus() {
-            return List.of(new LLMStatus(
-                    "test-instance", "gpt-4", AdapterStatus.UP,
-                    java.time.LocalDateTime.now(), 0, null, "OK"));
+        public List<com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord> getCurrentStatus() {
+            return List.of(new com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord(
+                    "test-instance", "gpt-4", "UP",
+                    LocalDateTime.now(), 0, null, "OK"));
         }
     }
 }

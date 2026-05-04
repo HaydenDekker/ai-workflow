@@ -4,7 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
+import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -26,10 +27,10 @@ public class ScannerMetricsPushService {
 
     private static final Logger log = LoggerFactory.getLogger(ScannerMetricsPushService.class);
 
-    private final ScannerObserverUseCase observer;
+    private final ScannerObserverService observer;
 
     @Autowired
-    public ScannerMetricsPushService(ScannerObserverUseCase observer) {
+    public ScannerMetricsPushService(ScannerObserverService observer) {
         this.observer = observer;
     }
 
@@ -46,6 +47,8 @@ public class ScannerMetricsPushService {
     @EventListener
     public void onScannerMetricsChanged(ScannerMetricsChangedEvent event) {
         log.debug("Received scanner metrics event: agent={}, type={}", event.getAgentId(), event.getType());
-        observer.pushToUI(event);
+        // Convert the event into the new port-based pushToUI signature
+        ScannerStatus status = event.getStatus() != null ? event.getStatus() : ScannerStatus.IDLE;
+        observer.pushToUI(event.getAgentId(), status);
     }
 }

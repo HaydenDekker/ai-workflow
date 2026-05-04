@@ -15,7 +15,8 @@ import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentCreationDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.LlmStatusBadge;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+import com.hdekker.ai_workflow.application.agent.AgentStatusService;
+import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -45,13 +46,13 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
     private static final Logger log = LoggerFactory.getLogger(AgentListView.class);
     final Grid<AgentInfo> grid;  // package-private for browserless test access
     private final AgentInfoService agentInfoService;
-    private final AgentStatusUsecase llmStatusService;
+    private final AgentStatusService llmStatusService;
     private final ProgressBar loadingIndicator;
     private final LlmStatusBadge llmStatusBadge;
     private ScheduledExecutorService refreshScheduler;
 
     @Autowired
-    public AgentListView(AgentInfoService agentInfoService, AgentStatusUsecase llmStatusService) {
+    public AgentListView(AgentInfoService agentInfoService, AgentStatusService llmStatusService) {
         this.agentInfoService = agentInfoService;
         this.llmStatusService = llmStatusService;
         
@@ -247,9 +248,11 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
 
     private void updateLlmStatus() {
         try {
-            List<LLMStatus> statuses = llmStatusService.getCurrentStatus();
-            if (!statuses.isEmpty()) {
-                llmStatusBadge.updateStatus(statuses.get(0).status());
+            List<LLMStatusRecord> records = llmStatusService.getCurrentStatus();
+            if (!records.isEmpty()) {
+                com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus status =
+                        com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus.valueOf(records.get(0).status());
+                llmStatusBadge.updateStatus(status);
             }
         } catch (Exception e) {
             llmStatusBadge.updateStatus(com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus.UNKNOWN);

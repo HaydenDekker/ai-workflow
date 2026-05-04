@@ -7,10 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,20 +21,24 @@ public class AgentInfoService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentInfoService.class);
 
-    private final AgentLifecycleUseCase dynamicAgentManager;
-    private final TargetDirectoryValidator targetDirectoryValidator;
+    private final AgentLifecycleService agentLifecycleService;
+    private final DirectoryValidationPort directoryValidationPort;
 
     @Autowired
-    public AgentInfoService(AgentLifecycleUseCase dynamicAgentManager,
-                            TargetDirectoryValidator targetDirectoryValidator) {
-        this.dynamicAgentManager = dynamicAgentManager;
-        this.targetDirectoryValidator = targetDirectoryValidator;
+    public AgentInfoService(AgentLifecycleService agentLifecycleService,
+                            DirectoryValidationPort directoryValidationPort) {
+        this.agentLifecycleService = agentLifecycleService;
+        this.directoryValidationPort = directoryValidationPort;
     }
 
     public Mono<List<AgentInfo>> getAllAgentInfos() {
         try {
-            List<AgentInfo> agents = dynamicAgentManager.listAgents();
-            return Mono.just(agents);
+            List<com.hdekker.ai_workflow.domain.agent.AgentInfo> domainAgents = agentLifecycleService.listAgents();
+            List<AgentInfo> result = new java.util.ArrayList<>();
+            for (com.hdekker.ai_workflow.domain.agent.AgentInfo d : domainAgents) {
+                result.add(new AgentInfo(d.id(), d.definition(), d.createdAt(), d.active(), d.source()));
+            }
+            return Mono.just(result);
         } catch (Exception ex) {
             log.error("Error fetching agent infos", ex);
             return Mono.just(List.of());
@@ -43,7 +47,7 @@ public class AgentInfoService {
 
     public Mono<String> deleteAgent(String id) {
         try {
-            dynamicAgentManager.removeAgent(id);
+            agentLifecycleService.removeAgent(id);
             return Mono.just(id);
         } catch (Exception ex) {
             log.error("Error deleting agent with id: {}", id, ex);
@@ -54,12 +58,13 @@ public class AgentInfoService {
     public Mono<AgentInfo> createAgent(AgentDefinition agentDefinition) {
         try {
             String targetDir = agentDefinition.targetDirectory();
-            ValidationResult result = targetDirectoryValidator.validate(targetDir);
+            ValidationResult result = directoryValidationPort.validate(targetDir);
             if (!result.valid()) {
                 return Mono.error(new IllegalArgumentException(result.reason()));
             }
-            AgentInfo info = dynamicAgentManager.addDynamicAgent(agentDefinition, targetDir);
-            return Mono.just(info);
+            com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.addDynamicAgent(agentDefinition, targetDir);
+            return Mono.just(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                    domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         } catch (Exception ex) {
             log.error("Error creating agent: {}", agentDefinition.title(), ex);
             return Mono.error(ex);
@@ -76,9 +81,10 @@ public class AgentInfoService {
      */
     public Mono<AgentInfo> updateAgent(String id, AgentDefinition agentDefinition) {
         try {
-            AgentInfo info = dynamicAgentManager.updateAgent(id, agentDefinition);
-            if (info != null) {
-                return Mono.just(info);
+            com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.updateAgent(id, agentDefinition);
+            if (domainInfo != null) {
+                return Mono.just(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                        domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
             }
             return Mono.error(new RuntimeException("Agent not found: " + id));
         } catch (Exception ex) {
@@ -96,11 +102,12 @@ public class AgentInfoService {
      */
     public Mono<AgentInfo> refreshAgent(String id) {
         try {
-            AgentInfo info = dynamicAgentManager.refreshAgent(id);
-            if (info == null) {
+            com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.refreshAgent(id);
+            if (domainInfo == null) {
                 return Mono.error(new RuntimeException("Agent not found: " + id));
             }
-            return Mono.just(info);
+            return Mono.just(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                    domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         } catch (Exception ex) {
             log.error("Error refreshing agent with id: {}", id, ex);
             return Mono.error(ex);

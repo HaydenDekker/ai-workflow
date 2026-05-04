@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class ScannerService {
     private final ScannerRegistry scannerRegistry;
 
     @Autowired
-    public ScannerService(ScannerRegistry scannerRegistry) {
+    public ScannerService(com.hdekker.ai_workflow.application.pipeline.ScannerRegistry scannerRegistry) {
         this.scannerRegistry = scannerRegistry;
     }
 
@@ -34,8 +34,20 @@ public class ScannerService {
      */
     public Mono<List<ScannerInfo>> getAllScannerInfos() {
         try {
-            List<ScannerInfo> scanners = scannerRegistry.listAll();
-            return Mono.just(scanners);
+            List<com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo> domainScanners = scannerRegistry.listAll();
+            List<ScannerInfo> result = new java.util.ArrayList<>();
+            for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
+                result.add(new ScannerInfo(
+                        d.id(),
+                        d.agentId(),
+                        d.folderPath(),
+                        d.status(),
+                        d.createdAt(),
+                        d.lastEmittedAt(),
+                        d.errorMessage()
+                ));
+            }
+            return Mono.just(result);
         } catch (Exception ex) {
             log.error("Error fetching scanner infos", ex);
             return Mono.just(List.of());

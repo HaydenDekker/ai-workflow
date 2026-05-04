@@ -3,10 +3,10 @@ package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 import java.util.List;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.outbound.file.TargetDirectoryValidator;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,26 +24,31 @@ import org.springframework.web.bind.annotation.RestController;
 public class AgentController {
 
     @Autowired
-    private AgentLifecycleUseCase dynamicAgentManager;
+    private AgentLifecycleService agentLifecycleService;
 
     @Autowired
-    private TargetDirectoryValidator targetDirectoryValidator;
+    private DirectoryValidationPort directoryValidationPort;
 
     @PostMapping
     public ResponseEntity<?> createAgent(@RequestBody AgentDefinition agentDefinition) {
         String targetDir = agentDefinition.targetDirectory();
-        ValidationResult result = targetDirectoryValidator.validate(targetDir);
+        ValidationResult result = directoryValidationPort.validate(targetDir);
         if (!result.valid()) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", result.reason()));
         }
-        AgentInfo agentInfo = dynamicAgentManager.addDynamicAgent(agentDefinition, targetDir);
-        return ResponseEntity.ok(agentInfo);
+        com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.addDynamicAgent(agentDefinition, targetDir);
+        return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
     }
 
     @GetMapping
     public ResponseEntity<List<AgentInfo>> listAgents() {
-        List<AgentInfo> agents = dynamicAgentManager.listAgents();
-        return ResponseEntity.ok(agents);
+        List<com.hdekker.ai_workflow.domain.agent.AgentInfo> domainAgents = agentLifecycleService.listAgents();
+        List<AgentInfo> result = new java.util.ArrayList<>();
+        for (com.hdekker.ai_workflow.domain.agent.AgentInfo d : domainAgents) {
+            result.add(new AgentInfo(d.id(), d.definition(), d.createdAt(), d.active(), d.source()));
+        }
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -54,31 +59,33 @@ public class AgentController {
     public ResponseEntity<AgentInfo> updateAgent(
             @PathVariable String id,
             @RequestBody AgentDefinition agentDefinition) {
-        AgentInfo agentInfo = dynamicAgentManager.updateAgent(id, agentDefinition);
-        if (agentInfo != null) {
-            return ResponseEntity.ok(agentInfo);
+        com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.updateAgent(id, agentDefinition);
+        if (domainInfo != null) {
+            return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                    domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAgent(@PathVariable String id) {
-        dynamicAgentManager.removeAgent(id);
+        agentLifecycleService.removeAgent(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/enable")
     public ResponseEntity<AgentInfo> enableAgent(@PathVariable String id) {
-        AgentInfo agentInfo = dynamicAgentManager.enableAgent(id);
-        if (agentInfo != null) {
-            return ResponseEntity.ok(agentInfo);
+        com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.enableAgent(id);
+        if (domainInfo != null) {
+            return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                    domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();
     }
 
     @PutMapping("/{id}/disable")
     public ResponseEntity<Void> disableAgent(@PathVariable String id) {
-        dynamicAgentManager.disableAgent(id);
+        agentLifecycleService.disableAgent(id);
         return ResponseEntity.ok().build();
     }
 
@@ -88,9 +95,10 @@ public class AgentController {
      */
     @PostMapping("/{id}/refresh")
     public ResponseEntity<AgentInfo> refreshAgent(@PathVariable String id) {
-        AgentInfo agentInfo = dynamicAgentManager.refreshAgent(id);
-        if (agentInfo != null) {
-            return ResponseEntity.ok(agentInfo);
+        com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.refreshAgent(id);
+        if (domainInfo != null) {
+            return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                    domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();
     }

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 
 import reactor.core.publisher.Mono;
 
@@ -39,18 +39,25 @@ public class ScannerServiceTest {
 
     @Test
     public void givenRegistryWithScanners_ExpectAllReturned() {
-        ScannerInfo info1 = new ScannerInfo("id-1", "agent-1", "/dir/1", "IDLE",
-                LocalDateTime.now(), null);
-        ScannerInfo info2 = new ScannerInfo("id-2", "agent-2", "/dir/2", "ERROR",
-                LocalDateTime.now().minusHours(1), LocalDateTime.now().minusHours(1));
+        com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo domainInfo1 =
+                new com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo(
+                        "agent-1", "id-1", "/dir/1", "IDLE", LocalDateTime.now(), null, null);
+        com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo domainInfo2 =
+                new com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo(
+                        "agent-2", "id-2", "/dir/2", "ERROR",
+                        LocalDateTime.now().minusHours(1), LocalDateTime.now().minusHours(1), "Some error");
 
-        when(registry.listAll()).thenReturn(List.of(info1, info2));
+        when(registry.listAll()).thenReturn(List.of(domainInfo1, domainInfo2));
 
         Mono<List<ScannerInfo>> result = service.getAllScannerInfos();
         List<ScannerInfo> scanners = result.block();
 
         assertThat(scanners).hasSize(2);
-        assertThat(scanners).containsExactly(info1, info2);
+        assertThat(scanners.get(0).agentId()).isEqualTo("agent-1");
+        assertThat(scanners.get(0).targetDirectory()).isEqualTo("/dir/1");
+        assertThat(scanners.get(0).status()).isEqualTo("IDLE");
+        assertThat(scanners.get(1).agentId()).isEqualTo("agent-2");
+        assertThat(scanners.get(1).errorMessage()).isEqualTo("Some error");
     }
 
     @Test

@@ -2,8 +2,11 @@ package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
 
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+import com.hdekker.ai_workflow.application.agent.AgentStatusService;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
+import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ObservabilityController {
 
     @Autowired
-    private AgentStatusUsecase llmStatusService;
+    private AgentStatusService agentStatusService;
 
     /**
      * Get current LLM status from database cache.
@@ -32,8 +35,22 @@ public class ObservabilityController {
      */
     @GetMapping("/llm-status")
     public ResponseEntity<List<LLMStatus>> getLLMStatus() {
-        List<LLMStatus> status = llmStatusService.getCurrentStatus();
-        return ResponseEntity.ok(status);
+        List<LLMStatusRecord> records = agentStatusService.getCurrentStatus();
+        List<LLMStatus> result = new java.util.ArrayList<>();
+        for (LLMStatusRecord r : records) {
+            result.add(new LLMStatus(
+                    r.endpoint(),
+                    r.configuredModel(),
+                    AdapterStatus.valueOf(r.status()),
+                    r.lastChecked(),
+                    r.modelCount(),
+                    r.modelNames() != null && !r.modelNames().isEmpty()
+                            ? List.of(r.modelNames().split(","))
+                            : List.of(),
+                    r.errorMessage()
+            ));
+        }
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -42,7 +59,25 @@ public class ObservabilityController {
      */
     @PostMapping("/llm-status/poll")
     public ResponseEntity<List<LLMStatus>> triggerPoll() {
-        List<LLMStatus> status = llmStatusService.triggerPoll();
-        return ResponseEntity.ok(status);
+        List<LLMHealthPort.LLMStatus> portStatuses = agentStatusService.triggerPoll();
+        List<LLMStatus> result = new java.util.ArrayList<>();
+        for (LLMHealthPort.LLMStatus s : portStatuses) {
+            AdapterStatus dtoStatus =
+                    switch (s.status()) {
+                        case UP -> AdapterStatus.UP;
+                        case DOWN -> AdapterStatus.DOWN;
+                        case WARN -> AdapterStatus.WARN;
+                    };
+            result.add(new LLMStatus(
+                    s.endpoint(),
+                    s.configuredModel(),
+                    dtoStatus,
+                    s.lastChecked(),
+                    s.modelCount(),
+                    s.modelNames(),
+                    s.errorMessage()
+            ));
+        }
+        return ResponseEntity.ok(result);
     }
 }

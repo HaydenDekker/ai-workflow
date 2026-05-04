@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +29,7 @@ public class ScannerController {
     private final ScannerRegistry scannerRegistry;
 
     @Autowired
-    public ScannerController(ScannerRegistry scannerRegistry) {
+    public ScannerController(com.hdekker.ai_workflow.application.pipeline.ScannerRegistry scannerRegistry) {
         this.scannerRegistry = scannerRegistry;
     }
 
@@ -38,9 +38,21 @@ public class ScannerController {
      */
     @GetMapping
     public ResponseEntity<List<ScannerInfo>> listScanners() {
-        List<ScannerInfo> scanners = scannerRegistry.listAll();
-        log.debug("Listed {} scanners", scanners.size());
-        return ResponseEntity.ok(scanners);
+        List<com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo> domainScanners = scannerRegistry.listAll();
+        List<ScannerInfo> result = new java.util.ArrayList<>();
+        for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
+            result.add(new ScannerInfo(
+                    d.id(),
+                    d.agentId(),
+                    d.folderPath(),
+                    d.status(),
+                    d.createdAt(),
+                    d.lastEmittedAt(),
+                    d.errorMessage()
+            ));
+        }
+        log.debug("Listed {} scanners", result.size());
+        return ResponseEntity.ok(result);
     }
 
     /**
