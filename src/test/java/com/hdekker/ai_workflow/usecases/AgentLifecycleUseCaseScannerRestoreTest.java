@@ -79,8 +79,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
             return Flux.just(fh);
         });
 
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of());
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         doNothing().when(mockPersistenceService).disable(anyString());
         doNothing().when(mockPersistenceService).enable(anyString());
         doNothing().when(mockPersistenceService).deleteById(anyString());
@@ -97,8 +97,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     @Test
     public void givenNoAgentsInDatabase_ExpectNoScannersCreated() {
         // Arrange — no active or dormant agents
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of());
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
 
         // Act
         manager.restoreFromDatabase();
@@ -113,8 +113,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     public void givenActiveAgentInDatabase_ExpectScannerCreatedDuringRestore() {
         // Arrange — an active dynamic agent in the database
         AgentEntity activeEntity = createActiveEntity("restored-agent-1", "Restored Agent", "DYNAMIC", "/tmp/restored-dir");
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of(activeEntity));
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         when(mockPersistenceService.getDefinition("restored-agent-1")).thenReturn(Optional.of(createMatchingDefinition("restored-agent-1", "/tmp/restored-dir")));
 
         // Act
@@ -137,8 +137,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     public void givenDormantAgentInDatabase_ExpectScannerNotCreatedForDormant() {
         // Arrange — a dormant (disabled) agent in the database
         AgentEntity dormantEntity = createDormantEntity("dormant-agent-1", "Dormant Agent", "DYNAMIC", "/tmp/dormant-dir");
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of());
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of(dormantEntity));
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of(dormantEntity));
         when(mockPersistenceService.getDefinition("dormant-agent-1")).thenReturn(Optional.of(createMatchingDefinition("dormant-agent-1", "/tmp/dormant-dir")));
 
         // Act
@@ -156,8 +156,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         AgentEntity activeEntity = createActiveEntity("active-1", "Active Agent", "DYNAMIC", "/tmp/active-dir");
         AgentEntity dormantEntity = createDormantEntity("dormant-1", "Dormant Agent", "YAML", "/tmp/dormant-dir");
         
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of(activeEntity, dormantEntity));
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of(activeEntity));
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of(activeEntity, dormantEntity));
         when(mockPersistenceService.getDefinition("active-1")).thenReturn(Optional.of(createMatchingDefinition("active-1", "/tmp/active-dir")));
         when(mockPersistenceService.getDefinition("dormant-1")).thenReturn(Optional.of(createMatchingDefinition("dormant-1", "/tmp/dormant-dir")));
 
@@ -175,8 +175,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     public void givenRestoredAgent_ExpectListAgentsShowsInfo() {
         // Arrange
         AgentEntity activeEntity = createActiveEntity("list-test-1", "List Test Agent", "DYNAMIC", "/tmp/list-dir");
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of(activeEntity));
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         when(mockPersistenceService.getDefinition("list-test-1")).thenReturn(Optional.of(createMatchingDefinition("list-test-1", "/tmp/list-dir")));
 
         // Act
@@ -200,8 +200,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         new AgentDefinition(
                 ".*\\.txt", "No Target Agent", "prompt", "Map", "structure", "template", null);
         
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of(activeEntity));
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         when(mockPersistenceService.getDefinition("no-target-1")).thenReturn(Optional.of(createMatchingDefinition("no-target-1", null)));
 
         // Act
@@ -219,8 +219,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
         AgentEntity agent1 = createActiveEntity("multi-1", "Agent One", "DYNAMIC", "/tmp/dir1");
         AgentEntity agent2 = createActiveEntity("multi-2", "Agent Two", "DYNAMIC", "/tmp/dir2");
         
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of(agent1, agent2));
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of(agent1, agent2));
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         when(mockPersistenceService.getDefinition("multi-1")).thenReturn(Optional.of(createMatchingDefinition("multi-1", "/tmp/dir1")));
         when(mockPersistenceService.getDefinition("multi-2")).thenReturn(Optional.of(createMatchingDefinition("multi-2", "/tmp/dir2")));
 
@@ -238,8 +238,8 @@ public class AgentLifecycleUseCaseScannerRestoreTest {
     public void givenRestoreThenAddDynamicAgent_ExpectBothHaveScanners() {
         // Arrange — restore one agent from DB
         AgentEntity activeEntity = createActiveEntity("restored-1", "Restored Agent", "DYNAMIC", "/tmp/restored");
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of(activeEntity));
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of(activeEntity));
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         when(mockPersistenceService.getDefinition("restored-1")).thenReturn(Optional.of(createMatchingDefinition("restored-1", "/tmp/restored")));
         doNothing().when(mockPersistenceService).deleteById(anyString());
 

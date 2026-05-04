@@ -59,7 +59,7 @@ public class AgentPersistenceServiceTest {
 				"/tmp/test-dir");
 
 		// Act
-		AgentEntity entity = persistenceService.save("persist-1", def, "DYNAMIC");
+		AgentEntity entity = persistenceService.saveAndGetEntity("persist-1", def, "DYNAMIC");
 
 		// Assert
 		assertThat(entity).isNotNull();
@@ -83,7 +83,7 @@ public class AgentPersistenceServiceTest {
 				"Markdown structure",
 				"md-output/{filename}",
 				"/tmp/markdown-dir");
-		persistenceService.save("getdef-1", def, "YAML");
+		persistenceService.saveAndGetEntity("getdef-1", def, "YAML");
 
 		// Act
 		Optional<AgentDefinition> found = persistenceService.getDefinition("getdef-1");
@@ -111,11 +111,11 @@ public class AgentPersistenceServiceTest {
 		// Arrange
 		AgentDefinition def1 = new AgentDefinition(".*\\.txt", "Agent 1", "Body 1", "Map", "Out 1", "out1", "/tmp/dir1");
 		AgentDefinition def2 = new AgentDefinition(".*\\.md", "Agent 2", "Body 2", "Split", "Out 2", "out2", "/tmp/dir2");
-		persistenceService.save("list-1", def1, "YAML");
+		persistenceService.saveAndGetEntity("list-1", def1, "YAML");
 		// Ensure distinct createdAt timestamps to avoid non-deterministic ordering
 		// when H2 assigns the same millisecond timestamp to both saves.
 		Thread.sleep(10);
-		persistenceService.save("list-2", def2, "DYNAMIC");
+		persistenceService.saveAndGetEntity("list-2", def2, "DYNAMIC");
 
 		// Act
 		List<AgentEntity> all = persistenceService.listAll();
@@ -130,7 +130,7 @@ public class AgentPersistenceServiceTest {
 	public void givenAgentId_whenDeleted_thenNotListed() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(".*\\.txt", "Delete Me", "Body", "Map", "Out", "out", "/tmp/delete-me");
-		persistenceService.save("del-1", def, "DYNAMIC");
+		persistenceService.saveAndGetEntity("del-1", def, "DYNAMIC");
 		assertThat(persistenceService.listAll()).hasSize(1);
 
 		// Act
@@ -144,7 +144,7 @@ public class AgentPersistenceServiceTest {
 	public void givenAgent_whenToggledOff_thenActiveIsFalse() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(".*\\.txt", "Toggle Agent", "Body", "Map", "Out", "out", "/tmp/toggle");
-		persistenceService.save("toggle-1", def, "YAML");
+		persistenceService.saveAndGetEntity("toggle-1", def, "YAML");
 
 		// Act
 		persistenceService.disable("toggle-1");
@@ -159,7 +159,7 @@ public class AgentPersistenceServiceTest {
 	public void givenDisabledAgent_whenToggledOn_thenActiveIsTrueWithLastStartedAt() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(".*\\.txt", "Toggle On Agent", "Body", "Map", "Out", "out", "/tmp/toggle-on");
-		persistenceService.save("toggle-on-1", def, "YAML");
+		persistenceService.saveAndGetEntity("toggle-on-1", def, "YAML");
 		persistenceService.disable("toggle-on-1");
 
 		// Act
@@ -176,12 +176,12 @@ public class AgentPersistenceServiceTest {
 		// Arrange
 		AgentDefinition activeDef = new AgentDefinition(".*\\.txt", "Active Agent", "Body", "Map", "Out", "out", "/tmp/active");
 		AgentDefinition inactiveDef = new AgentDefinition(".*\\.md", "Inactive Agent", "Body", "Split", "Out", "out", "/tmp/inactive");
-		persistenceService.save("active-find-1", activeDef, "YAML");
-		persistenceService.save("inactive-find-1", inactiveDef, "DYNAMIC");
+		persistenceService.saveAndGetEntity("active-find-1", activeDef, "YAML");
+		persistenceService.saveAndGetEntity("inactive-find-1", inactiveDef, "DYNAMIC");
 		persistenceService.disable("inactive-find-1");
 
 		// Act
-		List<AgentEntity> active = persistenceService.findAllActive();
+		List<AgentEntity> active = persistenceService.findAllActiveEntities();
 
 		// Assert
 		assertThat(active).hasSize(1);
@@ -204,7 +204,7 @@ public class AgentPersistenceServiceTest {
 				"output/{filename}",
 				"/tmp/large-body");
 
-		persistenceService.save("large-1", def, "DYNAMIC");
+		persistenceService.saveAndGetEntity("large-1", def, "DYNAMIC");
 		Optional<AgentDefinition> retrieved = persistenceService.getDefinition("large-1");
 
 		// Assert

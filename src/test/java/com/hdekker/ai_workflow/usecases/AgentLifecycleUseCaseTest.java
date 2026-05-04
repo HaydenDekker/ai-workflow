@@ -74,8 +74,8 @@ public class AgentLifecycleUseCaseTest {
 
         // Mock persistence service
         mockPersistenceService = mock(AgentRepositoryAdapter.class);
-        when(mockPersistenceService.findAllActive()).thenReturn(List.of());
-        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
+        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
         doNothing().when(mockPersistenceService).disable(anyString());
         doNothing().when(mockPersistenceService).enable(anyString());
         doNothing().when(mockPersistenceService).deleteById(anyString());

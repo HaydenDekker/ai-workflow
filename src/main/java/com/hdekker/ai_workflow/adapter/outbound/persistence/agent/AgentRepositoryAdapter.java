@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,6 +9,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,11 +17,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 /**
- * Use case layer to handle entity↔domain mapping for agents.
- * Handles JSON serialization of AgentDefinition and CRUD operations.
+ * Outbound adapter implementing {@link AgentRepository} port.
+ * <p>
+ * Handles entity↔domain mapping for agents, including JSON serialization
+ * of {@link AgentDefinition} and CRUD operations against the JPA repository.
  */
 @Service
-public class AgentRepositoryAdapter {
+public class AgentRepositoryAdapter implements AgentRepository {
 
 	private static final Logger log = LoggerFactory.getLogger(AgentRepositoryAdapter.class);
 
@@ -31,16 +35,93 @@ public class AgentRepositoryAdapter {
 		this.objectMapper = objectMapper;
 	}
 
+	// ── AgentRepository port implementation ─────────────────────────
+
+	@Override
+	public void save(String id, AgentDefinition definition, String source) {
+		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
+		entity.setId(id);
+		try {
+			entity.setAgentDefinitionJson(objectMapper.writeValueAsString(definition));
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("Failed to serialize AgentDefinition for agent: " + id, e);
+		}
+		entity.setTitle(definition.title());
+		entity.setSource(source);
+		if (entity.getCreatedAt() == null) {
+			entity.setCreatedAt(LocalDateTime.now());
+		}
+		entity.setActive(true);
+		agentRepository.save(entity);
+	}
+
+	@Override
+	public Optional<AgentDefinition> findById(String id) {
+		return agentRepository.findById(id)
+				.flatMap(this::deserializeDefinition);
+	}
+
+	@Override
+	public boolean existsById(String id) {
+		return agentRepository.existsById(id);
+	}
+
+	@Override
+	public List<AgentDefinition> findAllActive() {
+		return agentRepository.findByActiveTrueOrderByCreatedAtDesc().stream()
+				.map(this::deserializeDefinition)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.toList();
+	}
+
+	@Override
+	public List<AgentDefinition> findAllOrdered() {
+		return agentRepository.findAllByOrderByCreatedAtDesc().stream()
+				.map(this::deserializeDefinition)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.toList();
+	}
+
+	@Override
+	public void deleteById(String id) {
+		agentRepository.deleteById(id);
+	}
+
+	@Override
+	public void enable(String id) {
+		toggle(id, true);
+	}
+
+	@Override
+	public void disable(String id) {
+		toggle(id, false);
+	}
+
+	@Override
+	public long countActive() {
+		return agentRepository.countByActiveTrue();
+	}
+
+	@Override
+	public long countInactive() {
+		return agentRepository.countByActiveFalse();
+	}
+
+	// ── Backward-compatible methods (tests + legacy AgentLifecycleUseCase) ─
+
 	/**
-	 * Save an agent (create or update).
-	 * New agents are created with active=true by default.
-	 * Existing agents are updated with new definition but preserve createdAt.
+	 * Save an agent and return the persisted entity.
+	 * <p>
+	 * Backward-compatible method used by tests and the legacy {@code AgentLifecycleUseCase}.
 	 *
 	 * @param id          the agent ID
 	 * @param definition  the agent definition
 	 * @param source      the source ("YAML" or "DYNAMIC")
+	 * @return the persisted entity
 	 */
-	public AgentEntity save(String id, AgentDefinition definition, String source) {
+	public AgentEntity saveAndGetEntity(String id, AgentDefinition definition, String source) {
 		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
 		entity.setId(id);
 		try {
@@ -59,37 +140,45 @@ public class AgentRepositoryAdapter {
 
 	/**
 	 * Load agent definition from DB by id.
+	 * <p>
+	 * Backward-compatible alias for {@link #findById(String)}.
 	 */
 	public Optional<AgentDefinition> getDefinition(String id) {
-		return agentRepository.findById(id)
-				.map(entity -> {
-					try {
-						return objectMapper.readValue(entity.getAgentDefinitionJson(), AgentDefinition.class);
-					} catch (JsonProcessingException e) {
-						throw new RuntimeException("Failed to deserialize AgentDefinition for agent: " + id, e);
-					}
-				});
+		return findById(id);
 	}
 
 	/**
-	 * List all agents ordered by creation date descending.
+	 * List all agents ordered by creation date descending (returns entities).
+	 * <p>
+	 * Backward-compatible method returning entities, used by tests.
 	 */
 	public List<AgentEntity> listAll() {
 		return agentRepository.findAllByOrderByCreatedAtDesc();
 	}
 
 	/**
-	 * Delete an agent by id.
+	 * Restore all enabled agents from DB (for startup) — returns entities.
+	 * <p>
+	 * Backward-compatible method returning entities, used by tests and
+	 * the legacy {@code AgentLifecycleUseCase}.
 	 */
-	public void deleteById(String id) {
-		agentRepository.deleteById(id);
+	public List<AgentEntity> findAllActiveEntities() {
+		return agentRepository.findByActiveTrueOrderByCreatedAtDesc();
 	}
 
 	/**
-	 * Toggle agent on/off.
-	 * When enabling, sets lastStartedAt to now.
+	 * Get all agents ordered (for UI listing — shows enabled and disabled) — returns entities.
+	 * <p>
+	 * Backward-compatible method returning entities, used by tests and
+	 * the legacy {@code AgentLifecycleUseCase}.
 	 */
-	public void toggle(String id, boolean enable) {
+	public List<AgentEntity> findAllOrderedEntities() {
+		return agentRepository.findAllByOrderByCreatedAtDesc();
+	}
+
+	// ── Internal helpers ─────────────────────────────────────────────
+
+	private void toggle(String id, boolean enable) {
 		agentRepository.findById(id).ifPresent(entity -> {
 			entity.setActive(enable);
 			if (enable) {
@@ -100,45 +189,11 @@ public class AgentRepositoryAdapter {
 		});
 	}
 
-	/**
-	 * Enable an agent.
-	 */
-	public void enable(String id) {
-		toggle(id, true);
-	}
-
-	/**
-	 * Disable an agent.
-	 */
-	public void disable(String id) {
-		toggle(id, false);
-	}
-
-	/**
-	 * Restore all enabled agents from DB (for startup).
-	 */
-	public List<AgentEntity> findAllActive() {
-		return agentRepository.findByActiveTrueOrderByCreatedAtDesc();
-	}
-
-	/**
-	 * Get all agents (for UI listing — shows enabled and disabled).
-	 */
-	public List<AgentEntity> findAllOrdered() {
-		return agentRepository.findAllByOrderByCreatedAtDesc();
-	}
-
-	/**
-	 * Count active (enabled) agents.
-	 */
-	public long countActive() {
-		return agentRepository.countByActiveTrue();
-	}
-
-	/**
-	 * Count inactive (disabled) agents.
-	 */
-	public long countInactive() {
-		return agentRepository.countByActiveFalse();
+	private Optional<AgentDefinition> deserializeDefinition(AgentEntity entity) {
+		try {
+			return Optional.of(objectMapper.readValue(entity.getAgentDefinitionJson(), AgentDefinition.class));
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("Failed to deserialize AgentDefinition for agent: " + entity.getId(), e);
+		}
 	}
 }

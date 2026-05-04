@@ -60,8 +60,8 @@ public class AgentLifecycleUseCasePersistenceTest {
 		Path outputDirectory = Path.of("/test/output");
 
 		mockPersistenceService = mock(AgentRepositoryAdapter.class);
-		when(mockPersistenceService.findAllActive()).thenReturn(List.of());
-		when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+		when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
+		when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
 
 		// Mock scanner registry
 		mockScannerRegistry = mock(ScannerRegistry.class);
@@ -87,8 +87,6 @@ public class AgentLifecycleUseCasePersistenceTest {
 	public void givenDynamicAgentAdded_whenPersistenceEnabled_thenPersistServiceCalled() {
 		// Arrange
 		AgentDefinition agent = TestData.basicPrompt();
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
-				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC"));
 
 		// Act
 		AgentInfo info = manager.addDynamicAgent(agent, "/tmp/test-dir");
@@ -98,9 +96,8 @@ public class AgentLifecycleUseCasePersistenceTest {
 		assertThat(info.active()).isTrue();
 		assertThat(info.source()).isEqualTo("DYNAMIC");
 
-		// Verify persistence was called
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
-				.thenReturn(createAgentEntity("test-id", agent, "DYNAMIC"));
+		// Verify persistence was called (save() is void — use doNothing)
+		verify(mockPersistenceService).save(any(String.class), any(AgentDefinition.class), any(String.class));
 	}
 
 	@Test
@@ -159,8 +156,6 @@ public class AgentLifecycleUseCasePersistenceTest {
 	public void givenYAMLAgent_whenDisabled_thenMovesToDormant() {
 		// Arrange
 		AgentDefinition yamlAgent = TestData.basicPrompt();
-		when(mockPersistenceService.save(any(String.class), any(AgentDefinition.class), any(String.class)))
-				.thenReturn(createAgentEntity(yamlAgent.title(), yamlAgent, "YAML"));
 
 		manager.initializeFromYAML(List.of(yamlAgent));
 
@@ -260,8 +255,8 @@ public class AgentLifecycleUseCasePersistenceTest {
 	@Test
 	public void givenRestoreFromDatabase_whenNoActiveAgents_thenNoAgentsRestored() {
 		// Arrange — mock returns empty lists
-		when(mockPersistenceService.findAllActive()).thenReturn(List.of());
-		when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
+		when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
+		when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
 
 		// Act
 		manager.restoreFromDatabase();

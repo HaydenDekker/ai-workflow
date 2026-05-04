@@ -139,7 +139,7 @@ public class AgentLifecycleUseCase {
         }
 
         // Restore active (enabled) agents — creates scanners for each
-        List<AgentEntity> activeEntities = persistenceService.findAllActive();
+        List<AgentEntity> activeEntities = persistenceService.findAllActiveEntities();
         int restoredCount = 0;
         int skippedCount = 0;
         for (AgentEntity entity : activeEntities) {
@@ -177,7 +177,7 @@ public class AgentLifecycleUseCase {
         }
 
         // Load disabled agents as dormant — no scanner created for dormant agents
-        List<AgentEntity> dormantEntities = persistenceService.findAllOrdered();
+        List<AgentEntity> dormantEntities = persistenceService.findAllOrderedEntities();
         int dormantCount = 0;
         for (AgentEntity entity : dormantEntities) {
             if (agentRegistry.containsKey(entity.getId())) {
