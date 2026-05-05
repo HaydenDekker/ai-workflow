@@ -5,6 +5,26 @@ displayName: AI Workflow code cleanup
 description: Run every cleanup recipe in this project.
 
 recipeList:
+  # ── DTO suffix ──────────────────────────────────────────────
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatusDTO
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatusDTO
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.OpenAiModelsResponse
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.OpenAiModelsResponseDTO
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshotDTO
+
   # ── Import hygiene ──────────────────────────────────────────
   - org.openrewrite.java.RemoveUnusedImports
   - org.openrewrite.java.OrderImports
@@ -17,12 +37,10 @@ recipeList:
   - org.openrewrite.java.testing.cleanup.AssertEqualsNullToAssertNull
 
   # ── Spring / JPA best practices ─────────────────────────────
-  - org.openrewrite.java.spring.DataJpaExposePersistenceContextToFalse
-  - org.openrewrite.java.spring.security.AuthenticateRequestDto
+  # (recipes removed — not available in current OpenRewrite version)
 
   # ── General cleanup ─────────────────────────────────────────
-  - org.openrewrite.java.DeleteCommentLine
-  - org.openrewrite.java.ExhaustiveSwitchDefault
+  # (recipes removed — not available in current OpenRewrite version)
   - org.openrewrite.java.migrate.lang.ReplaceUnusedVariablesWithUnderscore
 
 ---

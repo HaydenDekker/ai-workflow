@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentCreationDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.LlmStatusBadge;

@@ -15,7 +15,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;

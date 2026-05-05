@@ -219,14 +219,26 @@
    │       │   ├── TargetDirectoryValidator.java  (implements port.DirectoryValidationPort)
    │       │   └── FileCounterAdapter.java        (implements domain.FileCounter)
    │       ├── llm/
+   │       │   ├── LLMAdapter.java                (interface — from pipeline)
+   │       │   ├── LLMAdapterFactory.java         (factory — from pipeline.llmadapter)
+   │       │   ├── LLMReducerAdapter.java         (from pipeline.llmadapter)
+   │       │   ├── MapAgentLLMAdapter.java        (from pipeline.llmadapter)
+   │       │   ├── SplitterLLMAdapter.java        (from pipeline.llmadapter)
    │       │   ├── OpenAiHealthAdapter.java       (implements port.LLMHealthPort)
    │       │   ├── OpenAiHealthClient.java
+   │       │   ├── OpenAiHealthConfiguration.java
+   │       │   ├── OpenAiInstanceAdapterUtils.java
+   │       │   ├── OpenAiInstanceConfiguration.java
+   │       │   ├── OpenAiInstanceConfigurationProperties.java
    │       │   └── LLMOutputParsingUtils.java
    │       └── event/
    │           └── MetricsPublisher.java          (publishes domain events)
    │
    ├── config/                          # Spring Boot configuration (wiring)
+   │   ├── AgentConfiguration.java            (from pipeline)
+   │   ├── AgentRestoreOnStartup.java         (from pipeline.management)
    │   ├── DatabaseConfig.java
+   │   ├── DynamicAgentManagerConfiguration.java (from pipeline.management)
    │   ├── ScannerConfig.java
    │   ├── DataSourceProperties.java
    │   └── OpenAiConfig.java
@@ -288,9 +300,28 @@
  - Move ui/* → adapter.inbound.ui.*
  - Each adapter implements its ports; Spring config wires them
 
+
+ #### Phase 4.5: Migrate remaining pipeline classes (missed in Phase 4)
+
+ **Why missed:** The Phase 1 package assessment only listed `pipeline/` as "LLMAdapter, SplittableStrategy" but missed
+ the nested subpackages `pipeline.llmadapter/` and `pipeline.management/`. These contain code still referenced by the
+ new application layer.
+
+ - Move `pipeline/LLMAdapter.java` → `adapter.outbound.llm/LLMAdapter.java` (interface)
+ - Move `pipeline/llmadapter/LLMAdapterFactory.java` → `adapter.outbound.llm/LLMAdapterFactory.java`
+ - Move `pipeline/llmadapter/LLMReducerAdapter.java` → `adapter.outbound.llm/LLMReducerAdapter.java`
+ - Move `pipeline/llmadapter/MapAgentLLMAdapter.java` → `adapter.outbound.llm/MapAgentLLMAdapter.java`
+ - Move `pipeline/llmadapter/SplitterLLMAdapter.java` → `adapter.outbound.llm/SplitterLLMAdapter.java`
+ - Move `pipeline/AgentConfiguration.java` → `config/AgentConfiguration.java`
+ - Move `pipeline/management/AgentRestoreOnStartup.java` → `config/AgentRestoreOnStartup.java`
+ - Move `pipeline/management/DynamicAgentManagerConfiguration.java` → `config/DynamicAgentManagerConfiguration.java`
+ - Update `application/pipeline/AgentConfigurator` imports from `pipeline.LLMAdapter` → `adapter.outbound.llm.LLMAdapter`
+ - Delete duplicate `pipeline/SplittableStrategy.java` (already in `application/pipeline/`)
+
  #### Phase 5: Clean up and remove old packages
 
  - Remove old usecases/, database/, files/, app/, pipeline/ packages
+ - ⚠️ **Prerequisite:** Phase 4.5 must complete first — pipeline/ still has active classes
  - Update all test packages to match
  - Update pom.xml package-scanning if needed
  - Run full test suite to verify
@@ -333,9 +364,13 @@
  ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
  │ 4. Adapter wiring     │ ~30 files   │ ~5 adapters       │ Medium (rewiring) │ Large  │
  ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
- │ 5. Cleanup            │ ~60 files   │ 0                 │ Low (delete)      │ Small  │
- └───────────────────────┴─────────────┴───────────────────┴───────────────────┴────────┘
+ │ 4.5 Pipeline migrate  │ ~8 files    │ 0                 │ Medium (rewiring) │ Medium │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 5. Cleanup            │ ~70 files   │ 0                 │ Low (delete)      │ Small  │
 
- Total: ~90+ files touched, but mostly moves with targeted rewrites in phases 2-4.
+ Total: ~100+ files touched, but mostly moves with targeted rewrites in phases 2-4.
+
+> **Note:** Phase 4.5 is a catch-up for classes missed by the initial package assessment. It must complete before Phase 5
+> can safely delete the old `pipeline/` package.
 
  ────────────────────────────────────────────────────────────────────────────────
