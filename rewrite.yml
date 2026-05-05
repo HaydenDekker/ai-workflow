@@ -120,3 +120,80 @@ recipeList:
   - org.openrewrite.java.ChangeType:
       oldFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.ObservabilityRestControllerTest
       newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.inbound.rest.controller.ObservabilityControllerTest
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase4.5.pipeline-migrate
+displayName: Phase 4.5 — Migrate pipeline/* classes to adapter.outbound.llm and config
+description: |
+  Move remaining pipeline classes that were missed in the initial package assessment.
+  These contain LLM adapters and configuration still referenced by the new application layer.
+
+  Package mapping (source → target):
+    pipeline/LLMAdapter.java                    → adapter.outbound.llm/LLMAdapter.java
+    pipeline/llmadapter/LLMAdapterFactory.java  → adapter.outbound.llm/LLMAdapterFactory.java
+    pipeline/llmadapter/LLMReducerAdapter.java  → adapter.outbound.llm/LLMReducerAdapter.java
+    pipeline/llmadapter/MapAgentLLMAdapter.java → adapter.outbound.llm/MapAgentLLMAdapter.java
+    pipeline/llmadapter/SplitterLLMAdapter.java → adapter.outbound.llm/SplitterLLMAdapter.java
+    pipeline/AgentConfiguration.java            → config/AgentConfiguration.java
+    pipeline/management/AgentRestoreOnStartup.java → config/AgentRestoreOnStartup.java
+    pipeline/management/DynamicAgentManagerConfiguration.java → config/DynamicAgentManagerConfiguration.java
+
+  Import updates (cross-package references):
+    application.pipeline.AgentConfigurator:
+      com.hdekker.ai_workflow.pipeline.LLMAdapter
+        → com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter
+      com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory
+        → com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapterFactory
+
+    pipeline.AgentConfiguration:
+      com.hdekker.ai_workflow.pipeline.LLMAdapter
+        → com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter
+
+  Cleanup:
+    Delete duplicate pipeline/SplittableStrategy.java (application.pipeline.SplittableStrategy
+    is the canonical version already moved in Phase 3).
+
+recipeList:
+  # Step 1: Move pipeline.llmadapter/* → adapter.outbound.llm/*
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.pipeline.llmadapter
+      newPackageName: com.hdekker.ai_workflow.adapter.outbound.llm
+
+  # Step 2: Move pipeline.management/* → config/*
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.hdekker.ai_workflow.pipeline.management
+      newPackageName: com.hdekker.ai_workflow.config
+
+  # Step 3: Move pipeline/LLMAdapter.java → adapter.outbound.llm/LLMAdapter.java
+  # Cross-package move — update the type so all references resolve to new location
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.LLMAdapter
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter
+
+  # Step 4: Move pipeline/AgentConfiguration.java → config/AgentConfiguration.java
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.AgentConfiguration
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.config.AgentConfiguration
+
+  # Step 5: Update imports in application/pipeline/AgentConfigurator.java
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.LLMAdapter
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapterFactory
+
+  # Step 6: Update imports in app/pipeline/AgentBuilder.java
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.SplittableStrategy
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.SplittableStrategy
+
+  # Step 7: Delete duplicate pipeline/SplittableStrategy.java
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/pipeline/SplittableStrategy.java"
+
+  # Step 8: Import hygiene
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.config;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.adapter.outbound.llm.LLMOutputParsingUtils;
+import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.prompt.PromptConfiguration;

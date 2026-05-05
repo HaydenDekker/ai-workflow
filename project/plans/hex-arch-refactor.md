@@ -301,22 +301,27 @@
  - Each adapter implements its ports; Spring config wires them
 
 
- #### Phase 4.5: Migrate remaining pipeline classes (missed in Phase 4)
+ #### Phase 4.5: Migrate remaining pipeline classes (missed in Phase 4) ✅ **COMPLETE**
 
  **Why missed:** The Phase 1 package assessment only listed `pipeline/` as "LLMAdapter, SplittableStrategy" but missed
  the nested subpackages `pipeline.llmadapter/` and `pipeline.management/`. These contain code still referenced by the
  new application layer.
 
- - Move `pipeline/LLMAdapter.java` → `adapter.outbound.llm/LLMAdapter.java` (interface)
- - Move `pipeline/llmadapter/LLMAdapterFactory.java` → `adapter.outbound.llm/LLMAdapterFactory.java`
- - Move `pipeline/llmadapter/LLMReducerAdapter.java` → `adapter.outbound.llm/LLMReducerAdapter.java`
- - Move `pipeline/llmadapter/MapAgentLLMAdapter.java` → `adapter.outbound.llm/MapAgentLLMAdapter.java`
- - Move `pipeline/llmadapter/SplitterLLMAdapter.java` → `adapter.outbound.llm/SplitterLLMAdapter.java`
- - Move `pipeline/AgentConfiguration.java` → `config/AgentConfiguration.java`
- - Move `pipeline/management/AgentRestoreOnStartup.java` → `config/AgentRestoreOnStartup.java`
- - Move `pipeline/management/DynamicAgentManagerConfiguration.java` → `config/DynamicAgentManagerConfiguration.java`
- - Update `application/pipeline/AgentConfigurator` imports from `pipeline.LLMAdapter` → `adapter.outbound.llm.LLMAdapter`
- - Delete duplicate `pipeline/SplittableStrategy.java` (already in `application/pipeline/`)
+ **Completed:** 2026-05-05 via OpenRewrite recipe `com.hdekker.ai-workflow.phase4.5.pipeline-migrate`
+
+ - Move `pipeline/LLMAdapter.java` → `adapter.outbound.llm/LLMAdapter.java` (interface) ✅
+ - Move `pipeline/llmadapter/LLMAdapterFactory.java` → `adapter.outbound.llm/LLMAdapterFactory.java` ✅
+ - Move `pipeline/llmadapter/LLMReducerAdapter.java` → `adapter.outbound.llm/LLMReducerAdapter.java` ✅
+ - Move `pipeline/llmadapter/MapAgentLLMAdapter.java` → `adapter.outbound.llm/MapAgentLLMAdapter.java` ✅
+ - Move `pipeline/llmadapter/SplitterLLMAdapter.java` → `adapter.outbound.llm/SplitterLLMAdapter.java` ✅
+ - Move `pipeline/AgentConfiguration.java` → `config/AgentConfiguration.java` ✅
+ - Move `pipeline/management/AgentRestoreOnStartup.java` → `config/AgentRestoreOnStartup.java` ✅
+ - Move `pipeline/management/DynamicAgentManagerConfiguration.java` → `config/DynamicAgentManagerConfiguration.java` ✅
+ - Update `application/pipeline/AgentConfigurator` imports from `pipeline.LLMAdapter` → `adapter.outbound.llm.LLMAdapter` ✅
+ - Update `application/pipeline/AgentConfigurator` imports from `pipeline.llmadapter.LLMAdapterFactory` → `adapter.outbound.llm.LLMAdapterFactory` ✅
+ - Update `app/pipeline/AgentBuilder.java` imports from `pipeline.SplittableStrategy` → `application.pipeline.SplittableStrategy` ✅
+ - Update all test file imports ✅
+ - Delete duplicate `pipeline/SplittableStrategy.java` — **note:** `ChangeType` moved it over the canonical version, so the correct Phase 3 version was restored manually
 
  #### Phase 5: Clean up and remove old packages
 

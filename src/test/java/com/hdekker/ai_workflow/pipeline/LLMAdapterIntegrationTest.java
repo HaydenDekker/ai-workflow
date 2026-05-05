@@ -15,10 +15,12 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
+import com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter;
+import com.hdekker.ai_workflow.adapter.outbound.llm.LLMReducerAdapter;
 import com.hdekker.ai_workflow.app.pipeline.AgentBuilder;
+import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.pipeline.llmadapter.LLMReducerAdapter;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
 import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
@@ -160,12 +162,12 @@ public class LLMAdapterIntegrationTest {
 				// The adapter will be selected based on agentType in the definition
 				// We directly create and use the mock ChatClient
 				LLMAdapter adapter = 
-					com.hdekker.ai_workflow.pipeline.llmadapter.LLMAdapterFactory
+					com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapterFactory
 					.create(mockChatClient, testCase.agentDefinition());
 				return adapter.call(pr);
 			})
 			.persist(l -> log.info("Persisting response: {}", l))
-			.split(com.hdekker.ai_workflow.pipeline.SplittableStrategy.noSPLT())
+			.split(SplittableStrategy.noSPLT())
 			.build();
 		
 		// Execute the pipeline and collect results
@@ -275,7 +277,7 @@ Flux<PromptResponse> pipeline = AgentBuilder.instance()
 			.withTrigger(Flux.fromIterable(inputs))
 			.prompting(llmReducerAdapter::call)
 			.persist(l-> log.info("persisting " + l))
-			.split(com.hdekker.ai_workflow.pipeline.SplittableStrategy.noSPLT())
+			.split(SplittableStrategy.noSPLT())
 			.build();
 		
 		List<PromptResponse> reduced = pipeline.collectList()

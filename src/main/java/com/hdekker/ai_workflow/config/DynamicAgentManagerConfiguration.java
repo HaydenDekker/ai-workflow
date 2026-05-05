@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.management;
+package com.hdekker.ai_workflow.config;
 
 import java.io.IOException;
 import java.nio.file.Path;

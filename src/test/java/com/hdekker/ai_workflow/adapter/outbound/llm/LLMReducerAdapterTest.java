@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline.llmadapter;
+package com.hdekker.ai_workflow.adapter.outbound.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
