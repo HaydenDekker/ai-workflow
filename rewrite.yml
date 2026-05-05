@@ -197,3 +197,82 @@ recipeList:
   # Step 8: Import hygiene
   - org.openrewrite.java.RemoveUnusedImports
   - org.openrewrite.java.OrderImports
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.prompts-observability-relocate
+displayName: Relocate prompt/ and observability/ packages to proper hexagonal layers
+description: |
+  Relocate the prompt/ and observability/ packages to their correct hexagonal
+  architecture layers before Phase 5 cleanup.
+
+  Package mapping (source → target):
+    prompt/PathUtility.java                → domain.shared/PathUtility.java          (pure utility, no I/O/framework)
+    prompt/PromptConfiguration.java        → config/PromptConfiguration.java          (Spring @ConfigurationProperties)
+    prompt/SystemPromptConfiguration.java  → config/SystemPromptConfiguration.java    (Spring @Configuration, bootstraps workflows)
+    observability/ObservabilityProperties.java → config/ObservabilityProperties.java  (Spring @ConfigurationProperties)
+
+  Why these locations:
+    - PathUtility is a pure string utility with no I/O or framework deps → domain.shared
+    - PromptConfiguration, SystemPromptConfiguration, ObservabilityProperties are all
+      Spring @ConfigurationProperties or @Configuration beans → config/ (bootstrapping)
+
+  Cross-package references updated:
+    - config/AgentConfiguration.java imports PromptConfiguration, SystemPromptConfiguration
+    - AiWorkflowApplication.java imports ObservabilityProperties (@EnableConfigurationProperties)
+    - adapter/outbound/llm/OpenAiHealthConfiguration.java imports ObservabilityProperties
+    - application/agent/AgentStatusService.java imports ObservabilityProperties
+    - config/SystemPromptConfiguration.java uses PathUtility internally
+    - prompt/PromptConfigurationTest.java references PromptConfiguration, SystemPromptConfiguration
+    - prompt/SystemPromptConfigurationTest.java references SystemPromptConfiguration
+    - usecases/AgentStatusUsecase.java imports ObservabilityProperties (legacy — handled in Phase 5)
+    - usecases/AgentStatusUsecaseTest.java imports ObservabilityProperties (legacy — handled in Phase 5)
+
+  Test files moved (same package mapping as source):
+    prompt/PromptConfigurationTest.java        → config/PromptConfigurationTest.java
+    prompt/SystemPromptConfigurationTest.java  → config/SystemPromptConfigurationTest.java
+
+  Note: Phase 5 cleanup will remove the legacy usecases/AgentStatusUsecase.java
+  references. This recipe updates all active imports in main + test.
+
+recipeList:
+  # ── Step 1: Move prompt/ files to their target packages ─────────
+
+  # PathUtility → domain.shared (pure utility)
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.prompt.PathUtility
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.domain.shared.PathUtility
+
+  # PromptConfiguration → config (Spring config properties)
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.prompt.PromptConfiguration
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.config.PromptConfiguration
+
+  # SystemPromptConfiguration → config (Spring config, bootstraps workflows)
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.prompt.SystemPromptConfiguration
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.config.SystemPromptConfiguration
+
+  # ── Step 2: Move observability/ file to config ──────────────────
+
+  # ObservabilityProperties → config (Spring config properties)
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.observability.ObservabilityProperties
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.config.ObservabilityProperties
+
+  # ── Step 3: Move test classes to config/ package ────────────────
+  # ChangeType for the main classes above updates imports in test files
+  # but does NOT move the test files themselves. Explicitly move them:
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.prompt.PromptConfigurationTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.config.PromptConfigurationTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.prompt.SystemPromptConfigurationTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.config.SystemPromptConfigurationTest
+
+  # ── Step 4: Import hygiene ──────────────────────────────────────
+
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports

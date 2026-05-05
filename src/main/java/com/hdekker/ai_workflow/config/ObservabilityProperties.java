@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.observability;
+package com.hdekker.ai_workflow.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;

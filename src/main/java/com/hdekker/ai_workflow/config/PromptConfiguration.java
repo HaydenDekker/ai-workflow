@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.prompt;
+package com.hdekker.ai_workflow.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

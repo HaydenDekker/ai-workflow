@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.prompt;
+package com.hdekker.ai_workflow.config;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,6 +9,8 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.hdekker.ai_workflow.config.SystemPromptConfiguration;
 
 public class SystemPromptConfigurationTest {
     

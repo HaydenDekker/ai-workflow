@@ -19,7 +19,7 @@ import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
 import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
-import com.hdekker.ai_workflow.observability.ObservabilityProperties;
+import com.hdekker.ai_workflow.config.ObservabilityProperties;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;

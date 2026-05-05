@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.prompt;
+package com.hdekker.ai_workflow.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,6 +10,9 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.hdekker.ai_workflow.config.PromptConfiguration;
+import com.hdekker.ai_workflow.config.SystemPromptConfiguration;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

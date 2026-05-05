@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.adapter.outbound.llm;
 
-import com.hdekker.ai_workflow.observability.ObservabilityProperties;
+import com.hdekker.ai_workflow.config.ObservabilityProperties;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

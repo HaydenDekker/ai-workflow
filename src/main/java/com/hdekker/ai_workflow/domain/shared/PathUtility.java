@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.prompt;
+package com.hdekker.ai_workflow.domain.shared;
 
 public class PathUtility {
 

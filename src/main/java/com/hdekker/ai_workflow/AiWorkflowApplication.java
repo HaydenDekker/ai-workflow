@@ -1,7 +1,7 @@
 package com.hdekker.ai_workflow;
 
 import com.hdekker.ai_workflow.config.DataSourceProperties;
-import com.hdekker.ai_workflow.observability.ObservabilityProperties;
+import com.hdekker.ai_workflow.config.ObservabilityProperties;
 
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.Push;

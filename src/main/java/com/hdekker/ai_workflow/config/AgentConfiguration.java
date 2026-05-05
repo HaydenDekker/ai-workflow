@@ -13,8 +13,6 @@ import com.hdekker.ai_workflow.adapter.outbound.llm.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.prompt.PromptConfiguration;
-import com.hdekker.ai_workflow.prompt.SystemPromptConfiguration;
 import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
