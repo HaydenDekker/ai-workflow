@@ -7,7 +7,11 @@
 
 | Phase | Description | Status | Notes |
 |-------|-------------|--------|-------|
+| 5.1 | Update all imports | ✅ Done | OpenRewrite + manual fixes for remaining imports |
 | 5.2 | Fix Javadoc @link references | ✅ Done | Both `FileSystemScannerAdapterFactory.java` and `NativeFileWatcher.java` already reference new packages |
+| 5.3 | Move test files | ✅ Done | Tests moved from usecases/app to application layer |
+| 5.4 | Delete old source | ✅ Done | 8 old source files deleted |
+| 5.5 | Delete old test | ✅ Done | 11 old test files deleted, 1 orphaned test removed |
 
 ## Current State Summary
 
@@ -309,6 +313,6 @@ src/test/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistryInt
 | 5.1 | Update all imports | OpenRewrite `ChangePackage` | Low | Config + adapter + app layer tests |
 | 5.2 | Fix Javadoc @links | Manual edit | None | No tests needed |
 | 5.3 | Move test files | OpenRewrite `ChangePackage` | Medium | Each moved test class individually |
-| 5.4 | Delete old source | `ChangeType` or rm | Low | Full app layer + adapter compile |
-| 5.5 | Delete old test | `ChangeType` or rm | Low | Each moved test class individually |
+| 5.4 | Delete old source | `ChangeType` or rm | Low | Full app layer + adapter compile | ✅ Done |
+| 5.5 | Delete old test | `ChangeType` or rm | Low | Each moved test class individually | ✅ Done |
 | 5.6 | Final verification | grep + compile | None | Full test suite |
