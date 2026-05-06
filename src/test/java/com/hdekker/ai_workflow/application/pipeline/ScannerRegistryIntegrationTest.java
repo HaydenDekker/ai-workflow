@@ -35,7 +35,7 @@ import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
-import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
 
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;

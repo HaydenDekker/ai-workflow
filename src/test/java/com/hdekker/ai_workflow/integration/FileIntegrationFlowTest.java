@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.integration;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,9 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.test.harness.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.harness.factory.TestConfigurationFactory;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;

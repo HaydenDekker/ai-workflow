@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.integration;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -11,10 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.test.pipeline.harness.EndToEndTestHarness;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.harness.EndToEndTestHarness;
+import com.hdekker.ai_workflow.test.harness.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.harness.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;

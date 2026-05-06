@@ -1,8 +1,8 @@
-package com.hdekker.ai_workflow.test.pipeline.config;
+package com.hdekker.ai_workflow.test.harness.config;
 
-import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.harness.mock.MockConfiguration;
+import com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;

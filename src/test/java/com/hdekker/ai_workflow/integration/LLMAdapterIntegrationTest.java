@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.pipeline;
+package com.hdekker.ai_workflow.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,11 +21,11 @@ import com.hdekker.ai_workflow.application.pipeline.AgentBuilder;
 import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
-import com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.harness.config.ChatClientTestConfig;
+import com.hdekker.ai_workflow.test.harness.factory.AdapterTestCase;
+import com.hdekker.ai_workflow.test.harness.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.harness.mock.MockConfiguration;
+import com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;

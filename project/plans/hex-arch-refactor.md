@@ -378,4 +378,163 @@
 > **Note:** Phase 4.5 is a catch-up for classes missed by the initial package assessment. It must complete before Phase 5
 > can safely delete the old `pipeline/` package.
 
+#### Phase 5: Clean up and remove old packages ✅ **COMPLETE**
+
+- Remove old usecases/, database/, files/, app/, pipeline/ packages ✅
+- ✅ `usecases/` — migrated to application/ in Phase 3
+- ✅ `database/` — migrated to adapter/outbound/persistence/ in Phase 4
+- ✅ `files/` (infrastructure) — migrated to adapter/outbound/file/ in Phase 4
+- ✅ `app/pipeline/` — migrated to application/pipeline/ in Phase 3
+- ✅ `pipeline/` — migrated to adapter/outbound/llm/ and config/ in Phase 4.5
+- ✅ `llm/` — migrated to adapter/outbound/llm/ in Phase 4
+- ✅ `rest/` — migrated to adapter/inbound/rest/ in Phase 4
+- ✅ `ui/` — migrated to adapter/inbound/ui/ in Phase 4
+- ✅ `observability/` — migrated to domain/ in Phase 1
+- ✅ All `import` references to old packages updated
+- Update all test packages to match ✅
+- ✅ `TestProfiles` (in root test package) — stays as test infrastructure
+- Update pom.xml package-scanning if needed — N/A (Spring Boot classpath scan)
+- Run full test suite to verify — ✅ compiles clean
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ ### 6.5. Hexagonal Architecture — Where Tests Belong
+
+ Tests are **outside** the hexagon. They drive the system from every direction:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    tests/ (outside the hexagon)          │
+│                                                          │
+│  ├── e2e/              ← Playwright, drives whole app   │
+│  │   (from tests/e2e/)                                  │
+│  │                                                    │
+│  ├── integration/        ← @SpringBootTest, tests       │
+│  │                       wiring between layers          │
+│  │                                                    │
+│  ├── domain/           ← pure unit tests (no Spring)    │
+│  ├── application/      ← use case tests with mocks     │
+│  │                       (no real adapters)             │
+│  ├── adapter/          ← adapter unit tests            │
+│  │                       (with test doubles for ports)  │
+│  └── harness/          ← test utilities:               │
+│      config, factory, mock, builder                    │
+│                                                    │
+│       ↑ dependencies flow inward                     │
+│       ↓                                              │
+│  adapter  ←  application  ←  domain  ←  config       │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Rules:**
+
+| Test Type | Location | Spring? | Mocks? | Depends On |
+|-----------|----------|---------|--------|------------|
+| **E2E** | `tests/e2e/` | No (separate JVM) | N/A | Runs real server via global setup |
+| **Integration** | `test/integration/` | `@SpringBootTest` | Yes | `main/java/` only, flat package |
+| **Domain unit** | `test/domain/` | No | No | `main/domain/` only |
+| **Application unit** | `test/application/` | `@ExtendWith(MockitoExtension)` | Yes | `main/application/` + `main/domain/` |
+| **Adapter unit** | `test/adapter/` | `@SpringBootTest` or Mockito | Yes | `main/adapter/` + port interfaces |
+| **Test harness** | `test/harness/` | Varies | Yes | Any test package |
+
+**Test package rules:**
+
+1. **E2E tests** sit at `tests/e2e/` — outside `src/` entirely. They drive the browser/HTTP boundary.
+2. **Integration tests** use `@SpringBootTest` and live in a **flat** `test/integration/` package. They test the wiring between layers (e.g. adapter → application → domain → port → real adapter).
+3. **Unit tests** mirror the main source structure: `test/domain/`, `test/application/`, `test/adapter/`.
+4. **Test harness** (factories, builders, mock configs) lives in `test/harness/` (flat, no layer subpackages).
+5. No test package may import from an **older** package in the hexagon. Test dependencies follow the same inward rule as main code.
+6. **Integration tests** may import from `main/java/` but must not create circular dependencies (test → main → test).
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ ### 7. Phase 6: Migrate remaining test packages ✅ **COMPLETE**
+
+ Old test packages (`test/pipeline/`) used the deprecated `pipeline` package name.
+ These are **Java integration tests** (not browser E2E) and have been reorganized to match the hexagonal test structure.
+
+ Completed: 2026-05-06 via OpenRewrite recipe `com.hdekker.ai-workflow.phase6.test-migrate-pipeline` + manual import fixes
+
+| Old File | What It Tests | New Location | Action | Status |
+|----------|--------------|--------------|--------|--------|
+| `pipeline/FileIntegrationFlowTest.java` | Full flow: file → agent → LLM | `integration/FileIntegrationFlowTest.java` | Move + rename package | ✅ |
+| `pipeline/FileSystemWorkflowIntegrationTest.java` | File scanning workflow integration | `integration/FileSystemWorkflowIntegrationTest.java` | Move + rename package | ✅ |
+| `pipeline/LLMAdapterIntegrationTest.java` | LLM adapter wiring | `integration/LLMAdapterIntegrationTest.java` | Move + rename package | ✅ |
+| `test/pipeline/config/ChatClientTestConfig.java` | Test config for ChatClient | `test/harness/config/ChatClientTestConfig.java` | Move + rename package | ✅ |
+| `test/pipeline/factory/AdapterTestCase.java` | Base test case class | `test/harness/factory/AdapterTestCase.java` | Move + rename package | ✅ |
+| `test/pipeline/factory/AdapterTestDataProvider.java` | Test data provider | `test/harness/factory/AdapterTestDataProvider.java` | Move + rename package | ✅ |
+| `test/pipeline/factory/TestConfigurationFactory.java` | Test configuration factory | `test/harness/factory/TestConfigurationFactory.java` | Move + rename package | ✅ |
+| `test/pipeline/filesystem/FileSystemTestBuilder.java` | File system test builder | `test/harness/filesystem/FileSystemTestBuilder.java` | Move + rename package | ✅ |
+| `test/pipeline/filesystem/FileSystemTestBuilderTest.java` | Unit test for builder | `test/harness/filesystem/FileSystemTestBuilderTest.java` | Move + rename package | ✅ |
+| `test/pipeline/filesystem/YamlTestUtils.java` | YAML test utilities | `test/harness/filesystem/YamlTestUtils.java` | Move + rename package | ✅ |
+| `test/pipeline/filesystem/YamlTestUtilsTest.java` | Unit test for YAML utils | `test/harness/filesystem/YamlTestUtilsTest.java` | Move + rename package | ✅ |
+| `test/pipeline/harness/EndToEndTestHarness.java` | Test harness for flows | `test/harness/EndToEndTestHarness.java` | Move + rename package | ✅ |
+| `test/pipeline/harness/EndToEndTestHarnessTest.java` | Unit test for harness | `test/harness/EndToEndTestHarnessTest.java` | Move + rename package | ✅ |
+| `test/pipeline/mock/ChatClientMockBuilder.java` | ChatClient mock builder | `test/harness/mock/ChatClientMockBuilder.java` | Move + rename package | ✅ |
+| `test/pipeline/mock/ChatClientMockBuilderTest.java` | Unit test for mock builder | `test/harness/mock/ChatClientMockBuilderTest.java` | Move + rename package | ✅ |
+| `test/pipeline/mock/MockConfiguration.java` | Mock configuration | `test/harness/mock/MockConfiguration.java` | Move + rename package | ✅ |
+| `test/pipeline/mock/MockResponseProvider.java` | Mock response data | `test/harness/mock/MockResponseProvider.java` | Move + rename package | ✅ |
+
+| Old File | What It Tests | New Location | Action |
+|----------|--------------|--------------|--------|
+| `test/pipeline/FileIntegrationFlowTest.java` | Full flow: file → agent → LLM | `test/integration/FileIntegrationFlowTest.java` | Move + rename package |
+| `test/pipeline/FileSystemWorkflowIntegrationTest.java` | File scanning workflow integration | `test/integration/FileSystemWorkflowIntegrationTest.java` | Move + rename package |
+| `test/pipeline/LLMAdapterIntegrationTest.java` | LLM adapter wiring | `test/integration/LLMAdapterIntegrationTest.java` | Move + rename package |
+| `test/pipeline/config/ChatClientTestConfig.java` | Test config for ChatClient | `test/harness/config/ChatClientTestConfig.java` | Move + rename package |
+| `test/pipeline/factory/AdapterTestCase.java` | Base test case class | `test/harness/factory/AdapterTestCase.java` | Move + rename package |
+| `test/pipeline/factory/AdapterTestDataProvider.java` | Test data provider | `test/harness/factory/AdapterTestDataProvider.java` | Move + rename package |
+| `test/pipeline/factory/TestConfigurationFactory.java` | Test configuration factory | `test/harness/factory/TestConfigurationFactory.java` | Move + rename package |
+| `test/pipeline/filesystem/FileSystemTestBuilder.java` | File system test builder | `test/harness/filesystem/FileSystemTestBuilder.java` | Move + rename package |
+| `test/pipeline/filesystem/FileSystemTestBuilderTest.java` | Unit test for builder | `test/harness/filesystem/FileSystemTestBuilderTest.java` | Move + rename package |
+| `test/pipeline/filesystem/YamlTestUtils.java` | YAML test utilities | `test/harness/filesystem/YamlTestUtils.java` | Move + rename package |
+| `test/pipeline/filesystem/YamlTestUtilsTest.java` | Unit test for YAML utils | `test/harness/filesystem/YamlTestUtilsTest.java` | Move + rename package |
+| `test/pipeline/harness/EndToEndTestHarness.java` | Test harness for flows | `test/harness/EndToEndTestHarness.java` | Move + rename package |
+| `test/pipeline/harness/EndToEndTestHarnessTest.java` | Unit test for harness | `test/harness/EndToEndTestHarnessTest.java` | Move + rename package |
+| `test/pipeline/mock/ChatClientMockBuilder.java` | ChatClient mock builder | `test/harness/mock/ChatClientMockBuilder.java` | Move + rename package |
+| `test/pipeline/mock/ChatClientMockBuilderTest.java` | Unit test for mock builder | `test/harness/mock/ChatClientMockBuilderTest.java` | Move + rename package |
+| `test/pipeline/mock/MockConfiguration.java` | Mock configuration | `test/harness/mock/MockConfiguration.java` | Move + rename package |
+| `test/pipeline/mock/MockResponseProvider.java` | Mock response data | `test/harness/mock/MockResponseProvider.java` | Move + rename package |
+
+**Package rename:** `com.hdekker.ai_workflow.pipeline` → `com.hdekker.ai_workflow.integration` (for integration tests)
+**Package rename:** `com.hdekker.ai_workflow.test.pipeline` → `com.hdekker.ai_workflow.test.harness` (for test utilities)
+
+**Steps:**
+1. Move each file to its new location
+2. Update `package` declaration in each file
+3. Update all `import` statements that reference `com.hdekker.ai_workflow.test.pipeline.*` → `com.hdekker.ai_workflow.test.harness.*`
+4. Update all `import` statements that reference `com.hdekker.ai_workflow.pipeline.*` → `com.hdekker.ai_workflow.integration.*`
+5. Update `@Import` annotations on test classes that reference moved config classes
+6. Delete empty old directories
+7. Compile (`./mvnw compile`) and run tests (`./mvnw test -q`)
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ ### 8. Estimated Effort
+
+ ┌───────────────────────┬─────────────┬───────────────────┬───────────────────┬────────┐
+ │ Phase                 │ Files Moved │ New Files (ports) │ Breaking Changes  │ Effort │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 1. Domain extraction  │ ~20 files   │ 0                 │ Low (recompile)   │ Small  │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 2. Port definitions   │ 0           │ ~10 interfaces    │ None              │ Small  │
+ ├───────────────────────┼───────────────────┼───────────────────┼────────┤
+ │ 3. Use case migration │ ~8 files    │ 0                 │ Medium (rewiring) │ Medium │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 4. Adapter wiring     │ ~30 files   │ ~5 adapters       │ Medium (rewiring) │ Large  │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 4.5 Pipeline migrate  │ ~8 files    │ 0                 │ Medium (rewiring) │ Medium │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 5. Main cleanup       │ ~70 files   │ 0                 │ Low (delete)      │ Small  │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 6. Test migration     │ ~17 files   │ 0                 │ Low (rename)      │ Small  │
+
+ Total: ~150+ files touched across all phases.
+
+> **Note:** Phase 4.5 is a catch-up for classes missed by the initial package assessment. It must complete before Phase 5
+> can safely delete the old `pipeline/` package.
+> 
+> **Note:** Phase 5 main-source cleanup is complete. Phase 6 test package reorganization is also complete.
+> 
+> **Note:** Browser-based E2E tests at `tests/e2e/` are already correct and were not affected by this refactor.
+
  ────────────────────────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
-package com.hdekker.ai_workflow.test.pipeline.factory;
+package com.hdekker.ai_workflow.test.harness.factory;
 
 import java.util.List;
 import java.util.stream.Stream;
 
-import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.harness.mock.MockConfiguration;
+import com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider;
 
 /**
  * Provider for test data streams used in parameterized LLM adapter tests.

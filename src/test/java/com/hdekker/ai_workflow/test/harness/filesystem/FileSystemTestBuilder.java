@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.test.pipeline.filesystem;
+package com.hdekker.ai_workflow.test.harness.filesystem;
 
 import java.io.IOException;
 import java.nio.file.Files;

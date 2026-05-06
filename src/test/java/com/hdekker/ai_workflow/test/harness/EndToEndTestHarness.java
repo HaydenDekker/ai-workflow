@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.test.pipeline.harness;
+package com.hdekker.ai_workflow.test.harness;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +15,7 @@ import com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapterFactory;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.test.pipeline.filesystem.FileSystemTestBuilder;
+import com.hdekker.ai_workflow.test.harness.filesystem.FileSystemTestBuilder;
 
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;

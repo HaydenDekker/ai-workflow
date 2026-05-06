@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.test.pipeline.factory;
+package com.hdekker.ai_workflow.test.harness.factory;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 

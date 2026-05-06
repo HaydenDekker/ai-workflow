@@ -1,10 +1,10 @@
-package com.hdekker.ai_workflow.test.pipeline.factory;
+package com.hdekker.ai_workflow.test.harness.factory;
 
 import java.util.List;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.harness.mock.MockConfiguration;
+import com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider;
 
 /**
  * Test case data structure for parameterized LLM adapter testing.

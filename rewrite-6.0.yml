@@ -1,0 +1,134 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase6.test-migrate-pipeline
+displayName: Phase 6 — Migrate test packages from pipeline/ to integration/ and test.harness/
+description: |
+  Move remaining test files from the deprecated pipeline/ packages to proper
+  hexagonal test locations:
+
+  Integration tests (3 files):
+    pipeline/FileIntegrationFlowTest.java                    → test/integration/FileIntegrationFlowTest.java
+    pipeline/FileSystemWorkflowIntegrationTest.java          → test/integration/FileSystemWorkflowIntegrationTest.java
+    pipeline/LLMAdapterIntegrationTest.java                  → test/integration/LLMAdapterIntegrationTest.java
+
+  Test harness (13 files):
+    test/pipeline/config/ChatClientTestConfig.java           → test/harness/config/ChatClientTestConfig.java
+    test/pipeline/factory/AdapterTestCase.java               → test/harness/factory/AdapterTestCase.java
+    test/pipeline/factory/AdapterTestDataProvider.java       → test/harness/factory/AdapterTestDataProvider.java
+    test/pipeline/factory/TestConfigurationFactory.java      → test/harness/factory/TestConfigurationFactory.java
+    test/pipeline/filesystem/FileSystemTestBuilder.java      → test/harness/filesystem/FileSystemTestBuilder.java
+    test/pipeline/filesystem/FileSystemTestBuilderTest.java  → test/harness/filesystem/FileSystemTestBuilderTest.java
+    test/pipeline/filesystem/YamlTestUtils.java              → test/harness/filesystem/YamlTestUtils.java
+    test/pipeline/filesystem/YamlTestUtilsTest.java          → test/harness/filesystem/YamlTestUtilsTest.java
+    test/pipeline/harness/EndToEndTestHarness.java           → test/harness/EndToEndTestHarness.java
+    test/pipeline/harness/EndToEndTestHarnessTest.java       → test/harness/EndToEndTestHarnessTest.java
+    test/pipeline/mock/ChatClientMockBuilder.java            → test/harness/mock/ChatClientMockBuilder.java
+    test/pipeline/mock/ChatClientMockBuilderTest.java        → test/harness/mock/ChatClientMockBuilderTest.java
+    test/pipeline/mock/MockConfiguration.java                → test/harness/mock/MockConfiguration.java
+    test/pipeline/mock/MockResponseProvider.java             → test/harness/mock/MockResponseProvider.java
+
+  Package renames:
+    com.hdekker.ai_workflow.pipeline           → com.hdekker.ai_workflow.integration
+    com.hdekker.ai_workflow.test.pipeline.*    → com.hdekker.ai_workflow.test.harness.*
+
+  All cross-package import references are updated automatically.
+
+recipeList:
+  # ═══════════════════════════════════════════════════════════
+  # PART 1: Integration tests (pipeline/ → test/integration/)
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.FileIntegrationFlowTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.integration.FileIntegrationFlowTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.FileSystemWorkflowIntegrationTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.integration.FileSystemWorkflowIntegrationTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.pipeline.LLMAdapterIntegrationTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.integration.LLMAdapterIntegrationTest
+
+  # ═══════════════════════════════════════════════════════════
+  # PART 2: Test harness — config subpackage
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.config.ChatClientTestConfig
+
+  # ═══════════════════════════════════════════════════════════
+  # PART 3: Test harness — factory subpackage
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestCase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.factory.AdapterTestCase
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.factory.AdapterTestDataProvider
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.factory.AdapterTestDataProvider
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.factory.TestConfigurationFactory
+
+  # ═══════════════════════════════════════════════════════════
+  # PART 4: Test harness — filesystem subpackage
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.filesystem.FileSystemTestBuilder
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.filesystem.FileSystemTestBuilder
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.filesystem.FileSystemTestBuilderTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.filesystem.FileSystemTestBuilderTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.filesystem.YamlTestUtils
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.filesystem.YamlTestUtils
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.filesystem.YamlTestUtilsTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.filesystem.YamlTestUtilsTest
+
+  # ═══════════════════════════════════════════════════════════
+  # PART 5: Test harness — harness root
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.harness.EndToEndTestHarness
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.EndToEndTestHarness
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.harness.EndToEndTestHarnessTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.EndToEndTestHarnessTest
+
+  # ═══════════════════════════════════════════════════════════
+  # PART 6: Test harness — mock subpackage
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilderTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilderTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.mock.MockConfiguration
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.mock.MockConfiguration
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider
+
+  # ═══════════════════════════════════════════════════════════
+  # PART 7: Import hygiene
+  # ═══════════════════════════════════════════════════════════
+
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports

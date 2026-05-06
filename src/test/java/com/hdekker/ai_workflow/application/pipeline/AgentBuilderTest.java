@@ -13,7 +13,7 @@ import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
 
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;

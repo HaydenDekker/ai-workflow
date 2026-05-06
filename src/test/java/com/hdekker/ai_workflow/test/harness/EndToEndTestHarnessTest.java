@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.test.pipeline.harness;
+package com.hdekker.ai_workflow.test.harness;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,9 +15,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.test.pipeline.mock.MockResponseProvider;
+import com.hdekker.ai_workflow.test.harness.factory.TestConfigurationFactory;
+import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
+import com.hdekker.ai_workflow.test.harness.mock.MockResponseProvider;
 
 import org.springframework.ai.chat.client.ChatClient;
 
