@@ -11,7 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 
 import reactor.core.publisher.Mono;
@@ -31,8 +31,8 @@ public class ScannerServiceTest {
     public void givenEmptyRegistry_ExpectEmptyList() {
         when(registry.listAll()).thenReturn(List.of());
 
-        Mono<List<ScannerInfo>> result = service.getAllScannerInfos();
-        List<ScannerInfo> scanners = result.block();
+        Mono<List<ScannerInfoDTO>> result = service.getAllScannerInfos();
+        List<ScannerInfoDTO> scanners = result.block();
 
         assertThat(scanners).isEmpty();
     }
@@ -49,8 +49,8 @@ public class ScannerServiceTest {
 
         when(registry.listAll()).thenReturn(List.of(domainInfo1, domainInfo2));
 
-        Mono<List<ScannerInfo>> result = service.getAllScannerInfos();
-        List<ScannerInfo> scanners = result.block();
+        Mono<List<ScannerInfoDTO>> result = service.getAllScannerInfos();
+        List<ScannerInfoDTO> scanners = result.block();
 
         assertThat(scanners).hasSize(2);
         assertThat(scanners.get(0).agentId()).isEqualTo("agent-1");
@@ -64,8 +64,8 @@ public class ScannerServiceTest {
     public void givenExceptionInRegistry_ExpectEmptyList() {
         when(registry.listAll()).thenThrow(new RuntimeException("Database error"));
 
-        Mono<List<ScannerInfo>> result = service.getAllScannerInfos();
-        List<ScannerInfo> scanners = result.block();
+        Mono<List<ScannerInfoDTO>> result = service.getAllScannerInfos();
+        List<ScannerInfoDTO> scanners = result.block();
 
         assertThat(scanners).isEmpty();
     }

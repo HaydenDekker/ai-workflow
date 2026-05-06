@@ -19,7 +19,7 @@ import reactor.core.publisher.Sinks;
  * This class is a pure infrastructure adapter — it owns the {@link WatchService} loop
  * and emits {@link RawFileEvent} (path + content) for CREATE, MODIFY, and initial scan.
  * No business rules (hashing, comparison, metadata) are applied here; those belong
- * to {@link com.hdekker.ai_workflow.usecases.Scanner}.
+ * to {@link com.hdekker.ai_workflow.application.scanner.ScannerService}.
  * <p>
  * Lifecycle is managed externally: call {@link #start()} to begin watching
  * and {@link #stop()} to clean up resources.
@@ -260,7 +260,7 @@ public class NativeFileWatcher {
     /**
      * Get the flux of raw file events.
      * <p>
-     * Consumers (e.g., {@link com.hdekker.ai_workflow.usecases.Scanner}) subscribe
+     * Consumers (e.g., {@link com.hdekker.ai_workflow.application.scanner.ScannerService}) subscribe
      * to this flux and apply business logic (hashing, comparison, history creation).
      */
     public Flux<RawFileEvent> flux() {

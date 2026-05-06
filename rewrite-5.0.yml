@@ -1,0 +1,263 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase5.import-updates
+displayName: Phase 5.1 — Update all imports from old to new packages
+description: |
+  Update all imports across main and test sources from old usecases/app packages
+  to the new application layer. This must complete before old packages can be deleted.
+
+  Import mapping:
+    usecases.AgentLifecycleUseCase        → application.agent.AgentLifecycleService
+    usecases.AgentStatusUsecase           → application.agent.AgentStatusService
+    usecases.Scanner                      → application.scanner.ScannerService
+    usecases.ScannerObserverUseCase       → application.scanner.ScannerObserverService
+    usecases.FileCounter                  → application.file.port.FileCounterPort
+    app.pipeline.AgentBuilder             → application.pipeline.AgentBuilder
+    app.pipeline.AgentConfigurator        → application.pipeline.AgentConfigurator
+    app.pipeline.management.ScannerRegistry → application.pipeline.ScannerRegistry
+
+  Files affected (main):
+    config/AgentConfiguration.java
+    config/AgentRestoreOnStartup.java
+    adapter/inbound/ui/component/AdapterStatusComponent.java
+    adapter/inbound/ui/view/ObservabilityView.java
+    adapter/inbound/ui/view/ScannerListView.java
+
+  Files affected (test):
+    adapter/outbound/file/FileSystemSimplePollerFluxAdapterTest.java
+    pipeline/FileIntegrationFlowTest.java
+    pipeline/LLMAdapterIntegrationTest.java
+    app/pipeline/AgentPipelineTest.java
+    app/pipeline/management/ScannerRegistryIntegrationTest.java
+    app/pipeline/management/ScannerRegistryTest.java
+    usecases/AgentLifecycleUseCaseTest.java
+    usecases/AgentLifecycleUseCasePersistenceTest.java
+    usecases/AgentLifecycleUseCaseScannerRestoreTest.java
+    usecases/AgentStatusUsecaseTest.java
+    usecases/ScannerTest.java
+    usecases/ScannerObserverUseCaseTest.java
+
+  Also updates Javadoc @link references in:
+    adapter/outbound/file/FileSystemScannerAdapterFactory.java
+    adapter/outbound/file/NativeFileWatcher.java
+
+  Note: After this step, the old packages still exist as duplicates but are no longer
+  referenced by any other file. They can be safely deleted in Phase 5.4.
+
+recipeList:
+  # ── Step 1: Update imports from usecases/* → application.agent/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.agent.AgentLifecycleService
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.AgentStatusUsecase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.agent.AgentStatusService
+
+  # ── Step 2: Update imports from usecases/* → application.scanner/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.Scanner
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.scanner.ScannerService
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.ScannerObserverUseCase
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.scanner.ScannerObserverService
+
+  # ── Step 3: Update imports from usecases/* → application.file.port/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.FileCounter
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.file.port.FileCounterPort
+
+  # ── Step 4: Update imports from app.pipeline/* → application.pipeline/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.AgentBuilder
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.AgentBuilder
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.AgentConfigurator
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.AgentConfigurator
+
+  # ── Step 5: Update imports from app.pipeline.management/* → application.pipeline/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.ScannerRegistry
+
+  # ── Step 6: Update Javadoc @link string literals ──
+  # ChangeType updates imports and package declarations but NOT Javadoc @link literals.
+  # These must be fixed separately in Phase 5.2.
+
+  # ── Step 7: Import hygiene ──────────────────────────────────────
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase5.test-moves
+displayName: Phase 5.3 — Move test files to new package paths
+description: |
+  Move test classes from old usecases/app package paths to match the new
+  application layer structure. Each test class moves to the package of its
+  corresponding production class.
+
+  Test file mapping:
+    test/usecases/AgentLifecycleUseCaseTest.java
+      → test/application/agent/AgentLifecycleServiceTest.java
+    test/usecases/AgentLifecycleUseCasePersistenceTest.java
+      → test/application/agent/AgentLifecycleServicePersistenceTest.java
+    test/usecases/AgentLifecycleUseCaseScannerRestoreTest.java
+      → test/application/agent/AgentLifecycleServiceScannerRestoreTest.java
+    test/usecases/AgentStatusUsecaseTest.java
+      → test/application/agent/AgentStatusServiceTest.java
+    test/usecases/ScannerTest.java
+      → test/application/scanner/ScannerServiceTest.java
+    test/usecases/ScannerObserverUseCaseTest.java
+      → test/application/scanner/ScannerObserverServiceTest.java
+    test/app/pipeline/AgentBuilderTest.java
+      → test/application/pipeline/AgentBuilderTest.java
+    test/app/pipeline/AgentConfiguratorTest.java
+      → test/application/pipeline/AgentConfiguratorTest.java
+    test/app/pipeline/AgentPipelineTest.java
+      → test/application/pipeline/AgentPipelineTest.java
+    test/app/pipeline/management/ScannerRegistryTest.java
+      → test/application/pipeline/ScannerRegistryTest.java
+    test/app/pipeline/management/ScannerRegistryIntegrationTest.java
+      → test/application/pipeline/ScannerRegistryIntegrationTest.java
+
+  Also updates:
+    - package declarations in each test file
+    - any internal imports referencing old test packages
+
+recipeList:
+  # ── Step 1: Move usecases/* tests → application.agent/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.AgentLifecycleUseCaseTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.agent.AgentLifecycleServiceTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.AgentLifecycleUseCasePersistenceTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.agent.AgentLifecycleServicePersistenceTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.AgentLifecycleUseCaseScannerRestoreTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.agent.AgentLifecycleServiceScannerRestoreTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.AgentStatusUsecaseTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.agent.AgentStatusServiceTest
+
+  # ── Step 2: Move usecases/* tests → application.scanner/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.ScannerTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.scanner.ScannerServiceTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.usecases.ScannerObserverUseCaseTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.scanner.ScannerObserverServiceTest
+
+  # ── Step 3: Move app/pipeline/* tests → application.pipeline/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.AgentBuilderTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.AgentBuilderTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.AgentConfiguratorTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.AgentConfiguratorTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.AgentPipelineTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.AgentPipelineTest
+
+  # ── Step 4: Move app/pipeline/management/* tests → application.pipeline/* ──
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistryTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.ScannerRegistryTest
+
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistryIntegrationTest
+      newFullyQualifiedTypeName: com.hdekker.ai_workflow.application.pipeline.ScannerRegistryIntegrationTest
+
+  # ── Step 5: Import hygiene ──────────────────────────────────────
+  - org.openrewrite.java.RemoveUnusedImports
+  - org.openrewrite.java.OrderImports
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase5.delete-old-sources
+displayName: Phase 5.4 — Delete old source packages
+description: |
+  Delete the duplicate old source files that are no longer referenced after
+  Phase 5.1 import updates. The app/ and usecases/ directories will be empty
+  after deletion and can be removed.
+
+  Files deleted:
+    src/main/java/com/hdekker/ai_workflow/app/pipeline/AgentBuilder.java
+    src/main/java/com/hdekker/ai_workflow/app/pipeline/AgentConfigurator.java
+    src/main/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistry.java
+    src/main/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCase.java
+    src/main/java/com/hdekker/ai_workflow/usecases/AgentStatusUsecase.java
+    src/main/java/com/hdekker/ai_workflow/usecases/FileCounter.java
+    src/main/java/com/hdekker/ai_workflow/usecases/Scanner.java
+    src/main/java/com/hdekker/ai_workflow/usecases/ScannerObserverUseCase.java
+
+recipeList:
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/app/pipeline/AgentBuilder.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/app/pipeline/AgentConfigurator.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistry.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCase.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/usecases/AgentStatusUsecase.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/usecases/FileCounter.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/usecases/Scanner.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/main/java/com/hdekker/ai_workflow/usecases/ScannerObserverUseCase.java"
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.hdekker.ai-workflow.phase5.delete-old-tests
+displayName: Phase 5.5 — Delete old test packages
+description: |
+  Delete the duplicate old test files that have been moved to new package
+  paths in Phase 5.3.
+
+  Files deleted:
+    src/test/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCaseTest.java
+    src/test/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCasePersistenceTest.java
+    src/test/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCaseScannerRestoreTest.java
+    src/test/java/com/hdekker/ai_workflow/usecases/AgentStatusUsecaseTest.java
+    src/test/java/com/hdekker/ai_workflow/usecases/ScannerTest.java
+    src/test/java/com/hdekker/ai_workflow/usecases/ScannerObserverUseCaseTest.java
+    src/test/java/com/hdekker/ai_workflow/app/pipeline/AgentBuilderTest.java
+    src/test/java/com/hdekker/ai_workflow/app/pipeline/AgentConfiguratorTest.java
+    src/test/java/com/hdekker/ai_workflow/app/pipeline/AgentPipelineTest.java
+    src/test/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistryTest.java
+    src/test/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistryIntegrationTest.java
+
+recipeList:
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCaseTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCasePersistenceTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/usecases/AgentLifecycleUseCaseScannerRestoreTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/usecases/AgentStatusUsecaseTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/usecases/ScannerTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/usecases/ScannerObserverUseCaseTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/app/pipeline/AgentBuilderTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/app/pipeline/AgentConfiguratorTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/app/pipeline/AgentPipelineTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistryTest.java"
+  - org.openrewrite.java.DeleteFile:
+      filePattern: "src/test/java/com/hdekker/ai_workflow/app/pipeline/management/ScannerRegistryIntegrationTest.java"

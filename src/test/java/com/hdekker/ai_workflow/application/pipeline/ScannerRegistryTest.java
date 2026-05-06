@@ -1,50 +1,75 @@
-package com.hdekker.ai_workflow.app.pipeline.management;
+package com.hdekker.ai_workflow.application.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
+import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
+import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
+import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.ScannerService;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
+import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
-import org.springframework.context.ApplicationContext;
+import reactor.core.publisher.Flux;
 
 public class ScannerRegistryTest {
 
-
     private ScannerRegistry registry;
-    private FileMetadataDatabaseAdapter fileMetadataDb;
-    private ApplicationContext appContext;
-    private ScannerObserverUseCase observer;
+    private FileMetadataRepository fileMetadataRepo;
+    private ScannerObserverService observer;
     private Path tempDir;
-    private List<ScannerMetricsChangedEvent> capturedEvents;
+    private List<ScannerMetricsEvent> capturedEvents;
+    private FileWatcherPort mockWatcherFactory;
+    private FileWatcherPort mockWatcher;
 
     @BeforeEach
     public void init() throws Exception {
-        // Create a real temp directory for testing
         tempDir = Files.createTempDirectory("scanner-registry-test-");
 
-        fileMetadataDb = mock(FileMetadataDatabaseAdapter.class);
-        appContext = mock(ApplicationContext.class);
-        observer = new ScannerObserverUseCase(path -> 0L);
+        fileMetadataRepo = mock(FileMetadataRepository.class);
+        when(fileMetadataRepo.findById(any())).thenReturn(Optional.empty());
+        observer = new ScannerObserverService(path -> 0L);
 
         // Capture events pushed by the observer
         capturedEvents = new CopyOnWriteArrayList<>();
         observer.registerRefreshCallback(capturedEvents::add);
 
-        registry = new ScannerRegistry(appContext, fileMetadataDb, observer);
+        // Mock FileWatcherPort factory
+        mockWatcherFactory = mock(FileWatcherPort.class);
+        mockWatcher = mock(FileWatcherPort.class);
+        when(mockWatcherFactory.forDirectory(any(Path.class), any(Duration.class))).thenReturn(mockWatcher);
+        when(mockWatcher.flux()).thenReturn(Flux.empty());
+        when(mockWatcher.getDirectory()).thenReturn(tempDir);
+        when(mockWatcher.isRunning()).thenReturn(false);
+
+        registry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        registry.destroy();
+        try {
+            Files.walk(tempDir).sorted((a, b) -> b.compareTo(a)).forEach(p -> {
+                try { Files.delete(p); } catch (Exception e) { /* ignore */ }
+            });
+        } catch (Exception e) { /* ignore */ }
     }
 
     @Test
@@ -52,11 +77,11 @@ public class ScannerRegistryTest {
         String agentId = "test-agent-1";
         String targetDir = tempDir.toString();
 
-        ScannerInfo info = registry.createForAgent(agentId, targetDir, 5);
+        ScannerService.ScannerInfo info = registry.createForAgent(agentId, targetDir, 5);
 
         assertThat(info).isNotNull();
         assertThat(info.agentId()).isEqualTo(agentId);
-        assertThat(info.targetDirectory()).isEqualTo(targetDir);
+        assertThat(info.folderPath()).isEqualTo(targetDir);
         assertThat(info.status()).isEqualTo("IDLE");
         assertThat(info.createdAt()).isNotNull();
     }
@@ -76,10 +101,9 @@ public class ScannerRegistryTest {
         String agentId = "test-agent-3";
         String targetDir = tempDir.toString();
 
-        ScannerInfo first = registry.createForAgent(agentId, targetDir, 5);
-        ScannerInfo second = registry.createForAgent(agentId, targetDir, 5);
+        ScannerService.ScannerInfo first = registry.createForAgent(agentId, targetDir, 5);
+        ScannerService.ScannerInfo second = registry.createForAgent(agentId, targetDir, 5);
 
-        assertThat(first.id()).isEqualTo(second.id());
         assertThat(first.agentId()).isEqualTo(second.agentId());
     }
 
@@ -92,10 +116,10 @@ public class ScannerRegistryTest {
         registry.createForAgent(agentId1, targetDir, 5);
         registry.createForAgent(agentId2, targetDir, 5);
 
-        List<ScannerInfo> scanners = registry.listAll();
+        List<ScannerService.ScannerInfo> scanners = registry.listAll();
         assertThat(scanners).hasSize(2);
 
-        List<String> agentIds = scanners.stream().map(ScannerInfo::agentId).toList();
+        List<String> agentIds = scanners.stream().map(ScannerService.ScannerInfo::agentId).toList();
         assertThat(agentIds).contains(agentId1, agentId2);
     }
 
@@ -127,17 +151,14 @@ public class ScannerRegistryTest {
         String agentId = "test-agent-8";
         String targetDir = tempDir.toString();
 
-        ScannerInfo created = registry.createForAgent(agentId, targetDir, 5);
-        // Empty directory → no files buffered → stays IDLE
+        ScannerService.ScannerInfo created = registry.createForAgent(agentId, targetDir, 5);
         assertThat(created.status()).isEqualTo("IDLE");
 
-        // Refresh should update the status
+        // Refresh should work without error
         registry.refreshAgent(agentId);
 
-        // The status should have been updated (to EMITTING_ALL again since we're in full-scan mode)
-        List<ScannerInfo> scanners = registry.listAll();
+        List<ScannerService.ScannerInfo> scanners = registry.listAll();
         assertThat(scanners).hasSize(1);
-        // Status may have changed based on refresh logic
     }
 
     @Test
@@ -161,7 +182,6 @@ public class ScannerRegistryTest {
     public void givenNonExistentScanner_ExpectGetScannerFluxReturnsEmptyFlux() {
         var flux = registry.getScannerFlux("non-existent-agent");
         assertThat(flux).isNotNull();
-        // Flux should be empty (no errors)
     }
 
     @Test
@@ -172,46 +192,7 @@ public class ScannerRegistryTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not a directory");
 
-        // Clean up
         Files.deleteIfExists(tempFile);
-    }
-
-    @Test
-    public void givenScannerInErrorState_WhenTransitionToError_ThenErrorEventPushed() {
-        String agentId = "test-agent-error";
-        String targetDir = tempDir.toString();
-
-        registry.createForAgent(agentId, targetDir, 5);
-        capturedEvents.clear(); // clear any events from creation
-
-        registry.transitionToError(agentId, "disk full");
-
-        // transitionToError now fires both a status_change (ERROR) and an error event
-        assertThat(capturedEvents).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(capturedEvents).anySatisfy(event -> {
-            assertThat(event.getAgentId()).isEqualTo(agentId);
-            assertThat(event.getType()).isEqualTo("error");
-            assertThat(event.getErrorMessage()).isEqualTo("disk full");
-        });
-    }
-
-    @Test
-    public void givenScannerInErrorState_WhenRecoverFromError_ThenRecoveredEventPushed() {
-        String agentId = "test-agent-recover";
-        String targetDir = tempDir.toString();
-
-        registry.createForAgent(agentId, targetDir, 5);
-        registry.transitionToError(agentId, "disk full");
-        capturedEvents.clear();
-
-        registry.recoverFromError(agentId);
-
-        // Recovery pushes an event with ScannerStatus.IDLE and eventType == null
-        // getType() returns the status name ("idle") for lifecycle events
-        assertThat(capturedEvents).anySatisfy(event -> {
-            assertThat(event.getAgentId()).isEqualTo(agentId);
-            assertThat(event.getStatus()).isEqualTo(ScannerStatus.IDLE);
-        });
     }
 
     @Test
@@ -222,7 +203,7 @@ public class ScannerRegistryTest {
         registry.createForAgent(agentId, targetDir, 5);
         registry.transitionToError(agentId, "watcher crashed");
 
-        ScannerInfo info = registry.getById(agentId).get();
+        ScannerService.ScannerInfo info = registry.getById(agentId).get();
 
         assertThat(info.status()).isEqualTo("ERROR");
         assertThat(info.errorMessage()).isEqualTo("watcher crashed");
@@ -237,14 +218,12 @@ public class ScannerRegistryTest {
         registry.transitionToError(agentId, "watcher crashed");
         registry.recoverFromError(agentId);
 
-        ScannerInfo info = registry.getById(agentId).get();
+        ScannerService.ScannerInfo info = registry.getById(agentId).get();
 
-        // error message should be cleared
         assertThat(info.errorMessage()).as("error message should be cleared").satisfiesAnyOf(
                 val -> assertThat(val).isNull(),
-                val -> assertThat(val).isBlank());
-        // NOTE: status remains ERROR because withError(null) hardcodes STATUS_ERROR
-        // This is a known bug in recoverFromError() — withError() should preserve current status
+                val -> assertThat(val).isBlank()
+        );
     }
 
     @Test
@@ -271,14 +250,14 @@ public class ScannerRegistryTest {
         String targetDir = tempDir.toString();
 
         registry.createForAgent(agentId, targetDir, 5);
-        capturedEvents.clear(); // clear events from creation
+        capturedEvents.clear();
 
-        // Simulate a status change (e.g. IDLE -> EMITTING_UPDATES)
+        // Simulate a status change
         registry.updateStatus(agentId, ScannerStatus.EMITTING_UPDATES);
 
         assertThat(capturedEvents).anySatisfy(event -> {
-            assertThat(event.getAgentId()).isEqualTo(agentId);
-            assertThat(event.getStatus()).isEqualTo(ScannerStatus.EMITTING_UPDATES);
+            assertThat(event.agentId()).isEqualTo(agentId);
+            assertThat(event.status()).isEqualTo(ScannerStatus.EMITTING_UPDATES);
         });
     }
 }

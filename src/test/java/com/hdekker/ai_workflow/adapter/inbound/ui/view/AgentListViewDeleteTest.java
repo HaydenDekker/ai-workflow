@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
@@ -101,7 +101,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         // Act: Navigate and verify 2 agents
         view = navigate(AgentListView.class);
-        Grid<AgentInfo> grid = view.grid;
+        Grid<AgentInfoDTO> grid = view.grid;
         assertEquals(2, grid.getGenericDataView().getItems().toList().size(),
                 "Grid should show 2 agents");
 
@@ -113,7 +113,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         roundTrip();
 
         // Verify only 1 agent remains
-        List<AgentInfo> remaining = grid.getGenericDataView().getItems().toList();
+        List<AgentInfoDTO> remaining = grid.getGenericDataView().getItems().toList();
         assertEquals(1, remaining.size(), "Grid should show 1 agent after delete");
         assertEquals(agent2.id(), remaining.get(0).id(),
                 "Remaining agent should be the one that wasn't deleted (agents=" + TEST_AGENTS.size() + ")");
@@ -138,12 +138,12 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         // Act: Navigate and verify agent is in grid
         view = navigate(AgentListView.class);
-        Grid<AgentInfo> grid = view.grid;
+        Grid<AgentInfoDTO> grid = view.grid;
         assertEquals(1, grid.getGenericDataView().getItems().toList().size(),
                 "Grid should show 1 agent initially");
 
         // Act: Open detail dialog with the agent (convert domain to DTO)
-        AgentInfo dtoAgent = new AgentInfo(
+        AgentInfoDTO dtoAgent = new AgentInfoDTO(
                 agent.id(),
                 agent.definition(),
                 agent.createdAt(),
@@ -185,7 +185,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         int testAgentCount = TEST_AGENTS.size();
 
         // Verify the agent is removed from the grid
-        List<AgentInfo> remainingItems = grid.getGenericDataView().getItems().toList();
+        List<AgentInfoDTO> remainingItems = grid.getGenericDataView().getItems().toList();
         assertEquals(0, remainingItems.size(),
                 "Grid should be empty after deleting the agent (test agents=" + testAgentCount + ")");
     }
@@ -200,7 +200,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         // Act: Navigate
         view = navigate(AgentListView.class);
-        Grid<AgentInfo> grid = view.grid;
+        Grid<AgentInfoDTO> grid = view.grid;
 
         // Assert: Grid is empty
         assertEquals(0, grid.getGenericDataView().getItems().toList().size(),

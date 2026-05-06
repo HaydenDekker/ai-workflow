@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
@@ -65,8 +65,8 @@ public class AgentDetailDialog extends Dialog {
     private final Button deleteButton;
 
     private final AgentInfoService agentInfoService;
-    private final AgentInfo existingAgent;
-    private final Consumer<AgentInfo> onSave;
+    private final AgentInfoDTO existingAgent;
+    private final Consumer<AgentInfoDTO> onSave;
     private final Consumer<String> onDelete;
 
     /**
@@ -78,8 +78,8 @@ public class AgentDetailDialog extends Dialog {
      * @param onDelete         callback invoked with the deleted agent ID on successful delete
      */
     public AgentDetailDialog(AgentInfoService agentInfoService,
-                             AgentInfo agentInfo,
-                             Consumer<AgentInfo> onSave,
+                             AgentInfoDTO agentInfo,
+                             Consumer<AgentInfoDTO> onSave,
                              Consumer<String> onDelete) {
         this.agentInfoService = agentInfoService;
         this.existingAgent = agentInfo;

@@ -3,7 +3,7 @@ package com.hdekker.ai_workflow.adapter.inbound.rest.dto;
 /**
  * Status states for LLM endpoints.
  */
-public enum AdapterStatus {
+public enum AdapterStatusDTO {
     UNKNOWN,     // No data yet (initial state)
     CONNECTING,  // Currently checking (transient state)
     UP,          // Healthy - green indicator

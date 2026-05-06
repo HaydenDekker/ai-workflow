@@ -11,9 +11,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+import com.hdekker.ai_workflow.application.agent.AgentStatusService;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort.LLMStatus;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort.LLMStatus.HealthStatus;
 
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.html.Div;
@@ -46,7 +46,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
     private static final int DEFAULT_REFRESH_INTERVAL_SECONDS = 30;
 
     private LLMStatus status;
-    private final AgentStatusUsecase service;
+    private final AgentStatusService service;
     private final int refreshIntervalSeconds;
 
     // UI Components
@@ -68,7 +68,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
      * @param status current status of the LLM endpoint
      * @param service service for triggering health checks
      */
-    public AdapterStatusComponent(LLMStatus status, AgentStatusUsecase service) {
+    public AdapterStatusComponent(LLMStatus status, AgentStatusService service) {
         this(status, service, DEFAULT_REFRESH_INTERVAL_SECONDS);
     }
 
@@ -79,7 +79,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
      * @param service service for triggering health checks
      * @param refreshIntervalSeconds interval for auto-refresh (0 to disable)
      */
-    public AdapterStatusComponent(LLMStatus status, AgentStatusUsecase service,
+    public AdapterStatusComponent(LLMStatus status, AgentStatusService service,
                                   int refreshIntervalSeconds) {
         this.status = status;
         this.service = service;
@@ -207,7 +207,7 @@ public class AdapterStatusComponent extends HorizontalLayout {
         }
 
         // Model count
-        if (status.modelCount() != null && status.modelCount() > 0) {
+        if (status.modelCount() > 0) {
             modelCountField.setValue(status.modelCount() + " model(s) available");
             modelCountField.setVisible(true);
         } else {
@@ -238,11 +238,11 @@ public class AdapterStatusComponent extends HorizontalLayout {
         applyStatusStyles(status.status());
     }
 
-    private void applyStatusStyles(AdapterStatus adapterStatus) {
+    private void applyStatusStyles(HealthStatus healthStatus) {
         // Reset classes on the badge
         statusBadge.getElement().getClassList().clear();
 
-        switch (adapterStatus) {
+        switch (healthStatus) {
             case UP:
                 statusIcon.setIcon(VaadinIcon.CHECK_CIRCLE_O);
                 statusIcon.setColor("var(--lumo-success-color)");
@@ -262,13 +262,6 @@ public class AdapterStatusComponent extends HorizontalLayout {
                 statusIcon.setColor("var(--lumo-error-color)");
                 statusBadge.setText("DOWN");
                 statusBadge.addClassName("status-badge-down");
-                break;
-
-            case CONNECTING:
-                statusIcon.setIcon(VaadinIcon.SPINNER);
-                statusIcon.setColor("var(--lumo-primary-color)");
-                statusBadge.setText("CHECKING");
-                statusBadge.addClassName("status-badge-connecting");
                 break;
 
             default:

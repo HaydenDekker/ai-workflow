@@ -7,10 +7,10 @@ import java.util.List;
  * DTO for LLM endpoint status.
  * Returned by REST API and used by UI components.
  */
-public record LLMStatus(
+public record LLMStatusDTO(
     String endpoint,
     String configuredModel,
-    AdapterStatus status,
+    AdapterStatusDTO status,
     LocalDateTime lastChecked,
     Integer modelCount,
     List<String> modelNames,

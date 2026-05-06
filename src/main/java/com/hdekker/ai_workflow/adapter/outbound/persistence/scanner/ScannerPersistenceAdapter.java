@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 
 import org.springframework.stereotype.Service;
 
@@ -47,7 +47,7 @@ public class ScannerPersistenceAdapter {
     /**
      * Save a scanner entity with full details.
      */
-    public ScannerEntity save(ScannerInfo info) {
+    public ScannerEntity save(ScannerInfoDTO info) {
         ScannerEntity entity = scannerRepository.findById(info.id()).orElseGet(ScannerEntity::new);
         entity.setId(info.id());
         entity.setTargetDirectory(info.targetDirectory());

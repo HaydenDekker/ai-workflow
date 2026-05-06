@@ -1,13 +1,17 @@
-package com.hdekker.ai_workflow.app.pipeline.management;
+package com.hdekker.ai_workflow.application.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 
 import org.junit.jupiter.api.AfterEach;
@@ -17,31 +21,27 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.adapter.outbound.file.FileWriter;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.filemetadata.FileMetadataDatabaseAdapter;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
+import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
+import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
+import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
+import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
+import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
+import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
+import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
 
-import org.springframework.context.ApplicationContext;
+import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
 /**
  * Integration tests for the full agent-scanner lifecycle.
- * 
- * Tests verify:
- * 1. Create agent → scanner created
- * 2. Refresh agent → scanner resets to full-scan mode
- * 3. Delete agent → scanner destroyed
- * 4. Scanner flux is properly connected to the agent pipeline
- * 5. Multiple agents each get isolated scanners
- * 
- * These tests use real Spring Integration infrastructure (not mocks)
- * for the scanner adapter, but mock the ChatClient and FileWriter.
  */
 public class ScannerRegistryIntegrationTest {
 
@@ -54,48 +54,63 @@ public class ScannerRegistryIntegrationTest {
     private Path outputDir;
 
     private ScannerRegistry scannerRegistry;
-    private AgentLifecycleUseCase agentManager;
-    private FileMetadataDatabaseAdapter fileMetadataDb;
-    private ApplicationContext appContext;
-    private ScannerObserverUseCase observer;
+    private AgentLifecycleService agentManager;
+    private FileMetadataRepository fileMetadataRepo;
+    private FileWatcherPort mockWatcherFactory;
+    private FileWatcherPort mockWatcher;
+    private ScannerObserverService observer;
 
     @BeforeEach
     void setUp() throws Exception {
-        // Create subdirectories for input and output
         inputDir = Files.createDirectory(tempDir.resolve("input"));
         outputDir = Files.createDirectory(tempDir.resolve("output"));
 
-        // Create real (non-mocked) dependencies for scanner integration
-        fileMetadataDb = mock(FileMetadataDatabaseAdapter.class);
-        appContext = mock(ApplicationContext.class);
-        observer = new ScannerObserverUseCase(path -> 0L);
+        fileMetadataRepo = mock(FileMetadataRepository.class);
+        when(fileMetadataRepo.findById(any())).thenReturn(Optional.empty());
+        observer = new ScannerObserverService(path -> 0L);
+
+        // Mock FileWatcherPort
+        mockWatcherFactory = mock(FileWatcherPort.class);
+        mockWatcher = mock(FileWatcherPort.class);
+        when(mockWatcherFactory.forDirectory(any(Path.class), any(Duration.class))).thenReturn(mockWatcher);
+        when(mockWatcher.flux()).thenReturn(Flux.empty());
+        when(mockWatcher.getDirectory()).thenReturn(inputDir);
+        when(mockWatcher.isRunning()).thenReturn(false);
 
         // Create the real scanner registry
-        scannerRegistry = new ScannerRegistry(appContext, fileMetadataDb, observer, null);
+        scannerRegistry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory);
 
         // Create a mock ChatClient and FileWriter for the agent manager
         String mockResponse = "## Analysis\n\nDocument processed successfully.";
         var chatClient = ChatClientMockBuilder.createMock(mockResponse);
 
-        // Mock FileWriter to write to output dir
-        FileWriter fileWriter = mock(FileWriter.class);
-        when(fileWriter.createPersister(any(Path.class))).thenReturn((content) -> {
-            // No-op for integration tests - we just want to verify the flow works
+        // Mock FileWritePort
+        FileWritePort fileWritePort = mock(FileWritePort.class);
+        when(fileWritePort.createPersister(any(Path.class))).thenReturn((Consumer<PromptResponse>) content -> {
+            // No-op for integration tests
         });
 
+        // Mock persistence
+        AgentRepository agentRepository = mock(AgentRepository.class);
+        when(agentRepository.findAllActive()).thenReturn(List.of());
+        when(agentRepository.findAllOrdered()).thenReturn(List.of());
+
+        // Mock validator
+        DirectoryValidationPort validator = mock(DirectoryValidationPort.class);
+        when(validator.validate(anyString())).thenReturn(DirectoryValidationPort.ValidationResult.success());
+
         // Create agent manager with real scanner registry
-        agentManager = new AgentLifecycleUseCase(
+        agentManager = new AgentLifecycleService(
                 scannerRegistry,
-                fileWriter,
+                fileWritePort,
                 outputDir,
                 chatClient,
-                null, // no persistence for these tests
-                null); // no target directory validator for these tests
+                agentRepository,
+                validator);
     }
 
     @AfterEach
     void tearDown() {
-        // Clean up any remaining scanners
         scannerRegistry.destroy();
     }
 
@@ -106,19 +121,15 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-CREATE-TEST");
         String targetDir = inputDir.toString();
 
-        // Act: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
 
-        // Assert: agent created
         assertThat(agentInfo).isNotNull();
         assertThat(agentInfo.id()).isNotNull();
 
-        // Assert: scanner is listed in registry
-        // Empty directory → no files buffered → stays IDLE (correct behavior after hash filter)
-        List<ScannerInfo> scanners = scannerRegistry.listAll();
+        List<ScannerService.ScannerInfo> scanners = scannerRegistry.listAll();
         assertThat(scanners).hasSize(1);
         assertThat(scanners.get(0).agentId()).isEqualTo(agentInfo.id());
-        assertThat(scanners.get(0).targetDirectory()).isEqualTo(targetDir);
+        assertThat(scanners.get(0).folderPath()).isEqualTo(targetDir);
         assertThat(scanners.get(0).status()).isEqualTo("IDLE");
 
         log.info("PASSED: agent {} has scanner, listed in registry", agentInfo.id());
@@ -131,21 +142,16 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-REMOVE-TEST");
         String targetDir = inputDir.toString();
 
-        // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
-        String scannerId = agentInfo.id();
 
-        // Assert: scanner exists
         assertThat(scannerRegistry.listAll()).hasSize(1);
 
-        // Act: remove agent
         agentManager.removeAgent(agentInfo.id());
 
-        // Assert: scanner destroyed
         assertThat(scannerRegistry.listAll()).hasSize(0);
         assertThat(agentManager.listAgents()).hasSize(0);
 
-        log.info("PASSED: scanner {} destroyed when agent {} removed", scannerId, agentInfo.id());
+        log.info("PASSED: scanner destroyed when agent {} removed", agentInfo.id());
     }
 
     @Test
@@ -155,19 +161,15 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-REFRESH-TEST");
         String targetDir = inputDir.toString();
 
-        // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
 
-        // Act: refresh agent
         AgentInfo refreshed = agentManager.refreshAgent(agentInfo.id());
 
-        // Assert: agent still exists
         assertThat(refreshed).isNotNull();
         assertThat(refreshed.id()).isEqualTo(agentInfo.id());
         assertThat(agentManager.listAgents()).hasSize(1);
 
-        // Assert: scanner still exists
-        List<ScannerInfo> scanners = scannerRegistry.listAll();
+        List<ScannerService.ScannerInfo> scanners = scannerRegistry.listAll();
         assertThat(scanners).hasSize(1);
 
         log.info("PASSED: agent refreshed, scanner {} still active", agentInfo.id());
@@ -182,19 +184,15 @@ public class ScannerRegistryIntegrationTest {
 
         String targetDir = inputDir.toString();
 
-        // Act: add both agents
         AgentInfo info1 = agentManager.addDynamicAgent(agent1, targetDir);
         AgentInfo info2 = agentManager.addDynamicAgent(agent2, targetDir);
 
-        // Assert: two scanners exist
-        List<ScannerInfo> scanners = scannerRegistry.listAll();
+        List<ScannerService.ScannerInfo> scanners = scannerRegistry.listAll();
         assertThat(scanners).hasSize(2);
 
-        // Assert: each agent has a unique ID
         assertThat(info1.id()).isNotEqualTo(info2.id());
 
-        // Assert: each scanner belongs to the correct agent
-        for (ScannerInfo scanner : scanners) {
+        for (ScannerService.ScannerInfo scanner : scanners) {
             boolean found = scanners.stream()
                     .anyMatch(s -> s.agentId().equals(scanner.agentId()));
             assertThat(found).isTrue();
@@ -212,20 +210,16 @@ public class ScannerRegistryIntegrationTest {
 
         String targetDir = inputDir.toString();
 
-        // Arrange: add both agents
         AgentInfo info1 = agentManager.addDynamicAgent(agent1, targetDir);
         AgentInfo info2 = agentManager.addDynamicAgent(agent2, targetDir);
         assertThat(scannerRegistry.listAll()).hasSize(2);
 
-        // Act: remove first agent only
         agentManager.removeAgent(info1.id());
 
-        // Assert: only second agent's scanner remains
-        List<ScannerInfo> remainingScanners = scannerRegistry.listAll();
+        List<ScannerService.ScannerInfo> remainingScanners = scannerRegistry.listAll();
         assertThat(remainingScanners).hasSize(1);
         assertThat(remainingScanners.get(0).agentId()).isEqualTo(info2.id());
 
-        // Assert: agent1 removed, agent2 still exists
         List<AgentInfo> agents = agentManager.listAgents();
         assertThat(agents).hasSize(1);
         assertThat(agents.get(0).id()).isEqualTo(info2.id());
@@ -240,16 +234,13 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-FLUX-TEST");
         String targetDir = inputDir.toString();
 
-        // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
 
-        // Act: get scanner flux
         Flux<FileHistory> flux = scannerRegistry.getScannerFlux(agentInfo.id());
 
-        // Assert: flux is not null (may be empty if no files)
         assertThat(flux).isNotNull();
 
-        log.info("PASSED: scanner flux is accessible and well-formed for agent {}", agentInfo.id());
+        log.info("PASSED: scanner flux is accessible for agent {}", agentInfo.id());
     }
 
     @Test
@@ -259,13 +250,10 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-FLUX-AFTER-REFRESH");
         String targetDir = inputDir.toString();
 
-        // Arrange: add agent
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, targetDir);
 
-        // Act: refresh agent
         agentManager.refreshAgent(agentInfo.id());
 
-        // Assert: flux still accessible
         Flux<FileHistory> flux = scannerRegistry.getScannerFlux(agentInfo.id());
         assertThat(flux).isNotNull();
 
@@ -279,13 +267,9 @@ public class ScannerRegistryIntegrationTest {
         AgentDefinition agent = createAgentDefinition("AGENT-INVALID-DIR-TEST");
         String nonExistentDir = tempDir.resolve("does-not-exist").toString();
 
-        // Act & Assert: addDynamicAgent should not throw
         AgentInfo agentInfo = agentManager.addDynamicAgent(agent, nonExistentDir);
 
-        // The agent is still added (scanner creation failure is logged but not fatal)
         assertThat(agentInfo).isNotNull();
-
-        // No scanners should be registered
         assertThat(scannerRegistry.listAll()).hasSize(0);
 
         log.info("PASSED: agent created without scanner when directory does not exist");
@@ -293,7 +277,7 @@ public class ScannerRegistryIntegrationTest {
 
     @Test
     void givenFullLifecycle_WhenCreateRefreshDelete_ThenScannerLifecycleCorrect() {
-        log.info("Test: full lifecycle - create → refresh → delete");
+        log.info("Test: full lifecycle - create -> refresh -> delete");
 
         AgentDefinition agent = createAgentDefinition("AGENT-FULL-LIFECYCLE");
         String targetDir = inputDir.toString();
@@ -316,7 +300,7 @@ public class ScannerRegistryIntegrationTest {
         assertThat(agentManager.listAgents()).hasSize(0);
         log.info("Step 3 complete: agent and scanner {} destroyed", scannerId);
 
-        log.info("PASSED: full lifecycle verified (create → refresh → delete)");
+        log.info("PASSED: full lifecycle verified (create -> refresh -> delete)");
     }
 
     private AgentDefinition createAgentDefinition(String title) {

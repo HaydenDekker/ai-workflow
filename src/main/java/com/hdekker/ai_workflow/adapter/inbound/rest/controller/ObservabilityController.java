@@ -2,8 +2,8 @@ package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatusDTO;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatusDTO;
 import com.hdekker.ai_workflow.application.agent.AgentStatusService;
 import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
 import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
@@ -34,14 +34,14 @@ public class ObservabilityController {
      * Fast - no polling, just reads from database.
      */
     @GetMapping("/llm-status")
-    public ResponseEntity<List<LLMStatus>> getLLMStatus() {
+    public ResponseEntity<List<LLMStatusDTO>> getLLMStatus() {
         List<LLMStatusRecord> records = agentStatusService.getCurrentStatus();
-        List<LLMStatus> result = new java.util.ArrayList<>();
+        List<LLMStatusDTO> result = new java.util.ArrayList<>();
         for (LLMStatusRecord r : records) {
-            result.add(new LLMStatus(
+            result.add(new LLMStatusDTO(
                     r.endpoint(),
                     r.configuredModel(),
-                    AdapterStatus.valueOf(r.status()),
+                    AdapterStatusDTO.valueOf(r.status()),
                     r.lastChecked(),
                     r.modelCount(),
                     r.modelNames() != null && !r.modelNames().isEmpty()
@@ -58,17 +58,17 @@ public class ObservabilityController {
      * Returns updated status after polling completes.
      */
     @PostMapping("/llm-status/poll")
-    public ResponseEntity<List<LLMStatus>> triggerPoll() {
+    public ResponseEntity<List<LLMStatusDTO>> triggerPoll() {
         List<LLMHealthPort.LLMStatus> portStatuses = agentStatusService.triggerPoll();
-        List<LLMStatus> result = new java.util.ArrayList<>();
+        List<LLMStatusDTO> result = new java.util.ArrayList<>();
         for (LLMHealthPort.LLMStatus s : portStatuses) {
-            AdapterStatus dtoStatus =
+            AdapterStatusDTO dtoStatus =
                     switch (s.status()) {
-                        case UP -> AdapterStatus.UP;
-                        case DOWN -> AdapterStatus.DOWN;
-                        case WARN -> AdapterStatus.WARN;
+                        case UP -> AdapterStatusDTO.UP;
+                        case DOWN -> AdapterStatusDTO.DOWN;
+                        case WARN -> AdapterStatusDTO.WARN;
                     };
-            result.add(new LLMStatus(
+            result.add(new LLMStatusDTO(
                     s.endpoint(),
                     s.configuredModel(),
                     dtoStatus,

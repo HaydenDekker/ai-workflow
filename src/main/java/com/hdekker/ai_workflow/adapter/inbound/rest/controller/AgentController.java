@@ -2,7 +2,7 @@ package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
@@ -37,16 +37,16 @@ public class AgentController {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", result.reason()));
         }
         com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.addDynamicAgent(agentDefinition, targetDir);
-        return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+        return ResponseEntity.ok(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                 domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
     }
 
     @GetMapping
-    public ResponseEntity<List<AgentInfo>> listAgents() {
+    public ResponseEntity<List<AgentInfoDTO>> listAgents() {
         List<com.hdekker.ai_workflow.domain.agent.AgentInfo> domainAgents = agentLifecycleService.listAgents();
-        List<AgentInfo> result = new java.util.ArrayList<>();
+        List<AgentInfoDTO> result = new java.util.ArrayList<>();
         for (com.hdekker.ai_workflow.domain.agent.AgentInfo d : domainAgents) {
-            result.add(new AgentInfo(d.id(), d.definition(), d.createdAt(), d.active(), d.source()));
+            result.add(new AgentInfoDTO(d.id(), d.definition(), d.createdAt(), d.active(), d.source()));
         }
         return ResponseEntity.ok(result);
     }
@@ -56,12 +56,12 @@ public class AgentController {
      * with the updated definition.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<AgentInfo> updateAgent(
+    public ResponseEntity<AgentInfoDTO> updateAgent(
             @PathVariable String id,
             @RequestBody AgentDefinition agentDefinition) {
         com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.updateAgent(id, agentDefinition);
         if (domainInfo != null) {
-            return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+            return ResponseEntity.ok(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                     domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();
@@ -74,10 +74,10 @@ public class AgentController {
     }
 
     @PutMapping("/{id}/enable")
-    public ResponseEntity<AgentInfo> enableAgent(@PathVariable String id) {
+    public ResponseEntity<AgentInfoDTO> enableAgent(@PathVariable String id) {
         com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.enableAgent(id);
         if (domainInfo != null) {
-            return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+            return ResponseEntity.ok(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                     domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();
@@ -94,10 +94,10 @@ public class AgentController {
      * Used when an agent's definition is modified and needs reprocessing.
      */
     @PostMapping("/{id}/refresh")
-    public ResponseEntity<AgentInfo> refreshAgent(@PathVariable String id) {
+    public ResponseEntity<AgentInfoDTO> refreshAgent(@PathVariable String id) {
         com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.refreshAgent(id);
         if (domainInfo != null) {
-            return ResponseEntity.ok(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+            return ResponseEntity.ok(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                     domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();

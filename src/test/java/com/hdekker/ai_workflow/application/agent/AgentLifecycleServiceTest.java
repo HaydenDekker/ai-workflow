@@ -1,36 +1,37 @@
-package com.hdekker.ai_workflow.usecases;
+package com.hdekker.ai_workflow.application.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.Consumer;
 
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.adapter.outbound.file.FileWriter;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.agent.AgentRepositoryAdapter;
-import com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry;
+import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
+import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
+import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
+import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
+import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
-import com.hdekker.ai_workflow.domain.shared.FileHash;
+import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.pipeline.mock.ChatClientMockBuilder;
 
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
-public class AgentLifecycleUseCaseTest {
+public class AgentLifecycleServiceTest {
 
-    AgentLifecycleUseCase manager;
+    AgentLifecycleService manager;
     ScannerRegistry scannerRegistry;
-    AgentRepositoryAdapter mockPersistenceService;
+    AgentRepository mockPersistenceService;
 
     String expectedMockResult = "This is the expected result";
 
@@ -38,20 +39,10 @@ public class AgentLifecycleUseCaseTest {
 
     @BeforeEach
     public void init() {
-
-        String mockFileBody = "This is an example file input body";
-
-        FileHistory fh = new FileHistory(
-                new FileMetadata(
-                        "/config/doco.txt",
-                        mockFileBody,
-                        FileHash.hash(mockFileBody)),
-                    Optional.empty());
-
         ChatClient chatClient = ChatClientMockBuilder.createMock(expectedMockResult);
 
-        FileWriter fileWriter = mock(FileWriter.class);
-        when(fileWriter.createPersister(any(Path.class))).thenReturn((pr) -> {
+        FileWritePort fileWritePort = mock(FileWritePort.class);
+        when(fileWritePort.createPersister(any(Path.class))).thenReturn((Consumer<PromptResponse>) pr -> {
             persistCalled = true;
         });
 
@@ -62,32 +53,36 @@ public class AgentLifecycleUseCaseTest {
         when(scannerRegistry.createForAgent(anyString(), any(), anyInt())).thenAnswer(invocation -> {
             String agentId = invocation.getArgument(0);
             String targetDir = invocation.getArgument(1);
-            return new ScannerInfo(
-                    "scanner-" + agentId,
+            return new ScannerService.ScannerInfo(
                     agentId,
+                    "scanner-" + agentId,
                     targetDir,
                     "IDLE",
-                    java.time.LocalDateTime.now(),
+                    LocalDateTime.now(),
+                    null,
                     null);
         });
-        when(scannerRegistry.getScannerFlux(any())).thenReturn(Flux.just(fh));
+        when(scannerRegistry.getScannerFlux(anyString())).thenReturn(Flux.<FileHistory>empty());
 
         // Mock persistence service
-        mockPersistenceService = mock(AgentRepositoryAdapter.class);
-        when(mockPersistenceService.findAllActiveEntities()).thenReturn(List.of());
-        when(mockPersistenceService.findAllOrderedEntities()).thenReturn(List.of());
+        mockPersistenceService = mock(AgentRepository.class);
+        when(mockPersistenceService.findAllActive()).thenReturn(List.of());
+        when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
         doNothing().when(mockPersistenceService).disable(anyString());
         doNothing().when(mockPersistenceService).enable(anyString());
         doNothing().when(mockPersistenceService).deleteById(anyString());
 
-        // Use the new constructor with ScannerRegistry
-        manager = new AgentLifecycleUseCase(
+        DirectoryValidationPort validator = mock(DirectoryValidationPort.class);
+        when(validator.validate(anyString())).thenReturn(DirectoryValidationPort.ValidationResult.success());
+
+        // Use the new constructor with ports
+        manager = new AgentLifecycleService(
                 scannerRegistry,
-                fileWriter,
+                fileWritePort,
                 outputDirectory,
                 chatClient,
                 mockPersistenceService,
-                null);
+                validator);
     }
 
     @Test

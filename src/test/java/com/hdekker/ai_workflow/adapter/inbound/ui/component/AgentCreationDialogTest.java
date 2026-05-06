@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
@@ -39,7 +39,7 @@ class AgentCreationDialogTest extends BrowserlessTest {
     private AgentInfoService mockService;
     private static final AgentDefinition STUB_DEF = new AgentDefinition(
             ".*", "stub", "stub", "Map", "stub", "output/${name}.md", "/tmp/stub");
-    private static final AgentInfo STUB_INFO = new AgentInfo(
+    private static final AgentInfoDTO STUB_INFO = new AgentInfoDTO(
             "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST");
 
     @BeforeEach

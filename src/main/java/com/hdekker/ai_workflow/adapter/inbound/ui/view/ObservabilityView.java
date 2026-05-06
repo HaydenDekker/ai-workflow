@@ -5,9 +5,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AdapterStatusComponent;
-import com.hdekker.ai_workflow.usecases.AgentStatusUsecase;
+import com.hdekker.ai_workflow.application.agent.AgentStatusService;
+import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort.LLMStatus;
+import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
 
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
@@ -43,7 +44,7 @@ public class ObservabilityView extends VerticalLayout
 
     private static final int VIEW_REFRESH_SECONDS = 30;
 
-    private final AgentStatusUsecase llmStatusService;
+    private final AgentStatusService llmStatusService;
     private VerticalLayout cardsContainer;
     private Button refreshButton;
     private ProgressBar loadingIndicator;
@@ -52,7 +53,7 @@ public class ObservabilityView extends VerticalLayout
     private ScheduledExecutorService viewRefreshScheduler;
 
     @Autowired
-    public ObservabilityView(AgentStatusUsecase llmStatusService) {
+    public ObservabilityView(AgentStatusService llmStatusService) {
         this.llmStatusService = llmStatusService;
         initLayout();
     }
@@ -120,12 +121,12 @@ public class ObservabilityView extends VerticalLayout
         refreshButton.setEnabled(false);
 
         // Fetch status data
-        List<LLMStatus> statuses = llmStatusService.getCurrentStatus();
+        List<LLMStatusRecord> records = llmStatusService.getCurrentStatus();
 
         // Clear existing cards
         cardsContainer.removeAll();
 
-        if (statuses.isEmpty()) {
+        if (records.isEmpty()) {
             Notification.show("No LLM endpoints configured",
                     3000, Notification.Position.MIDDLE);
             showLoading(false);
@@ -134,13 +135,23 @@ public class ObservabilityView extends VerticalLayout
         }
 
         // Create card for each endpoint
-        for (LLMStatus status : statuses) {
+        for (LLMStatusRecord record : records) {
+            LLMStatus status = new LLMStatus(
+                    record.endpoint(),
+                    record.configuredModel(),
+                    LLMStatus.HealthStatus.valueOf(record.status()),
+                    record.lastChecked(),
+                    record.modelCount(),
+                    record.modelNames() != null && !record.modelNames().isEmpty()
+                            ? List.of(record.modelNames().split(","))
+                            : List.of(),
+                    record.errorMessage());
             AdapterStatusComponent card = new AdapterStatusComponent(
                     status, llmStatusService);
             cardsContainer.add(card);
         }
 
-        Notification.show("Loaded " + statuses.size() + " endpoint(s)",
+        Notification.show("Loaded " + records.size() + " endpoint(s)",
                 2000, Notification.Position.BOTTOM_START);
 
         showLoading(false);

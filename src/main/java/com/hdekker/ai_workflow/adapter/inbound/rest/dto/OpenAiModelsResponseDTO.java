@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * DTO for OpenAI-compatible /v1/models API response.
  * Used for health checking LLM endpoints.
  */
-public record OpenAiModelsResponse(
+public record OpenAiModelsResponseDTO(
     @JsonProperty("object")
     String object,
     

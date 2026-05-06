@@ -9,7 +9,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatusDTO;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentCreationDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.LlmStatusBadge;
@@ -43,7 +44,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @PageTitle("Agent List")
 public class AgentListView extends VerticalLayout implements AfterNavigationObserver {
     private static final Logger log = LoggerFactory.getLogger(AgentListView.class);
-    final Grid<AgentInfo> grid;  // package-private for browserless test access
+    final Grid<AgentInfoDTO> grid;  // package-private for browserless test access
     private final AgentInfoService agentInfoService;
     private final AgentStatusService llmStatusService;
     private final ProgressBar loadingIndicator;
@@ -91,7 +92,7 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         gridContainer.getElement().getStyle().setBorderRadius("8px");
         gridContainer.getElement().getStyle().setPadding("16px 24px");
         
-        grid = new Grid<AgentInfo>();
+        grid = new Grid<AgentInfoDTO>();
         grid.setWidthFull();
         grid.setHeightFull();
         grid.setMinHeight("500px");
@@ -113,7 +114,7 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         });
         
         // Configure columns with proper sizing and sorting
-        grid.addColumn(AgentInfo::id)
+        grid.addColumn(AgentInfoDTO::id)
             .setHeader("ID")
             .setAutoWidth(true)
             .setSortable(true);
@@ -139,17 +140,17 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(AgentInfo::source)
+        grid.addColumn(AgentInfoDTO::source)
             .setHeader("Source")
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(AgentInfo::createdAt)
+        grid.addColumn(AgentInfoDTO::createdAt)
             .setHeader("Created")
             .setAutoWidth(true)
             .setSortable(true);
             
-        grid.addColumn(AgentInfo::active)
+        grid.addColumn(AgentInfoDTO::active)
             .setHeader("Active")
             .setAutoWidth(true)
             .setSortable(true);
@@ -200,7 +201,7 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         log.debug("reloadData() called - refreshing agent grid");
         showLoading(true);
         try {
-            List<AgentInfo> agentInfos = agentInfoService.getAllAgentInfos().block();
+            List<AgentInfoDTO> agentInfos = agentInfoService.getAllAgentInfos().block();
             log.info("Loaded {} agents", agentInfos.size());
             grid.setItems(agentInfos);
         } catch (Exception error) {
@@ -210,7 +211,7 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         }
     }
 
-    private void updateGrid(List<AgentInfo> agentInfos) {
+    private void updateGrid(List<AgentInfoDTO> agentInfos) {
         grid.setItems(agentInfos);
         if (agentInfos.isEmpty()) {
             Notification.show("No agents found");
@@ -219,7 +220,7 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         }
     }
 
-    private void refreshAgent(AgentInfo agent) {
+    private void refreshAgent(AgentInfoDTO agent) {
         Notification.show("Refreshing agent: " + agent.id(), 2000, Notification.Position.MIDDLE);
         agentInfoService.refreshAgent(agent.id()).subscribe(
             info -> {
@@ -249,12 +250,12 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         try {
             List<LLMStatusRecord> records = llmStatusService.getCurrentStatus();
             if (!records.isEmpty()) {
-                com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus status =
-                        com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus.valueOf(records.get(0).status());
+                AdapterStatusDTO status =
+                        AdapterStatusDTO.valueOf(records.get(0).status());
                 llmStatusBadge.updateStatus(status);
             }
         } catch (Exception e) {
-            llmStatusBadge.updateStatus(com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus.UNKNOWN);
+            llmStatusBadge.updateStatus(AdapterStatusDTO.UNKNOWN);
         }
     }
 

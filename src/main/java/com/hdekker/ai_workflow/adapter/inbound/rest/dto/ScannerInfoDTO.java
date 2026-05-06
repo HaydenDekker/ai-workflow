@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * @param lastEmittedAt    timestamp of last file emission (null if none yet)
  * @param errorMessage     error message when status is ERROR (null otherwise)
  */
-public record ScannerInfo(
+public record ScannerInfoDTO(
     String id,
     String agentId,
     String targetDirectory,
@@ -33,7 +33,7 @@ public record ScannerInfo(
      * @param createdAt       when the scanner was created
      * @param lastEmittedAt   timestamp of last file emission
      */
-    public ScannerInfo(String id, String agentId, String targetDirectory,
+    public ScannerInfoDTO(String id, String agentId, String targetDirectory,
                        String status, LocalDateTime createdAt, LocalDateTime lastEmittedAt) {
         this(id, agentId, targetDirectory, status, createdAt, lastEmittedAt, "");
     }
@@ -41,7 +41,7 @@ public record ScannerInfo(
     /**
      * Canonical constructor body.
      */
-    public ScannerInfo {
+    public ScannerInfoDTO {
         if (errorMessage == null) {
             errorMessage = "";
         }

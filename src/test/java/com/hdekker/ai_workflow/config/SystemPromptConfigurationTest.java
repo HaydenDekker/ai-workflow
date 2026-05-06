@@ -10,8 +10,6 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.hdekker.ai_workflow.config.SystemPromptConfiguration;
-
 public class SystemPromptConfigurationTest {
     
     @TempDir

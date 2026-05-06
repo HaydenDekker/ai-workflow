@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Factory for creating {@link NativeFileWatcher} instances.
  * <p>
- * Encapsulates the adapter construction so that {@link com.hdekker.ai_workflow.app.pipeline.management.ScannerRegistry}
+ * Encapsulates the adapter construction so that {@link com.hdekker.ai_workflow.application.pipeline.ScannerRegistry}
  * doesn't need to know the adapter's constructor details. The adapter is a pure
  * infrastructure component — it needs only the directory path and poll interval.
  */

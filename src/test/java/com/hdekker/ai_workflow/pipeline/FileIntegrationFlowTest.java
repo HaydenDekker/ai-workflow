@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.test.pipeline.config.ChatClientTestConfig;
 import com.hdekker.ai_workflow.test.pipeline.factory.TestConfigurationFactory;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +60,7 @@ public class FileIntegrationFlowTest {
     private ChatClient mockChatClient;
 
     @Autowired
-    private AgentLifecycleUseCase dynamicAgentManager;
+    private AgentLifecycleService dynamicAgentManager;
 
     @TempDir
     Path tempDir;

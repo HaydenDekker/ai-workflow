@@ -11,11 +11,11 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerMetricsSnapshot;
-import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.ScannerService;
-import com.hdekker.ai_workflow.usecases.ScannerObserverUseCase;
+import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
+import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
@@ -61,14 +61,14 @@ public class ScannerListView extends VerticalLayout
     private static final int VIEW_REFRESH_SECONDS = 30;
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private Grid<ScannerInfo> grid;
+    private Grid<ScannerInfoDTO> grid;
     private final ScannerService scannerService;
-    private final ScannerObserverUseCase observer;
+    private final ScannerObserverService observer;
     private ProgressBar loadingIndicator;
     private ScheduledExecutorService refreshScheduler;
-    private Consumer<ScannerMetricsChangedEvent> refreshCallback;
+    private Consumer<ScannerMetricsEvent> refreshCallback;
     @Autowired
-    public ScannerListView(ScannerService scannerService, ScannerObserverUseCase observer) {
+    public ScannerListView(ScannerService scannerService, ScannerObserverService observer) {
         this.scannerService = scannerService;
         this.observer = observer;
         initLayout();
@@ -100,18 +100,18 @@ public class ScannerListView extends VerticalLayout
         loadingIndicator.setIndeterminate(true);
 
         // Grid
-        grid = new Grid<>(ScannerInfo.class, false);
+        grid = new Grid<>(ScannerInfoDTO.class, false);
         grid.setWidthFull();
         grid.setHeight("600px");
         grid.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_COLUMN_BORDERS);
 
         // Configure columns
-        grid.addColumn(ScannerInfo::agentId)
+        grid.addColumn(ScannerInfoDTO::agentId)
             .setHeader("Agent")
             .setAutoWidth(true)
             .setSortable(true);
 
-        grid.addColumn(ScannerInfo::targetDirectory)
+        grid.addColumn(ScannerInfoDTO::targetDirectory)
             .setHeader("Target Directory")
             .setFlexGrow(2)
             .setSortable(true);
@@ -136,8 +136,8 @@ public class ScannerListView extends VerticalLayout
         // Files column: current file count from metrics
         grid.addColumn(info -> {
             try {
-                ScannerMetricsSnapshot m = observer.getMetrics(info.agentId());
-                return m.fileCount() + " files";
+                ScannerMetrics m = observer.getMetrics(info.agentId());
+                return m.totalDiscovered() + " files";
             } catch (Exception e) {
                 return "—";
             }
@@ -174,7 +174,7 @@ public class ScannerListView extends VerticalLayout
             com.vaadin.flow.component.UI ui = event.getUI();
             refreshCallback = e -> {
                 log.debug("UI refresh callback triggered: agent={}, type={}",
-                        e.getAgentId(), e.getType());
+                        e.agentId(), e.eventType() != null ? e.eventType().name().toLowerCase() : e.status().name().toLowerCase());
                 // Use quiet refresh — no loading indicator or toast.
                 // loadScanners() shows loading + notification which is too noisy
                 // for frequent file events. ScannerInfo is an immutable record so
@@ -199,7 +199,7 @@ public class ScannerListView extends VerticalLayout
      * If the status is ERROR and an error message is present, the dot is wrapped
      * in a tooltip showing the error.
      */
-    private Div renderStatusComponent(ScannerInfo info) {
+    private Div renderStatusComponent(ScannerInfoDTO info) {
         String status = info.status() != null ? info.status() : "UNKNOWN";
         String color;
         switch (status) {
@@ -243,7 +243,7 @@ public class ScannerListView extends VerticalLayout
     /**
      * Render the delete action button per row.
      */
-    private HorizontalLayout renderActionsColumn(ScannerInfo info) {
+    private HorizontalLayout renderActionsColumn(ScannerInfoDTO info) {
         Button deleteBtn = new Button(new Icon(VaadinIcon.TRASH));
         deleteBtn.addClassName("scanner-delete-btn");
         deleteBtn.getElement().setAttribute("title", "Delete scanner");
@@ -282,7 +282,7 @@ public class ScannerListView extends VerticalLayout
             );
     }
 
-    private void updateGrid(List<ScannerInfo> scanners, boolean notify) {
+    private void updateGrid(List<ScannerInfoDTO> scanners, boolean notify) {
         grid.setItems(scanners);
         if (notify) {
             if (scanners.isEmpty()) {

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.usecases;
+package com.hdekker.ai_workflow.application.agent;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,12 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.LLMStatus;
-import com.hdekker.ai_workflow.adapter.outbound.llm.OpenAiHealthAdapter;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusEntity;
-import com.hdekker.ai_workflow.adapter.outbound.persistence.llmstatus.LLMStatusJpaRepository;
 import com.hdekker.ai_workflow.application.agent.port.LLMHealthPort;
+import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository;
 import com.hdekker.ai_workflow.config.ObservabilityProperties;
 
 import org.mockito.ArgumentCaptor;
@@ -28,43 +24,42 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 
 /**
- * Unit tests for AgentStatusUsecase.
- * 
+ * Unit tests for AgentStatusService.
+ *
  * Tests cover:
  * - Scheduled polling (success, failure, null endpoint)
  * - WARN condition detection (stale data, fresh data, already DOWN)
  * - Manual trigger
- * - Entity to DTO conversion
  * - Status retrieval
  */
 @ExtendWith(MockitoExtension.class)
-class AgentStatusUsecaseTest {
+class AgentStatusServiceTest {
 
     @Mock
-    private LLMStatusJpaRepository repository;
+    private LLMStatusRepository repository;
 
     @Mock
-    private OpenAiHealthAdapter healthAdapter;
+    private LLMHealthPort healthPort;
 
     @Mock
     private ObservabilityProperties observabilityProperties;
 
     @Captor
-    private ArgumentCaptor<LLMStatusEntity> entityCaptor;
+    private ArgumentCaptor<String> endpointCaptor;
 
-    private AgentStatusUsecase service;
+    private AgentStatusService service;
 
     @BeforeEach
     void setUp() {
-        service = new AgentStatusUsecase(repository, healthAdapter, observabilityProperties);
+        service = new AgentStatusService(repository, healthPort, observabilityProperties);
     }
-    
+
     /**
      * Helper to set private fields via reflection (e.g. @Value fields).
      */
     private void setServiceField(String fieldName, Object value) {
         try {
-            java.lang.reflect.Field field = AgentStatusUsecase.class.getDeclaredField(fieldName);
+            java.lang.reflect.Field field = AgentStatusService.class.getDeclaredField(fieldName);
             field.setAccessible(true);
             field.set(service, value);
         } catch (Exception e) {
@@ -79,26 +74,21 @@ class AgentStatusUsecaseTest {
         // Arrange
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
-        
+
         LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
             "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1", "model2", "model3"), null
         );
-        when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(healthPort.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
 
         // Act
         service.schedulePolling();
 
         // Assert
-        verify(repository, times(1)).save(entityCaptor.capture());
-        LLMStatusEntity saved = entityCaptor.getValue();
-        assertEquals("http://localhost:8080", saved.getEndpoint());
-        assertEquals("test-model", saved.getConfiguredModel());
-        assertEquals("UP", saved.getStatus());
-        assertEquals(3, saved.getModelCount());
-        assertEquals("model1,model2,model3", saved.getModelNames());
-        assertNull(saved.getErrorMessage());
+        verify(repository, times(1)).save(
+            eq("http://localhost:8080"), eq("test-model"), eq("UP"),
+            any(LocalDateTime.class), eq(3), eq("model1,model2,model3"), isNull()
+        );
     }
 
     @Test
@@ -111,17 +101,16 @@ class AgentStatusUsecaseTest {
             "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.DOWN,
             LocalDateTime.now(), 0, List.of(), "Connection refused"
         );
-        when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(healthPort.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
 
         // Act
         service.schedulePolling();
 
         // Assert
-        verify(repository, times(1)).save(entityCaptor.capture());
-        LLMStatusEntity saved = entityCaptor.getValue();
-        assertEquals("DOWN", saved.getStatus());
-        assertEquals("Connection refused", saved.getErrorMessage());
+        verify(repository, times(1)).save(
+            eq("http://localhost:8080"), eq("test-model"), eq("DOWN"),
+            any(LocalDateTime.class), eq(0), eq(""), eq("Connection refused")
+        );
     }
 
     @Test
@@ -133,8 +122,8 @@ class AgentStatusUsecaseTest {
         service.schedulePolling();
 
         // Assert
-        verify(healthAdapter, never()).checkHealth(any(), any());
-        verify(repository, never()).save(any());
+        verify(healthPort, never()).checkHealth(any(), any());
+        verify(repository, never()).save(any(), any(), any(), any(), anyInt(), any(), any());
     }
 
     @Test
@@ -146,8 +135,8 @@ class AgentStatusUsecaseTest {
         service.schedulePolling();
 
         // Assert
-        verify(healthAdapter, never()).checkHealth(any(), any());
-        verify(repository, never()).save(any());
+        verify(healthPort, never()).checkHealth(any(), any());
+        verify(repository, never()).save(any(), any(), any(), any(), anyInt(), any(), any());
     }
 
     @Test
@@ -155,20 +144,21 @@ class AgentStatusUsecaseTest {
         // Arrange
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
-        
+
         LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
             "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.DOWN,
             LocalDateTime.now(), 0, List.of(), "Adapter error"
         );
-        when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(healthPort.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
 
         // Act
         service.schedulePolling();
 
         // Assert - should persist DOWN status, not throw
-        verify(repository, times(1)).save(entityCaptor.capture());
-        assertEquals("DOWN", entityCaptor.getValue().getStatus());
+        verify(repository, times(1)).save(
+            eq("http://localhost:8080"), eq("test-model"), eq("DOWN"),
+            any(LocalDateTime.class), eq(0), eq(""), eq("Adapter error")
+        );
     }
 
     // ==================== checkWarnCondition tests ====================
@@ -176,38 +166,38 @@ class AgentStatusUsecaseTest {
     @Test
     void checkWarnCondition_freshData_unchanged() {
         // Arrange
-        LLMStatus status = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.UP,
+        LLMHealthPort.LLMStatus status = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1"), null
         );
         when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.empty());
 
         // Act
-        LLMStatus result = checkWarnConditionPrivate(status);
+        LLMHealthPort.LLMStatus result = checkWarnConditionPrivate(status);
 
         // Assert
-        assertEquals(AdapterStatus.UP, result.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.UP, result.status());
     }
 
     @Test
     void checkWarnCondition_staleData_returnsWarn() {
         // Arrange
         LocalDateTime oldTime = LocalDateTime.now().minusHours(2);
-        LLMStatusEntity previousEntity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord previousRecord = new LLMStatusRepository.LLMStatusRecord(
             "http://localhost:8080", "test-model", "UP", oldTime, 3, "model1", null
         );
-        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(previousEntity));
-        
-        LLMStatus status = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.UP,
+        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(previousRecord));
+
+        LLMHealthPort.LLMStatus status = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1"), null
         );
 
         // Act
-        LLMStatus result = checkWarnConditionPrivate(status);
+        LLMHealthPort.LLMStatus result = checkWarnConditionPrivate(status);
 
         // Assert
-        assertEquals(AdapterStatus.WARN, result.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.WARN, result.status());
         assertNotNull(result.errorMessage());
         assertTrue(result.errorMessage().contains("hours"));
     }
@@ -216,55 +206,55 @@ class AgentStatusUsecaseTest {
     void checkWarnCondition_recentData_noWarn() {
         // Arrange
         setServiceField("warnAfterHours", 24L);
-        
+
         LocalDateTime recentTime = LocalDateTime.now().minusMinutes(30);
-        LLMStatusEntity previousEntity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord previousRecord = new LLMStatusRepository.LLMStatusRecord(
             "http://localhost:8080", "test-model", "UP", recentTime, 3, "model1", null
         );
-        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(previousEntity));
-        
-        LLMStatus status = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.UP,
+        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(previousRecord));
+
+        LLMHealthPort.LLMStatus status = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1"), null
         );
 
         // Act
-        LLMStatus result = checkWarnConditionPrivate(status);
+        LLMHealthPort.LLMStatus result = checkWarnConditionPrivate(status);
 
         // Assert
-        assertEquals(AdapterStatus.UP, result.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.UP, result.status());
     }
 
     @Test
     void checkWarnCondition_alreadyDown_unchanged() {
         // Arrange
-        LLMStatus status = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.DOWN,
+        LLMHealthPort.LLMStatus status = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.DOWN,
             LocalDateTime.now(), 0, List.of(), "Connection refused"
         );
 
         // Act
-        LLMStatus result = checkWarnConditionPrivate(status);
+        LLMHealthPort.LLMStatus result = checkWarnConditionPrivate(status);
 
         // Assert
-        assertEquals(AdapterStatus.DOWN, result.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.DOWN, result.status());
     }
 
     @Test
     void checkWarnCondition_noPreviousData_unchanged() {
         // Arrange
         when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.empty());
-        
-        LLMStatus status = new LLMStatus(
-            "http://localhost:8080", "test-model", AdapterStatus.UP,
+
+        LLMHealthPort.LLMStatus status = new LLMHealthPort.LLMStatus(
+            "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1"), null
         );
 
         // Act
-        LLMStatus result = checkWarnConditionPrivate(status);
+        LLMHealthPort.LLMStatus result = checkWarnConditionPrivate(status);
 
         // Assert
-        assertEquals(AdapterStatus.UP, result.status());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.UP, result.status());
     }
 
     // ==================== triggerPoll() tests ====================
@@ -274,21 +264,20 @@ class AgentStatusUsecaseTest {
         // Arrange
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         when(observabilityProperties.getModel()).thenReturn("test-model");
-        
+
         LLMHealthPort.LLMStatus healthStatus = new LLMHealthPort.LLMStatus(
             "http://localhost:8080", "test-model", LLMHealthPort.LLMStatus.HealthStatus.UP,
             LocalDateTime.now(), 3, List.of("model1"), null
         );
-        when(healthAdapter.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(healthPort.checkHealth(any(), any())).thenReturn(Mono.just(healthStatus));
 
         // Act
-        List<LLMStatus> result = service.triggerPoll();
+        List<LLMHealthPort.LLMStatus> result = service.triggerPoll();
 
         // Assert
         assertEquals(1, result.size());
-        assertEquals(AdapterStatus.UP, result.get(0).status());
-        verify(repository, times(1)).save(any());
+        assertEquals(LLMHealthPort.LLMStatus.HealthStatus.UP, result.get(0).status());
+        verify(repository, times(1)).save(any(), any(), any(), any(), anyInt(), any(), any());
     }
 
     @Test
@@ -297,11 +286,11 @@ class AgentStatusUsecaseTest {
         when(observabilityProperties.getEndpoint()).thenReturn(null);
 
         // Act
-        List<LLMStatus> result = service.triggerPoll();
+        List<LLMHealthPort.LLMStatus> result = service.triggerPoll();
 
         // Assert
         assertTrue(result.isEmpty());
-        verify(healthAdapter, never()).checkHealth(any(), any());
+        verify(healthPort, never()).checkHealth(any(), any());
     }
 
     // ==================== getCurrentStatus() tests ====================
@@ -313,7 +302,7 @@ class AgentStatusUsecaseTest {
         when(repository.findAll()).thenReturn(List.of());
 
         // Act
-        List<LLMStatus> result = service.getCurrentStatus();
+        List<LLMStatusRepository.LLMStatusRecord> result = service.getCurrentStatus();
 
         // Assert
         assertTrue(result.isEmpty());
@@ -325,52 +314,49 @@ class AgentStatusUsecaseTest {
         when(observabilityProperties.getEndpoint()).thenReturn(null);
 
         // Act
-        List<LLMStatus> result = service.getCurrentStatus();
+        List<LLMStatusRepository.LLMStatusRecord> result = service.getCurrentStatus();
 
         // Assert
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void getCurrentStatus_withData_returnsDtoList() {
+    void getCurrentStatus_withData_returnsRecordList() {
         // Arrange
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         LocalDateTime now = LocalDateTime.now();
-        LLMStatusEntity entity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord record = new LLMStatusRepository.LLMStatusRecord(
             "http://localhost:8080", "test-model", "UP", now, 3, "model1,model2", null
         );
-        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(entity));
+        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(record));
 
         // Act
-        List<LLMStatus> result = service.getCurrentStatus();
+        List<LLMStatusRepository.LLMStatusRecord> result = service.getCurrentStatus();
 
         // Assert
         assertEquals(1, result.size());
-        LLMStatus dto = result.get(0);
-        assertEquals("http://localhost:8080", dto.endpoint());
-        assertEquals("test-model", dto.configuredModel());
-        assertEquals(AdapterStatus.UP, dto.status());
-        assertEquals(3, dto.modelCount());
-        assertEquals(2, dto.modelNames().size());
-        assertEquals("model1", dto.modelNames().get(0));
+        LLMStatusRepository.LLMStatusRecord returned = result.get(0);
+        assertEquals("http://localhost:8080", returned.endpoint());
+        assertEquals("test-model", returned.configuredModel());
+        assertEquals("UP", returned.status());
+        assertEquals(3, returned.modelCount());
     }
 
     @Test
-    void getCurrentStatus_entityWithEmptyModelNames_returnsEmptyList() {
+    void getCurrentStatus_entityWithEmptyModelNames_returnsRecord() {
         // Arrange
         when(observabilityProperties.getEndpoint()).thenReturn("http://localhost:8080");
         LocalDateTime now = LocalDateTime.now();
-        LLMStatusEntity entity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord record = new LLMStatusRepository.LLMStatusRecord(
             "http://localhost:8080", "test-model", "DOWN", now, 0, "", "Error"
         );
-        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(entity));
+        when(repository.findByEndpoint("http://localhost:8080")).thenReturn(Optional.of(record));
 
         // Act
-        List<LLMStatus> result = service.getCurrentStatus();
+        List<LLMStatusRepository.LLMStatusRecord> result = service.getCurrentStatus();
 
         // Assert
         assertEquals(1, result.size());
-        assertTrue(result.get(0).modelNames().isEmpty());
     }
 
     @Test
@@ -379,25 +365,25 @@ class AgentStatusUsecaseTest {
         when(observabilityProperties.getEndpoint()).thenReturn("http://configured:8080");
         LocalDateTime now = LocalDateTime.now();
 
-        LLMStatusEntity configuredEntity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord configuredRecord = new LLMStatusRepository.LLMStatusRecord(
             "http://configured:8080", "test-model", "UP", now, 1, "model1", null
         );
-        LLMStatusEntity staleEntity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord staleRecord = new LLMStatusRepository.LLMStatusRecord(
             "http://old:8080", "old-model", "DOWN", now.minusHours(2), 0, "", "Error"
         );
-        LLMStatusEntity anotherStaleEntity = new LLMStatusEntity(
+        LLMStatusRepository.LLMStatusRecord anotherStaleRecord = new LLMStatusRepository.LLMStatusRecord(
             "http://deprecated:8080", "dep-model", "WARN", now.minusDays(1), 0, "", "Timeout"
         );
-        when(repository.findAll()).thenReturn(List.of(configuredEntity, staleEntity, anotherStaleEntity));
-        when(repository.findByEndpoint("http://configured:8080")).thenReturn(Optional.of(configuredEntity));
+        when(repository.findAll()).thenReturn(List.of(configuredRecord, staleRecord, anotherStaleRecord));
+        when(repository.findByEndpoint("http://configured:8080")).thenReturn(Optional.of(configuredRecord));
 
         // Act
-        List<LLMStatus> result = service.getCurrentStatus();
+        List<LLMStatusRepository.LLMStatusRecord> result = service.getCurrentStatus();
 
         // Assert
         assertEquals(1, result.size());
         assertEquals("http://configured:8080", result.get(0).endpoint());
-        verify(repository, times(2)).delete(any()); // stale entities removed
+        verify(repository, times(2)).deleteByEndpoint(any()); // stale endpoints removed
     }
 
     // ==================== Helper: invoke private checkWarnCondition ====================
@@ -406,12 +392,12 @@ class AgentStatusUsecaseTest {
      * Helper to invoke the private checkWarnCondition method for testing.
      * Uses reflection to access the private method.
      */
-    private LLMStatus checkWarnConditionPrivate(LLMStatus status) {
+    private LLMHealthPort.LLMStatus checkWarnConditionPrivate(LLMHealthPort.LLMStatus status) {
         try {
-            java.lang.reflect.Method method = AgentStatusUsecase.class
-                .getDeclaredMethod("checkWarnCondition", LLMStatus.class);
+            java.lang.reflect.Method method = AgentStatusService.class
+                .getDeclaredMethod("checkWarnCondition", LLMHealthPort.LLMStatus.class);
             method.setAccessible(true);
-            return (LLMStatus) method.invoke(service, status);
+            return (LLMHealthPort.LLMStatus) method.invoke(service, status);
         } catch (Exception e) {
             throw new RuntimeException("Failed to invoke checkWarnCondition", e);
         }

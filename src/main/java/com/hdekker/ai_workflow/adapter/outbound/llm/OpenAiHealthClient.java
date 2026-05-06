@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.OpenAiModelsResponse;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.OpenAiModelsResponseDTO;
 
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
@@ -63,10 +63,10 @@ public class OpenAiHealthClient {
     public Mono<List<String>> listModels() {
         return Mono.fromCallable(() -> {
             try {
-                OpenAiModelsResponse response = restClient.get()
+                OpenAiModelsResponseDTO response = restClient.get()
                     .uri("/v1/models")
                     .retrieve()
-                    .body(OpenAiModelsResponse.class);
+                    .body(OpenAiModelsResponseDTO.class);
                 
                 if (response == null || response.data() == null) {
                     log.warn("Unexpected empty response from /v1/models");
@@ -74,7 +74,7 @@ public class OpenAiHealthClient {
                 }
                 
                 List<String> modelNames = response.data().stream()
-                    .map(OpenAiModelsResponse.OpenAiModel::id)
+                    .map(OpenAiModelsResponseDTO.OpenAiModel::id)
                     .filter(id -> id != null && !id.isEmpty())
                     .collect(Collectors.toList());
                 

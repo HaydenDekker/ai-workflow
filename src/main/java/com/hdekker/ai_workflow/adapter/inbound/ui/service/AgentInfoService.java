@@ -6,7 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
@@ -31,12 +31,12 @@ public class AgentInfoService {
         this.directoryValidationPort = directoryValidationPort;
     }
 
-    public Mono<List<AgentInfo>> getAllAgentInfos() {
+    public Mono<List<AgentInfoDTO>> getAllAgentInfos() {
         try {
             List<com.hdekker.ai_workflow.domain.agent.AgentInfo> domainAgents = agentLifecycleService.listAgents();
-            List<AgentInfo> result = new java.util.ArrayList<>();
+            List<AgentInfoDTO> result = new java.util.ArrayList<>();
             for (com.hdekker.ai_workflow.domain.agent.AgentInfo d : domainAgents) {
-                result.add(new AgentInfo(d.id(), d.definition(), d.createdAt(), d.active(), d.source()));
+                result.add(new AgentInfoDTO(d.id(), d.definition(), d.createdAt(), d.active(), d.source()));
             }
             return Mono.just(result);
         } catch (Exception ex) {
@@ -55,7 +55,7 @@ public class AgentInfoService {
         }
     }
 
-    public Mono<AgentInfo> createAgent(AgentDefinition agentDefinition) {
+    public Mono<AgentInfoDTO> createAgent(AgentDefinition agentDefinition) {
         try {
             String targetDir = agentDefinition.targetDirectory();
             ValidationResult result = directoryValidationPort.validate(targetDir);
@@ -63,7 +63,7 @@ public class AgentInfoService {
                 return Mono.error(new IllegalArgumentException(result.reason()));
             }
             com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.addDynamicAgent(agentDefinition, targetDir);
-            return Mono.just(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+            return Mono.just(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                     domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         } catch (Exception ex) {
             log.error("Error creating agent: {}", agentDefinition.title(), ex);
@@ -79,11 +79,11 @@ public class AgentInfoService {
      * @param agentDefinition  the updated agent definition
      * @return the updated agent info
      */
-    public Mono<AgentInfo> updateAgent(String id, AgentDefinition agentDefinition) {
+    public Mono<AgentInfoDTO> updateAgent(String id, AgentDefinition agentDefinition) {
         try {
             com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.updateAgent(id, agentDefinition);
             if (domainInfo != null) {
-                return Mono.just(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+                return Mono.just(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                         domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
             }
             return Mono.error(new RuntimeException("Agent not found: " + id));
@@ -100,13 +100,13 @@ public class AgentInfoService {
      * @param id the agent ID to refresh
      * @return the refreshed agent info
      */
-    public Mono<AgentInfo> refreshAgent(String id) {
+    public Mono<AgentInfoDTO> refreshAgent(String id) {
         try {
             com.hdekker.ai_workflow.domain.agent.AgentInfo domainInfo = agentLifecycleService.refreshAgent(id);
             if (domainInfo == null) {
                 return Mono.error(new RuntimeException("Agent not found: " + id));
             }
-            return Mono.just(new AgentInfo(domainInfo.id(), domainInfo.definition(),
+            return Mono.just(new AgentInfoDTO(domainInfo.id(), domainInfo.definition(),
                     domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         } catch (Exception ex) {
             log.error("Error refreshing agent with id: {}", id, ex);

@@ -1,4 +1,4 @@
-package com.hdekker.ai_workflow.app.pipeline;
+package com.hdekker.ai_workflow.application.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

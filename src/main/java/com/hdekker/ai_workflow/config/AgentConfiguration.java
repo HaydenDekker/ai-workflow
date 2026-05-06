@@ -10,10 +10,10 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.adapter.outbound.llm.LLMOutputParsingUtils;
+import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
-import com.hdekker.ai_workflow.usecases.AgentLifecycleUseCase;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -69,14 +69,14 @@ public class AgentConfiguration {
 	Path outputFolderPath;
 
 	@Autowired
-	AgentLifecycleUseCase dynamicAgentManager;
+	AgentLifecycleService dynamicAgentManager;
 
 	public AgentConfiguration(
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
-			AgentLifecycleUseCase dynamicAgentManager) {
+			AgentLifecycleService dynamicAgentManager) {
 
 		this.promptConfiguration = promptConfiguration;
 		this.systemPromptConfiguration = systemPromptConfiguration;

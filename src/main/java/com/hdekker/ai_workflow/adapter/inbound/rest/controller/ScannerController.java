@@ -6,7 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfo;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,11 +37,11 @@ public class ScannerController {
      * List all scanners.
      */
     @GetMapping
-    public ResponseEntity<List<ScannerInfo>> listScanners() {
+    public ResponseEntity<List<ScannerInfoDTO>> listScanners() {
         List<com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo> domainScanners = scannerRegistry.listAll();
-        List<ScannerInfo> result = new java.util.ArrayList<>();
+        List<ScannerInfoDTO> result = new java.util.ArrayList<>();
         for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
-            result.add(new ScannerInfo(
+            result.add(new ScannerInfoDTO(
                     d.id(),
                     d.agentId(),
                     d.folderPath(),

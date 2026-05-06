@@ -1,6 +1,6 @@
 package com.hdekker.ai_workflow.adapter.inbound.ui.component;
 
-import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatus;
+import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AdapterStatusDTO;
 
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -21,14 +21,14 @@ public class LlmStatusBadge extends HorizontalLayout {
 
     private Span label;
     private Span statusDot;
-    private AdapterStatus currentStatus;
+    private AdapterStatusDTO currentStatus;
 
     /**
      * Creates a badge with the given status.
      *
      * @param status the current LLM interface state
      */
-    public LlmStatusBadge(AdapterStatus status) {
+    public LlmStatusBadge(AdapterStatusDTO status) {
         this.currentStatus = status;
         initLayout();
         applyStatusStyles(status);
@@ -36,10 +36,10 @@ public class LlmStatusBadge extends HorizontalLayout {
 
     /**
      * Creates a badge and initializes with UNKNOWN status.
-     * Call {@link #updateStatus(AdapterStatus)} to set the actual state.
+     * Call {@link #updateStatus(AdapterStatusDTO)} to set the actual state.
      */
     public LlmStatusBadge() {
-        this(AdapterStatus.UNKNOWN);
+        this(AdapterStatusDTO.UNKNOWN);
     }
 
     private void initLayout() {
@@ -69,7 +69,7 @@ public class LlmStatusBadge extends HorizontalLayout {
      *
      * @param status the new LLM interface state
      */
-    public void updateStatus(AdapterStatus status) {
+    public void updateStatus(AdapterStatusDTO status) {
         this.currentStatus = status;
         applyStatusStyles(status);
     }
@@ -79,11 +79,11 @@ public class LlmStatusBadge extends HorizontalLayout {
      *
      * @return current AdapterStatus
      */
-    public AdapterStatus getStatus() {
+    public AdapterStatusDTO getStatus() {
         return currentStatus;
     }
 
-    private void applyStatusStyles(AdapterStatus status) {
+    private void applyStatusStyles(AdapterStatusDTO status) {
         switch (status) {
             case UP:
                 statusDot.getStyle().set("background-color", "var(--lumo-success-color)");

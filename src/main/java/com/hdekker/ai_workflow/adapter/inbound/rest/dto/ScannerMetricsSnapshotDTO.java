@@ -10,7 +10,7 @@ package com.hdekker.ai_workflow.adapter.inbound.rest.dto;
  * @param fileCount       current files in target directory
  * @param totalDiscovered files discovered (created or modified) since scanner started
  */
-public record ScannerMetricsSnapshot(
+public record ScannerMetricsSnapshotDTO(
         String agentId,
         long fileCount,
         long totalDiscovered
