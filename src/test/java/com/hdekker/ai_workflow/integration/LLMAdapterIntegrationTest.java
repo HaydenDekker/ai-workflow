@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
-import com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter;
+import com.hdekker.ai_workflow.application.pipeline.port.LLMAdapter;
 import com.hdekker.ai_workflow.adapter.outbound.llm.LLMReducerAdapter;
 import com.hdekker.ai_workflow.application.pipeline.AgentBuilder;
 import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;

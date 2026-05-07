@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter;
 import com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapterFactory;
+import com.hdekker.ai_workflow.application.pipeline.port.LLMAdapter;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;

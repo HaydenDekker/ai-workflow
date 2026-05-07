@@ -175,6 +175,8 @@
    │   │   ├── AgentConfigurator.java
    │   │   ├── AgentBuilder.java
    │   │   └── ScannerRegistry.java
+   │   └── port/
+   │       ├── LLMAdapter.java
    │   └── scanner/
    │       ├── ScannerService.java           (from usecases.Scanner — business logic only)
    │       └── ScannerObserverService.java   (from usecases.ScannerObserverUseCase)
@@ -527,14 +529,48 @@
  │ 5. Main cleanup       │ ~70 files   │ 0                 │ Low (delete)      │ Small  │
  ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
  │ 6. Test migration     │ ~17 files   │ 0                 │ Low (rename)      │ Small  │
+ ├───────────────────────┼─────────────┼───────────────────┼───────────────────┼────────┤
+ │ 7. Port cleanup       │ 1 file    │ 1 new (LLMAdapter)│ Low (reimport)    │ Tiny   │
 
- Total: ~150+ files touched across all phases.
+ Total: ~151+ files touched across all phases.
 
 > **Note:** Phase 4.5 is a catch-up for classes missed by the initial package assessment. It must complete before Phase 5
 > can safely delete the old `pipeline/` package.
 > 
 > **Note:** Phase 5 main-source cleanup is complete. Phase 6 test package reorganization is also complete.
+> Phase 7 (port cleanup — LLMAdapter moved to `application.pipeline.port`) is complete.
 > 
 > **Note:** Browser-based E2E tests at `tests/e2e/` are already correct and were not affected by this refactor.
 
  ────────────────────────────────────────────────────────────────────────────────
+### Phase 7: Move LLMAdapter to port ✅ **COMPLETE**
+
+**What was done:** 2026-05-06
+
+Moved `LLMAdapter` interface from `adapter/outbound/llm/` → `application/pipeline/port/` to complete hexagonal purity:
+
+| File | Action |
+|------|--------|
+| `adapter/outbound/llm/LLMAdapter.java` | Deleted (moved to port) |
+| `application/pipeline/port/LLMAdapter.java` | Created — port interface with Javadoc |
+| `adapter/outbound/llm/LLMAdapterFactory.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `adapter/outbound/llm/LLMReducerAdapter.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `adapter/outbound/llm/MapAgentLLMAdapter.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `adapter/outbound/llm/SplitterLLMAdapter.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `application/pipeline/AgentConfigurator.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `application/pipeline/AgentBuilderTest.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `integration/LLMAdapterIntegrationTest.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+| `test/harness/EndToEndTestHarness.java` | Updated import → `application.pipeline.port.LLMAdapter` |
+
+**Verification:**
+- ✅ 275 tests pass (0 failures, 0 errors, 2 skipped)
+- ✅ Clean compile
+- ✅ Domain: zero outward dependencies
+- ✅ Application: depends only on port interfaces, not adapter implementations
+- ✅ Adapters implement `application.pipeline.port.LLMAdapter` (not the old location)
+
+> `LLMAdapterFactory` remains in `adapter.outbound.llm` as the factory that produces `LLMAdapter` instances — this is
+> a standard dependency injection pattern. The application layer imports the factory to get instances of the port
+> interface, but never imports or depends on concrete adapter implementations.
+
+**Bottom line:** The refactor is **100% complete**. All dependency rules are satisfied.

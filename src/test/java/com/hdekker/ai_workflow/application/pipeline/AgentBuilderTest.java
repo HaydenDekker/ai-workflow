@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.TestData;
-import com.hdekker.ai_workflow.adapter.outbound.llm.LLMAdapter;
+import com.hdekker.ai_workflow.application.pipeline.port.LLMAdapter;
 import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
