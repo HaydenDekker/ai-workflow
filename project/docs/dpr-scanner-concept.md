@@ -15,6 +15,7 @@ A **scanner** watches a single directory on the file system and emits a reactive
 3. **Filter**: Skip files whose hash matches stored metadata (unchanged / already known)
 4. **Emit**: Push `FileHistory` events through a shared reactive `Flux`
 5. **Report**: Update status and metrics when files are discovered, filtered, or emitted
+6. **Count**: Compute file count via `FileCounterPort` and push to observer
 
 ---
 
@@ -44,6 +45,7 @@ The scanner uses Java's `WatchService` directly (via `NativeFileWatcher`) — no
 │  └── Manages status transitions (IDLE → EMITTING_INITIAL → …)    │
 │  └── Controls emission delay throttling                          │
 │  └── Schedules FILTERED → IDLE reset after 2s                    │
+│  └── Computes fileCount via FileCounterPort (pushed to observer) │
 └──────────────────────┬───────────────────────────────────────────┘
                        │
           ┌────────────┼────────────┐
@@ -57,11 +59,12 @@ The scanner uses Java's `WatchService` directly (via `NativeFileWatcher`) — no
 | Class | Role | Package |
 |-------|------|---------|
 | `FileWatcherPort` | Port interface for file watching (implementation: `FileSystemFileWatcher`) | `file/port/` |
-| `ScannerService` | Application-layer orchestrator: status, idle timer, emission logic | `scanner/` |
+| `FileCounterPort` | Port interface for counting files (implementation: `FileSystemFileCounter`) | `file/port/` |
+| `ScannerService` | Application-layer orchestrator: status, idle timer, emission logic, **file counting** | `scanner/` |
 | `ScannerRegistry` | Lifecycle management, one scanner per agent, status tracking, idle detection | `pipeline/` |
 | `FileComparator` | Compares file hash against stored metadata to detect changes | `file/` |
 | `FileHash` | Computes SHA-256 hash of file content | `shared/` |
-| `ScannerObserverService` | Tracks metrics (discovered, fileCount) and pushes UI callbacks | `scanner/` |
+| `ScannerObserverService` | Stores metrics (discovered, fileCount) and pushes UI callbacks (pure messenger) | `scanner/` |
 | `ScannerMetricsEvent` | Domain event emitted by observer for UI push notifications | `scanner/` |
 
 ---
@@ -140,18 +143,18 @@ A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners.
 1. Agent created (POST /api/agents)
 2. ScannerRegistry.createForAgent(agentId, targetDir, delaySeconds)
    ├── Validates directory exists and is readable
-   ├── Calls observer.storeFolder(agentId, folderPath) — registers folder for countFiles()
-   ├── Registers scanner in ConcurrentHashMap<agentId, ScannerMetadata>
+   ├── Creates FileCounterPort (injected via ScannerRegistry)
+   ├── Registers scanner in ConcurrentHashMap<agentId, ScannerService>
    ├── Calls scanner.initSource(agentId)
-   │     ├── Stores folder in observer (so countFiles() works immediately)
+   │     ├── Computes initial fileCount via fileCounter.countFiles(folderPath)
    │     ├── Transitions to EMITTING_INITIAL
    │     ├── Starts FileWatcherPort (initial full scan)
    │     ├── Hash filter processes all existing files
-   │     │     ├── New/changed → recordEvent(CREATION), emit FileHistory
-   │     │     └── Unchanged → recordEvent(UNCHANGED), emit FILTERED status
+   │     │     ├── New/changed → recordEvent(CREATION, fileCount), emit FileHistory
+   │     │     └── Unchanged → recordEvent(UNCHANGED, fileCount), emit FILTERED status
    │     ├── Transitions to EMITTING_UPDATES (if files were buffered)
    │     │     or stays IDLE (if all files unchanged)
-   │     └── Folder stored in observer before scan starts
+   │     └── Pushes initial fileCount to observer
    └── Returns ScannerInfo DTO
 ```
 
@@ -205,14 +208,18 @@ FileHistory history = fileComparator.matches(metadata);
 
 if (!history.hashMatches()) {
     // New or changed — emit
+    long fileCount = fileCounter.countFiles(folderPath);  // compute once
     ScannerEventType eventType = history.previousFile().isEmpty()
         ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
-    observer.recordEvent(agentId, eventType, ScannerStatus.EMITTING_UPDATES, folderPath, null);
+    observer.recordEvent(agentId, eventType, ScannerStatus.EMITTING_UPDATES,
+                         folderPath, null, fileCount);  // push fileCount
     fileMetadataStore.save(metadata);
     emitWithDelay(history);
 } else {
     // Unchanged — skip
-    observer.recordEvent(agentId, ScannerEventType.UNCHANGED, ScannerStatus.FILTERED, folderPath, null);
+    long fileCount = fileCounter.countFiles(folderPath);
+    observer.recordEvent(agentId, ScannerEventType.UNCHANGED,
+                         ScannerStatus.FILTERED, folderPath, null, fileCount);
     cancelAndScheduleFilteredReset();
 }
 ```
@@ -277,27 +284,31 @@ private void tryEmitWithDelay(FileHistory history) {
 
 ## Metrics Tracking
 
-Metrics are tracked via `ScannerObserverUseCase` (not Micrometer). Each scanner has three metrics:
+Metrics are tracked via `ScannerObserverService` (not Micrometer). Each scanner has three metrics:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `fileCount` | Gauge | Current number of files in the watched directory |
+| `fileCount` | Gauge | Current number of files in the watched directory (pushed from scanner) |
 | `totalDiscovered` | Counter | Total files found (initial scan + incremental) |
 | `unchanged` | Counter | Files whose hash matches previous record (skipped) |
 
-### Metrics Event Flow
+### Metrics Event Flow (Push-Based)
 
 ```
 ScannerService.processRawEvent(rawEvent)
-  └─ observer.recordEvent(agentId, eventType, status, folderPath, errorMessage)
-       ├─ dispatches: store folder, increment counter (if CREATION/MOD)
-       └─ pushToUI(agentId, status, eventType, ...)
-            └─ callbacks.forEach(cb -> cb.accept(new ScannerMetricsEvent(...)))
+  └─ fileCounter.countFiles(folderPath)              ← computed once
+  └─ observer.recordEvent(agentId, eventType, status, folderPath, null, fileCount)
+       ├─ stores fileCount in AgentMetrics
+       └─ pushToUI(agentId, status, eventType, folderPath, null, fileCount)
+            └─ callbacks.forEach(cb -> cb.accept(new ScannerMetricsEvent(..., fileCount)))
                  └─ ScannerListView.refreshCallback
                       └─ ui.access(() → refreshScanners())
                            └─ scannerService.getAllScannerInfos()
                                 └─ grid.setItems(scanners)
+                                     └─ reads info.fileCount() from DTO
 ```
+
+**Key change**: File count is **pushed** from `ScannerService` during event processing, not pulled via `countFiles()` on every render. The scanner owns file counting; the observer owns metrics tracking and event distribution.
 
 ### Event Types
 
@@ -323,6 +334,7 @@ ScannerService scanner = new ScannerService(
     emissionDelay,                   // emission throttle (e.g., 2 seconds)
     fileWatcherPort,                 // file watching port
     fileComparator,                  // hash comparison
+    fileCounter,                     // file counting port
     observer                         // metrics + UI push
 );
 
@@ -331,8 +343,7 @@ ScannerMetadata metadata = new ScannerMetadata(
     LocalDateTime.now(), null, null);
 
 scanners.put(agentId, metadata);
-observer.storeFolder(agentId, targetDirectory);
-scanner.initSource(agentId);  // triggers initial scan
+scanner.initSource(agentId);  // triggers initial scan, computes fileCount
 ```
 
 ### Status Change Callback Chain
@@ -352,14 +363,10 @@ private void cancelAndScheduleFilteredReset() {
 ### Reading File Count in the UI
 
 ```java
-// In ScannerListView — Files column definition
+// In ScannerListView — Files column definition (reads from DTO, no observer call)
 grid.addColumn(info -> {
-    try {
-        long count = observer.countFiles(info.agentId());
-        return count + " files";
-    } catch (Exception e) {
-        return "—";
-    }
+    long count = info.fileCount() != null ? info.fileCount() : 0L;
+    return count + " files";
 }).setHeader("Files").setAutoWidth(true);
 
 // Status column — component column with colored dot + text
@@ -386,12 +393,42 @@ private void updateGrid(List<ScannerInfoDTO> scanners, boolean notify) {
 
 | Test Class | Layer | What it verifies |
 |------------|-------|------------------|
-| `ScannerObserverServiceTest` | Application | Metrics tracking, callback registration, concurrency, `countFiles()` with mocked file counter |
-| `ScannerServiceTest` (app) | Application | Scanner lifecycle, flux, full scan, `initSource()` folder storage, status transitions |
+| `ScannerObserverServiceTest` | Application | Metrics tracking, callback registration, concurrency, fileCount storage and preservation |
+| `ScannerServiceTest` (app) | Application | Scanner lifecycle, flux, full scan, fileCount computation and push, status transitions |
 | `ScannerServiceTest` (UI) | Inbound adapter | `getAllScannerInfos()` conversion, error handling |
 | `ScannerListViewTest` | Inbound adapter | Route and page title annotations |
 | `ScannerRegistryTest` | Application | Registry CRUD operations |
 | `ScannerRegistryIntegrationTest` | Application | Full agent-scanner lifecycle, flux connectivity |
+
+### Example: Testing File Count Push
+
+```java
+@Test
+void givenFileEventWithFileCount_WhenRecorded_ThenStoredInMetrics() {
+    useCase.recordEvent("agent-1", CREATION, EMITTING_UPDATES,
+            "/tmp/agent-1", null, 42L);
+    assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(42L);
+}
+
+@Test
+void givenFileEventWithFileCount_WhenPushed_ThenEventContainsFileCount() {
+    CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+    useCase.registerRefreshCallback(events::add);
+    useCase.recordEvent("agent-1", CREATION, EMITTING_UPDATES,
+            "/tmp/agent-1", null, 77L);
+    assertThat(events.get(0).fileCount()).isEqualTo(77L);
+}
+
+@Test
+void givenFileEventWithCount_WhenEmissionRecorded_ThenFileCountPreserved() {
+    // Regression test: emission events must not reset fileCount to 0
+    useCase.recordEvent("agent-1", CREATION, EMITTING_UPDATES,
+            "/tmp/agent-1", null, 7L);
+    useCase.recordEmission("agent-1");
+    useCase.recordEvent("agent-1", null, EMITTING_UPDATES, null, null, 7L);
+    assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(7L);
+}
+```
 
 ### Example: Testing Status Transitions
 
@@ -400,7 +437,7 @@ private void updateGrid(List<ScannerInfoDTO> scanners, boolean notify) {
 void givenNewFileEvent_WhenProcessed_ThenStatusTransitionsToEmittingUpdates() throws Exception {
     // Capture status via callback
     CopyOnWriteArrayList<ScannerStatus> statusHistory = new CopyOnWriteArrayList<>();
-    ScannerObserverService statusObserver = new ScannerObserverService(path -> 0L);
+    ScannerObserverService statusObserver = new ScannerObserverService();
     statusObserver.registerRefreshCallback(e -> statusHistory.add(e.status()));
 
     // Create scanner with flux that emits a CREATION event
@@ -411,7 +448,7 @@ void givenNewFileEvent_WhenProcessed_ThenStatusTransitionsToEmittingUpdates() th
 
     scanner = new ScannerService("agent", inputDir.toString(),
         Duration.ofMillis(500), Duration.ZERO, emittingWatcher,
-        comparator, statusObserver);
+        comparator, fileCounter, statusObserver);
     scanner.initSource("agent");
     Thread.sleep(1000);
 
@@ -442,24 +479,51 @@ void givenUnchangedFileEvent_WhenProcessed_ThenStatusTransitionsToFiltered() thr
 | Aspect | Old | New |
 |--------|-----|-----|
 | Metrics service | `ScannerObserverUseCase` / `ScannerMetricsService` | `ScannerObserverService` (implements `ScannerMetricsPort`) |
-| Metrics snapshot | `ScannerMetricsSnapshot` | `ScannerMetrics` |
-| Event type | `ScannerMetricsChangedEvent` (Spring event) | `ScannerMetricsEvent` (domain record) |
+| Metrics snapshot | `ScannerMetricsSnapshot` | `ScannerMetrics` (includes `fileCount`) |
+| Event type | `ScannerMetricsChangedEvent` (Spring event) | `ScannerMetricsEvent` (domain record, includes `fileCount`) |
 | Push bridge | `ScannerMetricsPushService` (@Service) | Direct callback list in `ScannerObserverService` |
 | UI refresh | `grid.getDataProvider().refreshAll()` | `grid.setItems(scanners)` (re-fetches data) |
 | Status colors | Gray IDLE, Green ACTIVE | Green IDLE, Amber EMITTING_INITIAL, Blue EMITTING_UPDATES, Orange FILTERED |
-| File count | `getMetrics().fileCount` | `countFiles(agentId)` on-demand via `FileCounterPort` |
-| Folder storage | Implicit (in metrics) | Explicit `storeFolder()` called in `initSource()` |
-| Filters | Not present | New FILTERED status for hash-matched files |
+| File count | `getMetrics().fileCount` (computed on-demand) | `ScannerInfoDTO.fileCount` (pushed from scanner) |
+| File count source | `observer.countFiles(agentId)` (pull-based) | `info.fileCount()` from DTO (push-based) |
+| Folder storage | `storeFolder()` in observer | Removed — no longer needed |
+| File counting location | Observer (via `FileCounterPort`) | Scanner (via `FileCounterPort`) |
+| Hexagonal separation | Observer accessed filesystem | Observer is pure messenger; scanner owns filesystem access |
 
-### What Changed from Phase 1 to Phase 4
+### Push-Based FileCount Architecture
 
-The scanner view regressions were fixed across four phases:
-- **Phase 1**: Added tests for `countFiles()` with non-zero mock, missing folder, and IOException path
-- **Phase 2**: Changed `ScannerListView` Files column from `observer.getMetrics().totalDiscovered()` to `observer.countFiles()`
-- **Phase 3**: Added test verifying `initSource()` stores folder in observer
-- **Phase 4**: Moved `observer.storeFolder()` from `processRawEvent()` to `initSource()` (called once at creation, not on every event)
+**Before (pull-based)**:
+```
+UI → observer.countFiles(agentId)
+         → agentFolders.get(agentId)
+              → fileCounter.countFiles(folderPath)
+```
+Required `storeFolder()` to be called, `countFiles()` on the port interface, `agentFolders` map in the observer, and a separate call from UI to observer for file count.
 
-This ensures the folder is registered before any events fire, so `countFiles()` returns real data from the start.
+**After (push-based)**:
+```
+ScannerService.processRawEvent()
+  └─ fileCounter.countFiles(folderPath)         ← computed once
+  └─ observer.recordEvent(agentId, ..., fileCount)
+       └─ pushToUI(agentId, status, fileCount)
+            └─ UI renders directly from event data or getAllScannerInfos()
+
+ScannerInfoDTO now includes fileCount — no separate observer call needed.
+```
+
+The observer becomes a pure messenger — it receives data from the scanner and pushes to UI. It no longer reaches into the filesystem or tracks folder paths. The scanner owns file counting; the observer owns metrics tracking and event distribution.
+
+### What Changed from Phase 1 to Phase 8
+
+The scanner view regressions were fixed across eight phases:
+- **Phase 1**: Added `fileCount` field to `ScannerMetrics`, `ScannerMetricsEvent`, `AgentMetrics`
+- **Phase 2**: Updated `recordEvent()` to accept and store `fileCount`
+- **Phase 3**: Updated `getMetrics()` to return `fileCount` from stored metrics
+- **Phase 4**: `ScannerService` computes `fileCount` via `FileCounterPort` and passes to `recordEvent()`
+- **Phase 5**: `ScannerInfoDTO` includes `fileCount`; UI/REST services include it in DTO conversion
+- **Phase 6**: `ScannerListView` reads `fileCount` from DTO instead of `observer.countFiles()`
+- **Phase 7**: Removed `storeFolder()`, `countFiles()`, `agentFolders`, `FileCounterPort` from observer
+- **Phase 8**: Removed old countFiles tests, added fileCount preservation regression tests
 
 ---
 

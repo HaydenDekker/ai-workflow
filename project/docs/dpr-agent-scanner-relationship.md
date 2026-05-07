@@ -72,7 +72,8 @@ public record ScannerInfo(
     String status,                 // IDLE, EMITTING_INITIAL, EMITTING_UPDATES, FILTERED, ERROR
     LocalDateTime createdAt,       // When the scanner was created
     LocalDateTime lastEmittedAt,   // Last time a file was emitted
-    String errorMessage            // Error message, if in ERROR state
+    String errorMessage,           // Error message, if in ERROR state
+    Long fileCount                 // ← pushed from scanner, includes file count
 ) {}
 ```
 
@@ -117,17 +118,18 @@ ScannerRegistry.createForAgent(agentId, targetDir, delaySeconds)
         │     ├── Set up callbacks: onStatusChanged, onError, onEmission
         │     └── Start filtered reset scheduler
         │
-        ├── Register in ConcurrentHashMap<agentId, ScannerMetadata>
+        ├── Register in ConcurrentHashMap<agentId, ScannerService>
         │
-        ├── Call adapter.initSource(agentId)
+        ├── Call scanner.initSource(agentId)
+        │     ├── fileCounter.countFiles(folderPath)          ← compute fileCount once
         │     ├── Transition to EMITTING_INITIAL
         │     ├── Start NativeFileWatcher (initial full scan)
         │     ├── Hash filter processes all existing files
-        │     │     ├── New/changed → recordDiscovery, emit FileHistory
-        │     │     └── Unchanged → recordUnchanged, STATUS_FILTERED
+        │     │     ├── New/changed → recordEvent(CREATION, fileCount), emit FileHistory
+        │     │     └── Unchanged → recordEvent(UNCHANGED, fileCount), STATUS_FILTERED
         │     ├── Transition to EMITTING_UPDATES (if files buffered)
         │     │     or stays IDLE (if all files unchanged)
-        │     └── Update fileCount
+        │     └── Push initial fileCount to observer
         │
         └── Return ScannerInfo DTO
 ```

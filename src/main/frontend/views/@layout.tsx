@@ -78,13 +78,6 @@ export default function MainLayout() {
         </nav>
       </header>
 
-      {/* Demo widget — Counter backed by a mocked Hilla endpoint. */}
-      {/* Replace with a real view slot once CounterService is wired up. */}
-      <div slot="drawer" className="flex flex-col p-m gap-m">
-        <h3 className="text-sm font-semibold">Demo</h3>
-        <Counter label="Session" initialCount={0} />
-      </div>
-
       <Suspense>
         <Outlet />
       </Suspense>
