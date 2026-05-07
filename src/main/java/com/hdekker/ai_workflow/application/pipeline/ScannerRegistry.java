@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.application.file.FileComparator;
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
@@ -43,6 +44,7 @@ public class ScannerRegistry implements DisposableBean {
     private final FileMetadataRepository fileMetadataRepository;
     private final ScannerMetricsPort observer;
     private final FileWatcherPort fileWatcherFactory;
+    private final FileCounterPort fileCounter;
     private final Duration defaultEmissionDelay;
     private final Duration defaultPollInterval;
 
@@ -52,17 +54,20 @@ public class ScannerRegistry implements DisposableBean {
      * @param fileMetadataRepository  repository for file metadata change detection
      * @param observer                scanner observer port for metrics and UI push
      * @param fileWatcherFactory      factory for creating file watcher instances
+     * @param fileCounter             file counter port for computing file counts
      * @param defaultEmissionDelay    default emission delay between consecutive file emissions
      * @param defaultPollInterval     default poll interval for the watch service
      */
     public ScannerRegistry(FileMetadataRepository fileMetadataRepository,
                            ScannerMetricsPort observer,
                            FileWatcherPort fileWatcherFactory,
+                           FileCounterPort fileCounter,
                            Duration defaultEmissionDelay,
                            Duration defaultPollInterval) {
         this.fileMetadataRepository = fileMetadataRepository;
         this.observer = observer;
         this.fileWatcherFactory = fileWatcherFactory;
+        this.fileCounter = fileCounter;
         this.defaultEmissionDelay = defaultEmissionDelay;
         this.defaultPollInterval = defaultPollInterval;
     }
@@ -72,9 +77,10 @@ public class ScannerRegistry implements DisposableBean {
      */
     public ScannerRegistry(FileMetadataRepository fileMetadataRepository,
                            ScannerMetricsPort observer,
-                           FileWatcherPort fileWatcherFactory) {
+                           FileWatcherPort fileWatcherFactory,
+                           FileCounterPort fileCounter) {
         this(fileMetadataRepository, observer, fileWatcherFactory,
-                Duration.ofSeconds(2), Duration.ofSeconds(1));
+                fileCounter, Duration.ofSeconds(2), Duration.ofSeconds(1));
     }
 
     /**
@@ -127,6 +133,7 @@ public class ScannerRegistry implements DisposableBean {
                 emissionDelay,
                 watcher,
                 comparator,
+                fileCounter,
                 observer);
 
         // Put in map BEFORE initSource() so callbacks can find it

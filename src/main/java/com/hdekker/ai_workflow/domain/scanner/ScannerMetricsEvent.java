@@ -23,7 +23,8 @@ public record ScannerMetricsEvent(
         ScannerStatus status,
         ScannerEventType eventType,
         String folderPath,
-        String errorMessage
+        String errorMessage,
+        long fileCount
 ) {
 
     /**
@@ -31,7 +32,7 @@ public record ScannerMetricsEvent(
      */
     public static ScannerMetricsEvent creation(String agentId, String folderPath) {
         return new ScannerMetricsEvent(agentId, ScannerStatus.EMITTING_UPDATES,
-                ScannerEventType.CREATION, folderPath, null);
+                ScannerEventType.CREATION, folderPath, null, 0);
     }
 
     /**
@@ -39,7 +40,7 @@ public record ScannerMetricsEvent(
      */
     public static ScannerMetricsEvent modification(String agentId, String folderPath) {
         return new ScannerMetricsEvent(agentId, ScannerStatus.EMITTING_UPDATES,
-                ScannerEventType.MODIFICATION, folderPath, null);
+                ScannerEventType.MODIFICATION, folderPath, null, 0);
     }
 
     /**
@@ -47,7 +48,7 @@ public record ScannerMetricsEvent(
      */
     public static ScannerMetricsEvent deletion(String agentId, String folderPath) {
         return new ScannerMetricsEvent(agentId, ScannerStatus.EMITTING_UPDATES,
-                ScannerEventType.DELETION, folderPath, null);
+                ScannerEventType.DELETION, folderPath, null, 0);
     }
 
     /**
@@ -55,13 +56,52 @@ public record ScannerMetricsEvent(
      */
     public static ScannerMetricsEvent unchanged(String agentId, String folderPath) {
         return new ScannerMetricsEvent(agentId, ScannerStatus.FILTERED,
-                ScannerEventType.UNCHANGED, folderPath, null);
+                ScannerEventType.UNCHANGED, folderPath, null, 0);
     }
 
     /**
      * Create a status transition event (emission, error, recovery).
      */
     public static ScannerMetricsEvent status(String agentId, ScannerStatus status, String errorMessage) {
-        return new ScannerMetricsEvent(agentId, status, null, null, errorMessage);
+        return new ScannerMetricsEvent(agentId, status, null, null, errorMessage, 0);
+    }
+
+    /**
+     * Create a file discovery event with a file count.
+     */
+    public static ScannerMetricsEvent creation(String agentId, String folderPath, long fileCount) {
+        return new ScannerMetricsEvent(agentId, ScannerStatus.EMITTING_UPDATES,
+                ScannerEventType.CREATION, folderPath, null, fileCount);
+    }
+
+    /**
+     * Create a file modification event with a file count.
+     */
+    public static ScannerMetricsEvent modification(String agentId, String folderPath, long fileCount) {
+        return new ScannerMetricsEvent(agentId, ScannerStatus.EMITTING_UPDATES,
+                ScannerEventType.MODIFICATION, folderPath, null, fileCount);
+    }
+
+    /**
+     * Create a file deletion event with a file count.
+     */
+    public static ScannerMetricsEvent deletion(String agentId, String folderPath, long fileCount) {
+        return new ScannerMetricsEvent(agentId, ScannerStatus.EMITTING_UPDATES,
+                ScannerEventType.DELETION, folderPath, null, fileCount);
+    }
+
+    /**
+     * Create an unchanged file event with a file count.
+     */
+    public static ScannerMetricsEvent unchanged(String agentId, String folderPath, long fileCount) {
+        return new ScannerMetricsEvent(agentId, ScannerStatus.FILTERED,
+                ScannerEventType.UNCHANGED, folderPath, null, fileCount);
+    }
+
+    /**
+     * Create a status transition event with a file count.
+     */
+    public static ScannerMetricsEvent status(String agentId, ScannerStatus status, String errorMessage, long fileCount) {
+        return new ScannerMetricsEvent(agentId, status, null, null, errorMessage, fileCount);
     }
 }

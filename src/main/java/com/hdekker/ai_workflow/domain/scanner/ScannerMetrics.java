@@ -12,27 +12,28 @@ import java.time.LocalDateTime;
 public record ScannerMetrics(
         String agentId,
         long totalDiscovered,
-        LocalDateTime lastEmissionTimestamp
+        LocalDateTime lastEmissionTimestamp,
+        long fileCount
 ) {
 
     /**
      * Returns a new instance with the discovered count incremented by one.
      */
     public ScannerMetrics withDiscovered() {
-        return new ScannerMetrics(agentId, totalDiscovered + 1, lastEmissionTimestamp);
+        return new ScannerMetrics(agentId, totalDiscovered + 1, lastEmissionTimestamp, fileCount);
     }
 
     /**
      * Returns a new instance with the last emission timestamp updated.
      */
     public ScannerMetrics withLastEmission(LocalDateTime timestamp) {
-        return new ScannerMetrics(agentId, totalDiscovered, timestamp);
+        return new ScannerMetrics(agentId, totalDiscovered, timestamp, fileCount);
     }
 
     /**
      * Returns a zeroed metrics instance for a new agent.
      */
     public static ScannerMetrics empty(String agentId) {
-        return new ScannerMetrics(agentId, 0, null);
+        return new ScannerMetrics(agentId, 0, null, 0);
     }
 }

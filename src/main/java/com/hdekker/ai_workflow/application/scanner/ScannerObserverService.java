@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
@@ -24,14 +23,14 @@ import org.springframework.stereotype.Service;
  * <p>
  * Implements {@link ScannerMetricsPort} — the application-layer port
  * for scanner metrics. Tracks per-agent discovered counts and emission
- * timestamps. The file count is always computed on-demand by walking
- * the watched directory via {@link FileCounterPort}.
+ * timestamps. The file count is received from the scanner during event
+ * processing and stored alongside discovered metrics.
  * <p>
  * Core responsibilities:
  * <ul>
- *   <li>Accept events via {@link #recordEvent(String, ScannerEventType, ScannerStatus, String, String)}</li>
+ *   <li>Accept events via {@link #recordEvent(String, ScannerEventType, ScannerStatus, String, String, long)}</li>
  *   <li>Track per-agent discovered count and last emission timestamp</li>
- *   <li>Compute file count on-demand via {@link #countFiles(String)}</li>
+ *   <li>Store file count received from the scanner</li>
  *   <li>Expose query methods for the application layer</li>
  *   <li>Support callback registration for real-time UI push notifications</li>
  * </ul>
@@ -50,28 +49,16 @@ public class ScannerObserverService implements ScannerMetricsPort {
     private final ConcurrentHashMap<String, AgentMetrics> metricsStore = new ConcurrentHashMap<>();
 
     /**
-     * Agent ID to folder path mapping, used to walk the directory on-demand.
-     */
-    private final ConcurrentHashMap<String, String> agentFolders = new ConcurrentHashMap<>();
-
-    /**
      * Registered callbacks for real-time UI push.
      */
     private final java.util.concurrent.CopyOnWriteArrayList<java.util.function.Consumer<ScannerMetricsEvent>> refreshCallbacks
             = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     /**
-     * Adapter for counting files in a watched directory.
+     * Construct the service — no file counter dependency needed.
+     * File counts are received from the scanner during event processing.
      */
-    private final FileCounterPort fileCounter;
-
-    /**
-     * Construct the service with the given file counter port.
-     *
-     * @param fileCounter the port for counting files on the filesystem
-     */
-    public ScannerObserverService(FileCounterPort fileCounter) {
-        this.fileCounter = fileCounter;
+    public ScannerObserverService() {
     }
 
     /**
@@ -80,22 +67,32 @@ public class ScannerObserverService implements ScannerMetricsPort {
     static class AgentMetrics {
         final long totalDiscovered;
         final LocalDateTime lastEmissionTimestamp;
+        final long fileCount;
 
-        AgentMetrics(long totalDiscovered, LocalDateTime lastEmissionTimestamp) {
+        AgentMetrics(long totalDiscovered, LocalDateTime lastEmissionTimestamp, long fileCount) {
             this.totalDiscovered = totalDiscovered;
             this.lastEmissionTimestamp = lastEmissionTimestamp;
+            this.fileCount = fileCount;
+        }
+
+        AgentMetrics(long totalDiscovered, LocalDateTime lastEmissionTimestamp) {
+            this(totalDiscovered, lastEmissionTimestamp, 0);
         }
 
         AgentMetrics(long totalDiscovered) {
-            this(totalDiscovered, null);
+            this(totalDiscovered, null, 0);
         }
 
         AgentMetrics withDiscovered() {
-            return new AgentMetrics(totalDiscovered + 1, lastEmissionTimestamp);
+            return new AgentMetrics(totalDiscovered + 1, lastEmissionTimestamp, fileCount);
         }
 
         AgentMetrics withLastEmission(LocalDateTime timestamp) {
-            return new AgentMetrics(totalDiscovered, timestamp);
+            return new AgentMetrics(totalDiscovered, timestamp, fileCount);
+        }
+
+        AgentMetrics withFileCount(long fileCount) {
+            return new AgentMetrics(totalDiscovered, lastEmissionTimestamp, fileCount);
         }
     }
 
@@ -104,38 +101,56 @@ public class ScannerObserverService implements ScannerMetricsPort {
      * <p>
      * Dispatch logic on {@code eventType}:
      * <ul>
-     *   <li>CREATION / MODIFICATION — store folder, increment discovered, update emission timestamp</li>
-     *   <li>DELETION / UNCHANGED — store folder, no discovered increment</li>
+     *   <li>CREATION / MODIFICATION — increment discovered, store file count, update emission timestamp</li>
+     *   <li>DELETION / UNCHANGED — store file count, no discovered increment</li>
      *   <li>null (emission, error, recovery) — update emission timestamp if EMITTING_UPDATES</li>
      * </ul>
      */
     @Override
     public void recordEvent(String agentId, ScannerEventType eventType,
                             ScannerStatus status, String folderPath, String errorMessage) {
+        recordEvent(agentId, eventType, status, folderPath, errorMessage, 0L);
+    }
+
+    /**
+     * Record a scanner event for the given agent with a file count.
+     */
+    @Override
+    public void recordEvent(String agentId, ScannerEventType eventType,
+                            ScannerStatus status, String folderPath, String errorMessage,
+                            long fileCount) {
         if (eventType == ScannerEventType.CREATION || eventType == ScannerEventType.MODIFICATION) {
-            agentFolders.put(agentId, folderPath);
             metricsStore.compute(agentId, (key, existing) -> {
                 if (existing == null) {
-                    return new AgentMetrics(1);
+                    return new AgentMetrics(1, null, fileCount);
                 }
-                return existing.withDiscovered();
+                return existing.withDiscovered().withFileCount(fileCount);
             });
         } else if (eventType == ScannerEventType.DELETION || eventType == ScannerEventType.UNCHANGED) {
-            agentFolders.put(agentId, folderPath);
+            metricsStore.compute(agentId, (key, existing) -> {
+                if (existing == null) {
+                    return new AgentMetrics(0, null, fileCount);
+                }
+                return existing.withFileCount(fileCount);
+            });
         } else if (eventType == null) {
-            // Lifecycle events (emission, error, recovery)
-            if (status == ScannerStatus.EMITTING_UPDATES) {
-                LocalDateTime now = LocalDateTime.now();
-                metricsStore.compute(agentId, (key, existing) -> {
-                    if (existing == null) {
-                        return new AgentMetrics(0, now);
+            // Lifecycle events (emission, error, recovery, init)
+            // Always store the file count; update emission timestamp if EMITTING_UPDATES
+            metricsStore.compute(agentId, (key, existing) -> {
+                if (existing == null) {
+                    if (status == ScannerStatus.EMITTING_UPDATES) {
+                        return new AgentMetrics(0, LocalDateTime.now(), fileCount);
                     }
-                    return existing.withLastEmission(now);
-                });
-            }
+                    return new AgentMetrics(0, null, fileCount);
+                }
+                if (status == ScannerStatus.EMITTING_UPDATES) {
+                    return existing.withLastEmission(LocalDateTime.now()).withFileCount(fileCount);
+                }
+                return existing.withFileCount(fileCount);
+            });
         }
 
-        pushToUI(agentId, status, eventType, folderPath, errorMessage);
+        pushToUI(agentId, status, eventType, folderPath, errorMessage, fileCount);
     }
 
     /**
@@ -157,24 +172,17 @@ public class ScannerObserverService implements ScannerMetricsPort {
      */
     @Override
     public void pushToUI(String agentId, ScannerStatus status) {
-        for (java.util.function.Consumer<ScannerMetricsEvent> callback : refreshCallbacks) {
-            try {
-                callback.accept(new ScannerMetricsEvent(agentId, status, null, null, null));
-            } catch (Exception e) {
-                log.warn("Error in metrics refresh callback for agent {}: {}",
-                        agentId, e.getMessage());
-            }
-        }
+        pushToUI(agentId, status, null, null, null, 0L);
     }
 
     /**
      * Push a full metrics event to all registered UI callbacks.
      */
     private void pushToUI(String agentId, ScannerStatus status, ScannerEventType eventType,
-                          String folderPath, String errorMessage) {
+                          String folderPath, String errorMessage, long fileCount) {
         for (java.util.function.Consumer<ScannerMetricsEvent> callback : refreshCallbacks) {
             try {
-                callback.accept(new ScannerMetricsEvent(agentId, status, eventType, folderPath, errorMessage));
+                callback.accept(new ScannerMetricsEvent(agentId, status, eventType, folderPath, errorMessage, fileCount));
             } catch (Exception e) {
                 log.warn("Error in metrics refresh callback for agent {}: {}",
                         agentId, e.getMessage());
@@ -208,31 +216,14 @@ public class ScannerObserverService implements ScannerMetricsPort {
     /**
      * Get a metrics snapshot for a specific agent.
      * <p>
-     * The file count is computed on-demand by walking the watched directory.
+     * Includes the file count stored at the last recorded event.
      */
     @Override
     public ScannerMetrics getMetrics(String agentId) {
         AgentMetrics metrics = metricsStore.get(agentId);
         long discovered = metrics != null ? metrics.totalDiscovered : 0;
-        long fileCount = countFiles(agentId);
-        return new ScannerMetrics(agentId, discovered, getLastEmissionTimestamp(agentId));
-    }
-
-    /**
-     * Count the number of regular files in the folder associated with the given agent.
-     */
-    @Override
-    public long countFiles(String agentId) {
-        String folderPath = agentFolders.get(agentId);
-        if (folderPath == null) {
-            return 0;
-        }
-        try {
-            return fileCounter.countFiles(folderPath);
-        } catch (Exception e) {
-            log.warn("Failed to count files for folder {}: {}", folderPath, e.getMessage());
-            return 0;
-        }
+        long fileCount = metrics != null ? metrics.fileCount : 0;
+        return new ScannerMetrics(agentId, discovered, getLastEmissionTimestamp(agentId), fileCount);
     }
 
     /**
@@ -266,11 +257,4 @@ public class ScannerObserverService implements ScannerMetricsPort {
         log.debug("Scanner metrics refresh callback unregistered");
     }
 
-    /**
-     * Store the folder path for a given agent, used on-demand file counting.
-     */
-    @Override
-    public void storeFolder(String agentId, String folderPath) {
-        agentFolders.put(agentId, folderPath);
-    }
 }

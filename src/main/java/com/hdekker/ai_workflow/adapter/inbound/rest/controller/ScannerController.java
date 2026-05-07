@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
+import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,10 +28,13 @@ public class ScannerController {
     private static final Logger log = LoggerFactory.getLogger(ScannerController.class);
 
     private final ScannerRegistry scannerRegistry;
+    private final ScannerObserverService observer;
 
     @Autowired
-    public ScannerController(com.hdekker.ai_workflow.application.pipeline.ScannerRegistry scannerRegistry) {
+    public ScannerController(com.hdekker.ai_workflow.application.pipeline.ScannerRegistry scannerRegistry,
+                           ScannerObserverService observer) {
         this.scannerRegistry = scannerRegistry;
+        this.observer = observer;
     }
 
     /**
@@ -41,6 +45,7 @@ public class ScannerController {
         List<com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo> domainScanners = scannerRegistry.listAll();
         List<ScannerInfoDTO> result = new java.util.ArrayList<>();
         for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
+            long fileCount = observer.getMetrics(d.agentId()).fileCount();
             result.add(new ScannerInfoDTO(
                     d.id(),
                     d.agentId(),
@@ -48,7 +53,8 @@ public class ScannerController {
                     d.status(),
                     d.createdAt(),
                     d.lastEmittedAt(),
-                    d.errorMessage()
+                    d.errorMessage(),
+                    fileCount
             ));
         }
         log.debug("Listed {} scanners", result.size());

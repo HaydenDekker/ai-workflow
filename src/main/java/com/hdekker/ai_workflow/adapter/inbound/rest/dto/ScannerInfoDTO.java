@@ -21,7 +21,8 @@ public record ScannerInfoDTO(
     String status,
     LocalDateTime createdAt,
     LocalDateTime lastEmittedAt,
-    String errorMessage
+    String errorMessage,
+    Long fileCount
 ) {
     /**
      * Backward-compatible constructor for tests.
@@ -35,7 +36,7 @@ public record ScannerInfoDTO(
      */
     public ScannerInfoDTO(String id, String agentId, String targetDirectory,
                        String status, LocalDateTime createdAt, LocalDateTime lastEmittedAt) {
-        this(id, agentId, targetDirectory, status, createdAt, lastEmittedAt, "");
+        this(id, agentId, targetDirectory, status, createdAt, lastEmittedAt, "", 0L);
     }
 
     /**

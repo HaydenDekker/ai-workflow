@@ -27,14 +27,30 @@ public interface ScannerMetricsPort {
      *   <li>UNCHANGED — no counter change</li>
      * </ul>
      *
-     * @param agentId    the owning agent's ID
-     * @param eventType  the type of file event
-     * @param status     current scanner status
-     * @param folderPath the folder being scanned
+     * @param agentId      the owning agent's ID
+     * @param eventType    the type of file event
+     * @param status       current scanner status
+     * @param folderPath   the folder being scanned
      * @param errorMessage error message if status is ERROR
+     * @param fileCount    the current file count in the watched folder
      */
     void recordEvent(String agentId, ScannerEventType eventType,
-                     ScannerStatus status, String folderPath, String errorMessage);
+                     ScannerStatus status, String folderPath, String errorMessage,
+                     long fileCount);
+
+    /**
+     * Record a scanner event for the given agent (file count defaults to 0).
+     *
+     * @param agentId      the owning agent's ID
+     * @param eventType    the type of file event
+     * @param status       current scanner status
+     * @param folderPath   the folder being scanned
+     * @param errorMessage error message if status is ERROR
+     */
+    default void recordEvent(String agentId, ScannerEventType eventType,
+                             ScannerStatus status, String folderPath, String errorMessage) {
+        recordEvent(agentId, eventType, status, folderPath, errorMessage, 0L);
+    }
 
     /**
      * Record that a file was emitted, updating the last emission timestamp.
@@ -62,16 +78,6 @@ public interface ScannerMetricsPort {
     ScannerMetrics getMetrics(String agentId);
 
     /**
-     * Count the number of regular files in the folder associated with the given agent.
-     * <p>
-     * Computed on-demand by walking the watched directory.
-     *
-     * @param agentId the owning agent's ID
-     * @return the number of regular files, or 0 if the agent has no folder
-     */
-    long countFiles(String agentId);
-
-    /**
      * Get metrics snapshots for all registered agents.
      *
      * @return a list of all agent metric snapshots
@@ -96,11 +102,4 @@ public interface ScannerMetricsPort {
      */
     LocalDateTime getLastEmissionTimestamp(String agentId);
 
-    /**
-     * Store the folder path for a given agent, used on-demand file counting.
-     *
-     * @param agentId    the owning agent's ID
-     * @param folderPath the absolute path to the watched folder
-     */
-    void storeFolder(String agentId, String folderPath);
 }

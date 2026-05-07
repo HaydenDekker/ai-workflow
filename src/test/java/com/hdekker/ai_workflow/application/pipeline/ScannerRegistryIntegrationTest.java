@@ -25,6 +25,7 @@ import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
@@ -56,6 +57,7 @@ public class ScannerRegistryIntegrationTest {
     private ScannerRegistry scannerRegistry;
     private AgentLifecycleService agentManager;
     private FileMetadataRepository fileMetadataRepo;
+    private FileCounterPort fileCounter;
     private FileWatcherPort mockWatcherFactory;
     private FileWatcherPort mockWatcher;
     private ScannerObserverService observer;
@@ -67,7 +69,9 @@ public class ScannerRegistryIntegrationTest {
 
         fileMetadataRepo = mock(FileMetadataRepository.class);
         when(fileMetadataRepo.findById(any())).thenReturn(Optional.empty());
-        observer = new ScannerObserverService(path -> 0L);
+        fileCounter = mock(FileCounterPort.class);
+        when(fileCounter.countFiles(any())).thenReturn(0L);
+        observer = new ScannerObserverService();
 
         // Mock FileWatcherPort
         mockWatcherFactory = mock(FileWatcherPort.class);
@@ -78,7 +82,7 @@ public class ScannerRegistryIntegrationTest {
         when(mockWatcher.isRunning()).thenReturn(false);
 
         // Create the real scanner registry
-        scannerRegistry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory);
+        scannerRegistry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory, fileCounter);
 
         // Create a mock ChatClient and FileWriter for the agent manager
         String mockResponse = "## Analysis\n\nDocument processed successfully.";

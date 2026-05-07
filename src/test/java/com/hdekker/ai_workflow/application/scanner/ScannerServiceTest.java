@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.application.file.FileComparator;
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
@@ -53,6 +54,7 @@ public class ScannerServiceTest {
     private FileMetadataRepository fileMetadataRepo;
     private FileComparator comparator;
     private ScannerObserverService observer;
+    private FileCounterPort fileCounter;
     private FileWatcherPort mockWatcher;
 
     private ScannerService scanner;
@@ -70,7 +72,9 @@ public class ScannerServiceTest {
         }).when(fileMetadataRepo).save(any());
 
         comparator = new FileComparator(fileMetadataRepo);
-        observer = new ScannerObserverService(path -> 0L);
+        fileCounter = mock(FileCounterPort.class);
+        when(fileCounter.countFiles(any())).thenReturn(0L);
+        observer = new ScannerObserverService();
 
         mockWatcher = mock(FileWatcherPort.class);
         when(mockWatcher.flux()).thenReturn(Flux.empty());
@@ -99,6 +103,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         assertThat(scanner).isNotNull();
@@ -121,6 +126,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         // Act: destroy
@@ -139,6 +145,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         scanner.destroy();
@@ -159,6 +166,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         long startTime = System.currentTimeMillis();
@@ -185,6 +193,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         scanner.resetToFullScan();
@@ -205,6 +214,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         List<Throwable> errors = new CopyOnWriteArrayList<>();
@@ -242,6 +252,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         scanner.destroy();
@@ -270,6 +281,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         assertThat(scanner.toInfo().folderPath()).isEqualTo(inputDir.toString());
@@ -287,6 +299,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         var info = scanner.toInfo();
@@ -325,6 +338,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 emittingWatcher,
                 comparator,
+                fileCounter,
                 observer);
 
         // Collect emitted files
@@ -350,13 +364,13 @@ public class ScannerServiceTest {
     }
 
     @Test
-    void givenScannerCreated_WhenInitSourceCalled_ThenFolderStoredInObserver() {
-        log.info("Test: initSource stores folder in observer for countFiles");
+    void givenScannerCreated_WhenInitSourceCalled_ThenFileCountStoredInObserver() {
+        log.info("Test: initSource computes and stores fileCount in observer");
 
-        // Use a non-zero file counter mock to distinguish "folder stored" from "folder missing".
-        // If the folder is NOT stored, countFiles returns 0 (no folder in agentFolders map).
-        // If the folder IS stored, countFiles delegates to the mock and returns the mocked value.
-        ScannerObserverService countingObserver = new ScannerObserverService(path -> 42L);
+        // Use a non-zero file counter mock to verify fileCount is computed during initSource.
+        ScannerObserverService countingObserver = new ScannerObserverService();
+        FileCounterPort countingCounter = mock(FileCounterPort.class);
+        when(countingCounter.countFiles(any())).thenReturn(42L);
 
         FileWatcherPort initWatcher = mock(FileWatcherPort.class);
         when(initWatcher.flux()).thenReturn(Flux.empty());
@@ -373,17 +387,19 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 initWatcher,
                 comparator,
+                countingCounter,
                 countingObserver);
 
-        // Act: call initSource — this should store the folder path in the observer
+        // Act: call initSource — this should compute fileCount via countingCounter
+        // and pass it to the countingObserver
         scanner.initSource("init-test-agent");
 
-        // Assert: countFiles should return the mocked non-zero value,
-        // proving that the folder was stored in the observer's agentFolders map.
-        long fileCount = countingObserver.countFiles("init-test-agent");
-        assertThat(fileCount).as("countFiles should return mocked value after initSource")
+        // Assert: metrics should contain the fileCount from the computed value
+        assertThat(countingObserver.getMetrics("init-test-agent").fileCount())
+                .as("fileCount should be computed by scanner during initSource")
                 .isGreaterThan(0);
-        assertThat(fileCount).isEqualTo(42L);
+        assertThat(countingObserver.getMetrics("init-test-agent").fileCount())
+                .isEqualTo(42L);
 
         // Also verify status transitioned from IDLE
         assertThat(scanner.toInfo().status()).isIn(
@@ -392,7 +408,7 @@ public class ScannerServiceTest {
                 ScannerStatus.FILTERED.name()
         );
 
-        log.info("PASSED: initSource stored folder in observer (countFiles returns {})", fileCount);
+        log.info("PASSED: initSource computed fileCount (fileCount={})", countingObserver.getMetrics("init-test-agent").fileCount());
     }
 
     @Test
@@ -401,7 +417,7 @@ public class ScannerServiceTest {
 
         // Capture status events via callback
         CopyOnWriteArrayList<ScannerStatus> statusHistory = new CopyOnWriteArrayList<>();
-        ScannerObserverService statusObserver = new ScannerObserverService(path -> 0L);
+        ScannerObserverService statusObserver = new ScannerObserverService();
         statusObserver.registerRefreshCallback(e -> statusHistory.add(e.status()));
 
         // Create a flux that emits a CREATION event
@@ -426,6 +442,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 emittingWatcher,
                 comparator,
+                fileCounter,
                 statusObserver);
 
         // Act: initSource triggers EMITTING_INITIAL
@@ -471,7 +488,7 @@ public class ScannerServiceTest {
         FileComparator matchingComparator = new FileComparator(matchingRepo);
 
         CopyOnWriteArrayList<ScannerStatus> statusHistory = new CopyOnWriteArrayList<>();
-        ScannerObserverService filteredObserver = new ScannerObserverService(path -> 0L);
+        ScannerObserverService filteredObserver = new ScannerObserverService();
         filteredObserver.registerRefreshCallback(e -> statusHistory.add(e.status()));
 
         // Create a flux that emits a CREATION event (content is the same as stored hash)
@@ -491,6 +508,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 emittingWatcher,
                 matchingComparator,
+                fileCounter,
                 filteredObserver);
 
         // Act: initSource triggers EMITTING_INITIAL

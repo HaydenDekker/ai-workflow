@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
@@ -34,6 +35,7 @@ public class ScannerRegistryTest {
     private ScannerRegistry registry;
     private FileMetadataRepository fileMetadataRepo;
     private ScannerObserverService observer;
+    private FileCounterPort fileCounter;
     private Path tempDir;
     private List<ScannerMetricsEvent> capturedEvents;
     private FileWatcherPort mockWatcherFactory;
@@ -45,7 +47,9 @@ public class ScannerRegistryTest {
 
         fileMetadataRepo = mock(FileMetadataRepository.class);
         when(fileMetadataRepo.findById(any())).thenReturn(Optional.empty());
-        observer = new ScannerObserverService(path -> 0L);
+        fileCounter = mock(FileCounterPort.class);
+        when(fileCounter.countFiles(any())).thenReturn(0L);
+        observer = new ScannerObserverService();
 
         // Capture events pushed by the observer
         capturedEvents = new CopyOnWriteArrayList<>();
@@ -59,7 +63,7 @@ public class ScannerRegistryTest {
         when(mockWatcher.getDirectory()).thenReturn(tempDir);
         when(mockWatcher.isRunning()).thenReturn(false);
 
-        registry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory);
+        registry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory, fileCounter);
     }
 
     @AfterEach

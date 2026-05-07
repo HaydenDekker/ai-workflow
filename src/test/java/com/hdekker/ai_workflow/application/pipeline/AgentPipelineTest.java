@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.application.file.FileComparator;
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
@@ -70,7 +71,9 @@ public class AgentPipelineTest {
     private SetupResult setupPipeline(Path inputDir, Path outputDir) throws Exception {
         FileMetadataRepository db = createSmartDb();
         FileComparator comparator = new FileComparator(db);
-        ScannerObserverService observer = new ScannerObserverService(path -> 0L);
+        FileCounterPort fileCounter = mock(FileCounterPort.class);
+        when(fileCounter.countFiles(any())).thenReturn(0L);
+        ScannerObserverService observer = new ScannerObserverService();
 
         // Create a real FileWatcherPort mock that emits events
         FileWatcherPort watcher = mock(FileWatcherPort.class);
@@ -88,6 +91,7 @@ public class AgentPipelineTest {
                 Duration.ZERO,
                 watcher,
                 comparator,
+                fileCounter,
                 observer);
 
         CopyOnWriteArrayList<String> prompts = new CopyOnWriteArrayList<>();
@@ -204,7 +208,9 @@ public class AgentPipelineTest {
 
         FileMetadataRepository db = createSmartDb();
         FileComparator comparator = new FileComparator(db);
-        ScannerObserverService observer = new ScannerObserverService(path -> 0L);
+        FileCounterPort fileCounter = mock(FileCounterPort.class);
+        when(fileCounter.countFiles(any())).thenReturn(0L);
+        ScannerObserverService observer = new ScannerObserverService();
 
         FileWatcherPort watcher = mock(FileWatcherPort.class);
         when(watcher.flux()).thenReturn(Flux.empty());
@@ -220,6 +226,7 @@ public class AgentPipelineTest {
                 Duration.ZERO,
                 watcher,
                 comparator,
+                fileCounter,
                 observer);
 
         assertThat(scanner).isNotNull();
@@ -249,7 +256,9 @@ public class AgentPipelineTest {
 
         FileMetadataRepository db = createSmartDb();
         FileComparator comparator = new FileComparator(db);
-        ScannerObserverService observer = new ScannerObserverService(path -> 0L);
+        FileCounterPort fileCounter = mock(FileCounterPort.class);
+        when(fileCounter.countFiles(any())).thenReturn(0L);
+        ScannerObserverService observer = new ScannerObserverService();
 
         FileWatcherPort watcher = mock(FileWatcherPort.class);
         when(watcher.flux()).thenReturn(Flux.empty());
@@ -265,6 +274,7 @@ public class AgentPipelineTest {
                 Duration.ZERO,
                 watcher,
                 comparator,
+                fileCounter,
                 observer);
 
         // Flux should be accessible

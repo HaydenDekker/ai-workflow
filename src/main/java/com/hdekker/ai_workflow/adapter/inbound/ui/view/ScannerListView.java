@@ -133,10 +133,11 @@ public class ScannerListView extends VerticalLayout
             .setAutoWidth(true)
             .setSortable(true);
 
-        // Files column: actual file count from the watched directory, computed on-demand
+        // Files column: file count stored in the DTO by the scanner
         grid.addColumn(info -> {
             try {
-                long count = observer.countFiles(info.agentId());
+                // fileCount is now part of ScannerInfoDTO — no separate observer call needed
+                long count = info.fileCount() != null ? info.fileCount() : 0L;
                 return count + " files";
             } catch (Exception e) {
                 return "—";

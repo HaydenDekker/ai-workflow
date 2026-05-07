@@ -1,8 +1,6 @@
 package com.hdekker.ai_workflow.application.scanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -16,13 +14,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
-import org.mockito.Mock;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -36,12 +33,9 @@ public class ScannerObserverServiceTest {
 
     private ScannerObserverService useCase;
 
-    @Mock
-    private FileCounterPort fileCounter;
-
     @BeforeEach
     void setUp() {
-        useCase = new ScannerObserverService(fileCounter);
+        useCase = new ScannerObserverService();
     }
 
     // -- Parameterised callback test --
@@ -145,6 +139,66 @@ public class ScannerObserverServiceTest {
     }
 
     // -- Metrics counting tests --
+
+    // -- fileCount domain field tests (Phase 1) --
+
+    @Test
+    void givenMetricsCreated_ThenFileCountIsZero() {
+        ScannerMetrics metrics = useCase.getMetrics("agent-1");
+        assertThat(metrics.fileCount()).isZero();
+    }
+
+    @Test
+    void givenEventWithFileCount_WhenRecorded_ThenStoredInMetrics() {
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 42L);
+
+        ScannerMetrics metrics = useCase.getMetrics("agent-1");
+        assertThat(metrics.fileCount()).isEqualTo(42L);
+    }
+
+    @Test
+    void givenMetricsWithFileCount_ThenFileCountReturned() {
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 100L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 150L);
+
+        ScannerMetrics metrics = useCase.getMetrics("agent-1");
+        assertThat(metrics.fileCount()).isEqualTo(150L);
+        assertThat(metrics.totalDiscovered()).isEqualTo(2);
+    }
+
+    @Test
+    void givenEventWithoutFileCount_WhenRecorded_ThenFileCountDefaultsToZero() {
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null);
+
+        ScannerMetrics metrics = useCase.getMetrics("agent-1");
+        assertThat(metrics.fileCount()).isZero();
+    }
+
+    @Test
+    void givenEventWithFileCount_WhenPushed_ThenEventContainsFileCount() {
+        CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+        useCase.registerRefreshCallback(events::add);
+
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 77L);
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).fileCount()).isEqualTo(77L);
+    }
+
+    @Test
+    void givenDeletionEvent_WhenRecordedWithFileCount_ThenFileCountStored() {
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 33L);
+
+        ScannerMetrics metrics = useCase.getMetrics("agent-1");
+        assertThat(metrics.fileCount()).isEqualTo(33L);
+        assertThat(metrics.totalDiscovered()).isZero();
+    }
 
     @Test
     void givenNoEvents_WhenGettingMetrics_ThenReturnsEmptyMetrics() {
@@ -255,39 +309,63 @@ public class ScannerObserverServiceTest {
         assertThat(useCase.isIdle("agent-1")).isTrue();
     }
 
-    // -- countFiles() tests --
-
     @Test
-    void givenAgentWithFolder_WhenCountFilesCalled_ThenReturnsMockedCount() {
-        String agentId = "count-agent";
-        String folderPath = "/tmp/count-test";
+    void givenDeletionEvent_WhenPushed_ThenEventContainsFileCount() {
+        CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+        useCase.registerRefreshCallback(events::add);
 
-        // Store a folder, then verify countFiles delegates to the mock
-        useCase.storeFolder(agentId, folderPath);
-        when(fileCounter.countFiles(folderPath)).thenReturn(7L);
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 5L);
 
-        long count = useCase.countFiles(agentId);
-        assertThat(count).isEqualTo(7L);
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).fileCount()).isEqualTo(5L);
     }
 
     @Test
-    void givenAgentWithoutFolder_WhenCountFilesCalled_ThenReturnsZero() {
-        // No folder stored — should return 0 regardless of the file counter
-        long count = useCase.countFiles("nonexistent-agent");
-        assertThat(count).isZero();
+    void givenUnchangedEvent_WhenPushed_ThenEventContainsFileCount() {
+        CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+        useCase.registerRefreshCallback(events::add);
+
+        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, ScannerStatus.FILTERED,
+                "/tmp/agent-1", null, 10L);
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).fileCount()).isEqualTo(10L);
     }
 
     @Test
-    void givenFileCounterThrows_WhenCountFilesCalled_ThenReturnsZero() {
-        String agentId = "error-agent";
-        String folderPath = "/tmp/error-test";
+    void givenLifecycleEvent_WhenRecordedWithFileCount_ThenFileCountStored() {
+        useCase.recordEvent("agent-1", null, ScannerStatus.EMITTING_UPDATES, null, null, 20L);
 
-        useCase.storeFolder(agentId, folderPath);
-        doThrow(new RuntimeException("disk full")).when(fileCounter).countFiles(folderPath);
+        ScannerMetrics metrics = useCase.getMetrics("agent-1");
+        assertThat(metrics.fileCount()).isEqualTo(20L);
+    }
 
-        // countFiles should handle the exception gracefully
-        long count = useCase.countFiles(agentId);
-        assertThat(count).isZero();
+    // -- fileCount persistence across emission events (regression test) --
+
+    @Test
+    void givenFileEventWithCount_WhenEmissionRecorded_ThenFileCountPreserved() {
+        // Simulates: file event sets count to 7, then emission callback fires
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 7L);
+        assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(7L);
+
+        // Emission event should NOT reset fileCount to 0
+        useCase.recordEmission("agent-1");
+        useCase.recordEvent("agent-1", null, ScannerStatus.EMITTING_UPDATES, null, null, 7L);
+
+        assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(7L);
+    }
+
+    @Test
+    void givenFileEventWithCount_WhenLifecycleEventRecorded_ThenFileCountPreserved() {
+        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, ScannerStatus.EMITTING_UPDATES,
+                "/tmp/agent-1", null, 42L);
+
+        // Lifecycle event with null eventType — should preserve fileCount
+        useCase.recordEvent("agent-1", null, ScannerStatus.EMITTING_UPDATES, null, null, 42L);
+
+        assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(42L);
     }
 
     @Test
