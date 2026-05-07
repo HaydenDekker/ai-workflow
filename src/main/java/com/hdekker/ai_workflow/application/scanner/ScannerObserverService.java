@@ -227,7 +227,12 @@ public class ScannerObserverService implements ScannerMetricsPort {
         if (folderPath == null) {
             return 0;
         }
-        return fileCounter.countFiles(folderPath);
+        try {
+            return fileCounter.countFiles(folderPath);
+        } catch (Exception e) {
+            log.warn("Failed to count files for folder {}: {}", folderPath, e.getMessage());
+            return 0;
+        }
     }
 
     /**

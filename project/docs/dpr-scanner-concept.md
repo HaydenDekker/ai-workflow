@@ -32,16 +32,15 @@ The scanner uses Java's `WatchService` directly (via `NativeFileWatcher`) — no
                        │
                        ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  NativeFileWatcher                                                │
+│  FileWatcherPort (implementation: FileSystemFileWatcher)          │
 │  └── Reads file, computes hash, compares with stored metadata    │
-│  └── Triggers callbacks: onDiscovery, onUnchanged, onFiltered    │
-│  └── Emits FileHistory through Sinks.Many (reactive)             │
+│  └── Emits RawFileEvent through Flux (reactive)                  │
 └──────────────────────┬───────────────────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  FileSystemScannerAdapter                                         │
-│  └── Bridges NativeFileWatcher to ScannerRegistry                │
+│  ScannerService (application layer)                               │
+│  └── Bridges FileWatcherPort to ScannerRegistry                  │
 │  └── Manages status transitions (IDLE → EMITTING_INITIAL → …)    │
 │  └── Controls emission delay throttling                          │
 │  └── Schedules FILTERED → IDLE reset after 2s                    │
@@ -49,21 +48,21 @@ The scanner uses Java's `WatchService` directly (via `NativeFileWatcher`) — no
                        │
           ┌────────────┼────────────┐
           ▼            ▼            ▼
-   ScannerRegistry  Observer    Event Publisher
-   (status mgmt)   (metrics)   (Spring events)
+   ScannerRegistry  ScannerObserverService
+   (lifecycle)      (metrics + UI push)
 ```
 
 ### Key Classes
 
 | Class | Role | Package |
 |-------|------|---------|
-| `NativeFileWatcher` | Pure NIO file watcher, reads files, computes hashes, emits `FileHistory` | `files/` |
-| `FileSystemScannerAdapter` | Bridges watcher to registry, manages status transitions, controls emission | `files/` |
-| `ScannerRegistry` | Lifecycle management, one adapter per agent, status tracking, idle detection | `pipeline/management/` |
-| `FileComparator` | Compares file hash against stored metadata to detect changes | `files/` |
-| `FileHash` | Computes SHA-256 hash of file content | `files/` |
-| `ScannerObserverUseCase` | Tracks metrics (discovered, unchanged, fileCount) per agent | `usecases/` |
-| `ScannerMetricsChangedEvent` | Spring event published when metrics change | `ui/events/` |
+| `FileWatcherPort` | Port interface for file watching (implementation: `FileSystemFileWatcher`) | `file/port/` |
+| `ScannerService` | Application-layer orchestrator: status, idle timer, emission logic | `scanner/` |
+| `ScannerRegistry` | Lifecycle management, one scanner per agent, status tracking, idle detection | `pipeline/` |
+| `FileComparator` | Compares file hash against stored metadata to detect changes | `file/` |
+| `FileHash` | Computes SHA-256 hash of file content | `shared/` |
+| `ScannerObserverService` | Tracks metrics (discovered, fileCount) and pushes UI callbacks | `scanner/` |
+| `ScannerMetricsEvent` | Domain event emitted by observer for UI push notifications | `scanner/` |
 
 ---
 
@@ -141,17 +140,18 @@ A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners.
 1. Agent created (POST /api/agents)
 2. ScannerRegistry.createForAgent(agentId, targetDir, delaySeconds)
    ├── Validates directory exists and is readable
-   ├── Creates FileSystemScannerAdapter
-   ├── Registers adapter in ConcurrentHashMap<agentId, ScannerMetadata>
-   ├── Calls adapter.initSource(agentId)
+   ├── Calls observer.storeFolder(agentId, folderPath) — registers folder for countFiles()
+   ├── Registers scanner in ConcurrentHashMap<agentId, ScannerMetadata>
+   ├── Calls scanner.initSource(agentId)
+   │     ├── Stores folder in observer (so countFiles() works immediately)
    │     ├── Transitions to EMITTING_INITIAL
-   │     ├── Starts NativeFileWatcher (initial full scan)
+   │     ├── Starts FileWatcherPort (initial full scan)
    │     ├── Hash filter processes all existing files
-   │     │     ├── New/changed → recordDiscovery, emit FileHistory
-   │     │     └── Unchanged → recordUnchanged, emit STATUS_FILTERED
+   │     │     ├── New/changed → recordEvent(CREATION), emit FileHistory
+   │     │     └── Unchanged → recordEvent(UNCHANGED), emit FILTERED status
    │     ├── Transitions to EMITTING_UPDATES (if files were buffered)
    │     │     or stays IDLE (if all files unchanged)
-   │     └── Updates fileCount gauge
+   │     └── Folder stored in observer before scan starts
    └── Returns ScannerInfo DTO
 ```
 
@@ -161,8 +161,8 @@ A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners.
 1. Agent removed (DELETE /api/agents/{id})
 2. ScannerRegistry.destroyForAgent(scannerId)
    ├── Removes scanner from ConcurrentHashMap
-   ├── Calls adapter.destroy()
-   │     ├── Stops NativeFileWatcher (closes WatchService)
+   ├── Calls scanner.destroy()
+   │     ├── Stops FileWatcherPort (closes WatchService)
    │     ├── Cancels pending FILTERED reset task
    │     └── Shuts down filteredResetScheduler
    └── Cleans up all resources
@@ -173,14 +173,14 @@ A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners.
 ```
 1. Agent refreshed (POST /api/agents/{id}/refresh)
 2. ScannerRegistry.refreshAgent(scannerId)
-   ├── Calls adapter.resetToFullScan()
+   ├── Calls scanner.resetToFullScan()
    │     ├── Transitions to EMITTING_INITIAL
-   │     ├── Calls scanAllFiles()
+   │     ├── Calls fileWatcherPort.rawScan()
    │     │     ├── Walks directory tree
    │     │     ├── For each file:
    │     │     │     ├── Hash mismatch → emit FileHistory
-   │     │     │     └── Hash match → STATUS_FILTERED
-   │     │     └── Updates fileCount
+   │     │     │     └── Hash match → FILTERED status
+   │     │     └── Updates buffer
    │     └── Transitions to EMITTING_UPDATES
    └── Logs refresh complete
 ```
@@ -205,13 +205,15 @@ FileHistory history = fileComparator.matches(metadata);
 
 if (!history.hashMatches()) {
     // New or changed — emit
-    observer.recordDiscovery(agentId);
+    ScannerEventType eventType = history.previousFile().isEmpty()
+        ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
+    observer.recordEvent(agentId, eventType, ScannerStatus.EMITTING_UPDATES, folderPath, null);
     fileMetadataStore.save(metadata);
-    nativeFileWatcher.emit(history);
+    emitWithDelay(history);
 } else {
     // Unchanged — skip
-    observer.recordUnchanged(agentId);
-    onFiltered.accept(directory.toString());
+    observer.recordEvent(agentId, ScannerEventType.UNCHANGED, ScannerStatus.FILTERED, folderPath, null);
+    cancelAndScheduleFilteredReset();
 }
 ```
 
@@ -286,22 +288,25 @@ Metrics are tracked via `ScannerObserverUseCase` (not Micrometer). Each scanner 
 ### Metrics Event Flow
 
 ```
-NativeFileWatcher.emitFile()
-  └─ observer.recordDiscovery(agentId)  /  observer.recordUnchanged(agentId)
-       └─ publishes ScannerMetricsChangedEvent
-            └─ ScannerMetricsPushService.onScannerMetricsChanged()
-                 └─ metricsService.pushToUI(event)
-                      └─ callback.accept(event)
-                           └─ ui.access(() → grid.refreshAll())
+ScannerService.processRawEvent(rawEvent)
+  └─ observer.recordEvent(agentId, eventType, status, folderPath, errorMessage)
+       ├─ dispatches: store folder, increment counter (if CREATION/MOD)
+       └─ pushToUI(agentId, status, eventType, ...)
+            └─ callbacks.forEach(cb -> cb.accept(new ScannerMetricsEvent(...)))
+                 └─ ScannerListView.refreshCallback
+                      └─ ui.access(() → refreshScanners())
+                           └─ scannerService.getAllScannerInfos()
+                                └─ grid.setItems(scanners)
 ```
 
 ### Event Types
 
 | Event Type | When Published |
 |------------|----------------|
-| `"discovered"` | New or changed file detected |
-| `"unchanged"` | File hash matches stored metadata |
-| `"file_count"` | File count updated (after initial scan, reset, or file event) |
+| `CREATION` | New file detected (no previous hash record) |
+| `MODIFICATION` | Existing file changed (hash mismatch) |
+| `DELETION` | File removed from watched directory |
+| `UNCHANGED` | File hash matches stored metadata (filtered) |
 
 ---
 
@@ -311,57 +316,66 @@ NativeFileWatcher.emitFile()
 
 ```java
 // In ScannerRegistry.createForAgent()
-FileSystemScannerAdapter scanner = new FileSystemScannerAdapter(
+ScannerService scanner = new ScannerService(
     agentId,
     targetDirectory,
     delay,                           // poll interval (e.g., 5 seconds)
     emissionDelay,                   // emission throttle (e.g., 2 seconds)
-    fileMetadataDatabase,            // hash comparison store
-    observer,                        // metrics tracking
-    metricsEventPublisher,           // Spring event publisher
-    errMsg -> transitionToError(agentId, errMsg),  // error handler
-    newStatus -> updateStatus(agentId, newStatus), // status callback
-    aId -> recordEmission(aId)       // emission callback
+    fileWatcherPort,                 // file watching port
+    fileComparator,                  // hash comparison
+    observer                         // metrics + UI push
 );
 
 ScannerMetadata metadata = new ScannerMetadata(
-    scanner, agentId, targetDirectory, STATUS_IDLE,
+    scanner, agentId, targetDirectory, ScannerStatus.IDLE,
     LocalDateTime.now(), null, null);
 
 scanners.put(agentId, metadata);
+observer.storeFolder(agentId, targetDirectory);
 scanner.initSource(agentId);  // triggers initial scan
 ```
 
 ### Status Change Callback Chain
 
 ```java
-// FileSystemScannerAdapter receives the callback from NativeFileWatcher
-aId -> {
-    // Hash filter rejected a file
-    if (onStatusChanged != null) {
-        if (filteredResetTask != null) {
-            filteredResetTask.cancel(false);
-        }
-        onStatusChanged.accept(STATUS_FILTERED);
-        // Schedule reset to IDLE after 2 seconds
-        filteredResetTask = filteredResetScheduler.schedule(
-            () -> onStatusChanged.accept(STATUS_IDLE), 2, TimeUnit.SECONDS);
+// ScannerService processes an unchanged file event
+private void cancelAndScheduleFilteredReset() {
+    if (filteredResetTask != null) {
+        filteredResetTask.cancel(false);
     }
+    notifyStatusChange(ScannerStatus.FILTERED);  // pushes via observer callback
+    filteredResetTask = filteredResetScheduler.schedule(
+        () -> notifyStatusChange(ScannerStatus.IDLE), 2, TimeUnit.SECONDS);
 }
 ```
 
-### Reading Metrics in the UI
+### Reading File Count in the UI
 
 ```java
-// In ScannerListView — column definition
+// In ScannerListView — Files column definition
 grid.addColumn(info -> {
     try {
-        ScannerMetricsSnapshot m = metricsService.getMetrics(info.agentId());
-        return m.fileCount() + " files";
+        long count = observer.countFiles(info.agentId());
+        return count + " files";
     } catch (Exception e) {
         return "—";
     }
 }).setHeader("Files").setAutoWidth(true);
+
+// Status column — component column with colored dot + text
+grid.addComponentColumn(this::renderStatusComponent)
+    .setHeader("Status").setAutoWidth(true);
+
+// Grid refresh — uses setItems() not refreshAll()
+private void refreshScanners() {
+    scannerService.getAllScannerInfos()
+        .subscribe(scanners -> grid.getUI().get().access(() -> updateGrid(scanners, false)),
+                   error -> log.warn("Error refreshing scanners: {}", error.getMessage()));
+}
+
+private void updateGrid(List<ScannerInfoDTO> scanners, boolean notify) {
+    grid.setItems(scanners);  // re-fetches fresh data (not just re-renders existing rows)
+}```
 ```
 
 ---
@@ -370,32 +384,52 @@ grid.addColumn(info -> {
 
 ### Test Classes
 
-| Test | Type | What it verifies |
-|------|------|-----------------|
-| `FileSystemScannerAdapterTest` | Integration | Adapter lifecycle, flux behavior, watch service events |
-| `FileSystemScannerAdapterMetricsTest` | Unit (Mockito) | Metrics counters increment correctly, events published |
-| `FileSystemScannerAdapterFilteredStatusTest` | Unit (Mockito) | FILTERED status emitted for unchanged files, not for new files |
-| `FileSystemSimplePollerFluxAdapterTest` | Integration | File creation/modification detection via watch service |
-| `NativeFileWatcherMetricsTest` | Unit | NativeFileWatcher callbacks invoked correctly |
-| `ScannerObserverUseCaseTest` | Unit | Metrics tracking, callback registration, thread safety |
-| `ScannerRegistryTest` | Unit | Registry CRUD operations, status updates |
-| `ScannerRegistryIntegrationTest` | Integration | Full agent-scanner lifecycle, flux connectivity |
+| Test Class | Layer | What it verifies |
+|------------|-------|------------------|
+| `ScannerObserverServiceTest` | Application | Metrics tracking, callback registration, concurrency, `countFiles()` with mocked file counter |
+| `ScannerServiceTest` (app) | Application | Scanner lifecycle, flux, full scan, `initSource()` folder storage, status transitions |
+| `ScannerServiceTest` (UI) | Inbound adapter | `getAllScannerInfos()` conversion, error handling |
+| `ScannerListViewTest` | Inbound adapter | Route and page title annotations |
+| `ScannerRegistryTest` | Application | Registry CRUD operations |
+| `ScannerRegistryIntegrationTest` | Application | Full agent-scanner lifecycle, flux connectivity |
 
-### Example: Testing FILTERED Status
+### Example: Testing Status Transitions
 
 ```java
 @Test
-void givenExistingFileWithStoredHash_WhenInitSourceCalled_ThenStatusFilteredEmitted() {
-    // Pre-populate metadata store with file's hash
-    when(fileMetadataStore.findById("known-file.txt"))
-        .thenReturn(Optional.of(new FileMetadata("known-file.txt", content, hash)));
+void givenNewFileEvent_WhenProcessed_ThenStatusTransitionsToEmittingUpdates() throws Exception {
+    // Capture status via callback
+    CopyOnWriteArrayList<ScannerStatus> statusHistory = new CopyOnWriteArrayList<>();
+    ScannerObserverService statusObserver = new ScannerObserverService(path -> 0L);
+    statusObserver.registerRefreshCallback(e -> statusHistory.add(e.status()));
 
-    // Create adapter with status callback
-    adapter = new FileSystemScannerAdapter(..., statusChanges::add, ...);
-    adapter.initSource(agentId);
+    // Create scanner with flux that emits a CREATION event
+    RawFileEvent rawEvent = new RawFileEvent(testFile, testContent);
+    FileWatcherPort emittingWatcher = mock(FileWatcherPort.class);
+    when(emittingWatcher.flux()).thenReturn(Flux.just(rawEvent));
+    // ... configure watcher ...
 
-    // Verify FILTERED was emitted
-    assertThat(statusChanges).contains("FILTERED");
+    scanner = new ScannerService("agent", inputDir.toString(),
+        Duration.ofMillis(500), Duration.ZERO, emittingWatcher,
+        comparator, statusObserver);
+    scanner.initSource("agent");
+    Thread.sleep(1000);
+
+    // Assert both statuses present
+    assertThat(statusHistory).contains(EMITTING_INITIAL, EMITTING_UPDATES);
+}
+
+@Test
+void givenUnchangedFileEvent_WhenProcessed_ThenStatusTransitionsToFiltered() throws Exception {
+    // Pre-populate repo with matching hash so hashMatches() returns true
+    FileMetadata existingMeta = new FileMetadata(fileName, content, hash);
+    when(matchingRepo.findById(fileName)).thenReturn(Optional.of(existingMeta));
+
+    // ... create scanner with matching comparator ...
+    scanner.initSource("agent");
+    Thread.sleep(1000);
+
+    assertThat(statusHistory).contains(FILTERED);
 }
 ```
 
@@ -405,15 +439,27 @@ void givenExistingFileWithStoredHash_WhenInitSourceCalled_ThenStatusFilteredEmit
 
 ### What Changed from the Old Architecture
 
-| Aspect | Old (Spring Integration) | New (NativeFileWatcher) |
-|--------|-------------------------|------------------------|
-| Watch service | Spring Integration `FileReadingMessageSource` | Pure NIO `WatchService` |
-| Metrics | Micrometer counters/gauges | `ScannerObserverUseCase` with `AtomicLong` |
-| Events | Spring Integration message channel | Reactor `Sinks.Many` |
-| Rate limiting | `delayElements()` on Flux | Coalescing buffer with `emissionDelay` |
-| Metrics publishing | `MeterRegistry` direct | `ScannerMetricsChangedEvent` Spring events |
-| Status tracking | External status management | Built-in `FileSystemScannerAdapter` status transitions |
-| FILTERED status | Not present | New status for hash-filtered files |
+| Aspect | Old | New |
+|--------|-----|-----|
+| Metrics service | `ScannerObserverUseCase` / `ScannerMetricsService` | `ScannerObserverService` (implements `ScannerMetricsPort`) |
+| Metrics snapshot | `ScannerMetricsSnapshot` | `ScannerMetrics` |
+| Event type | `ScannerMetricsChangedEvent` (Spring event) | `ScannerMetricsEvent` (domain record) |
+| Push bridge | `ScannerMetricsPushService` (@Service) | Direct callback list in `ScannerObserverService` |
+| UI refresh | `grid.getDataProvider().refreshAll()` | `grid.setItems(scanners)` (re-fetches data) |
+| Status colors | Gray IDLE, Green ACTIVE | Green IDLE, Amber EMITTING_INITIAL, Blue EMITTING_UPDATES, Orange FILTERED |
+| File count | `getMetrics().fileCount` | `countFiles(agentId)` on-demand via `FileCounterPort` |
+| Folder storage | Implicit (in metrics) | Explicit `storeFolder()` called in `initSource()` |
+| Filters | Not present | New FILTERED status for hash-matched files |
+
+### What Changed from Phase 1 to Phase 4
+
+The scanner view regressions were fixed across four phases:
+- **Phase 1**: Added tests for `countFiles()` with non-zero mock, missing folder, and IOException path
+- **Phase 2**: Changed `ScannerListView` Files column from `observer.getMetrics().totalDiscovered()` to `observer.countFiles()`
+- **Phase 3**: Added test verifying `initSource()` stores folder in observer
+- **Phase 4**: Moved `observer.storeFolder()` from `processRawEvent()` to `initSource()` (called once at creation, not on every event)
+
+This ensures the folder is registered before any events fire, so `countFiles()` returns real data from the start.
 
 ---
 

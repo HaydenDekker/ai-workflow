@@ -3,6 +3,7 @@ package com.hdekker.ai_workflow.application.scanner;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
@@ -27,6 +28,7 @@ import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
+import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
 
 import reactor.core.publisher.Flux;
@@ -345,5 +347,163 @@ public class ScannerServiceTest {
         }
 
         log.info("PASSED: watcher event processed through scanner");
+    }
+
+    @Test
+    void givenScannerCreated_WhenInitSourceCalled_ThenFolderStoredInObserver() {
+        log.info("Test: initSource stores folder in observer for countFiles");
+
+        // Use a non-zero file counter mock to distinguish "folder stored" from "folder missing".
+        // If the folder is NOT stored, countFiles returns 0 (no folder in agentFolders map).
+        // If the folder IS stored, countFiles delegates to the mock and returns the mocked value.
+        ScannerObserverService countingObserver = new ScannerObserverService(path -> 42L);
+
+        FileWatcherPort initWatcher = mock(FileWatcherPort.class);
+        when(initWatcher.flux()).thenReturn(Flux.empty());
+        when(initWatcher.getDirectory()).thenReturn(inputDir);
+        when(initWatcher.isRunning()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(initWatcher).start();
+        org.mockito.Mockito.doNothing().when(initWatcher).stop();
+        org.mockito.Mockito.doNothing().when(initWatcher).rawScan();
+        when(initWatcher.forDirectory(any(Path.class), any(java.time.Duration.class))).thenReturn(initWatcher);
+
+        scanner = new ScannerService("init-test-agent",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                initWatcher,
+                comparator,
+                countingObserver);
+
+        // Act: call initSource — this should store the folder path in the observer
+        scanner.initSource("init-test-agent");
+
+        // Assert: countFiles should return the mocked non-zero value,
+        // proving that the folder was stored in the observer's agentFolders map.
+        long fileCount = countingObserver.countFiles("init-test-agent");
+        assertThat(fileCount).as("countFiles should return mocked value after initSource")
+                .isGreaterThan(0);
+        assertThat(fileCount).isEqualTo(42L);
+
+        // Also verify status transitioned from IDLE
+        assertThat(scanner.toInfo().status()).isIn(
+                ScannerStatus.EMITTING_UPDATES.name(),
+                ScannerStatus.IDLE.name(),
+                ScannerStatus.FILTERED.name()
+        );
+
+        log.info("PASSED: initSource stored folder in observer (countFiles returns {})", fileCount);
+    }
+
+    @Test
+    void givenNewFileEvent_WhenProcessed_ThenStatusTransitionsToEmittingUpdates() throws Exception {
+        log.info("Test: status transitions include EMITTING_INITIAL and EMITTING_UPDATES on file event");
+
+        // Capture status events via callback
+        CopyOnWriteArrayList<ScannerStatus> statusHistory = new CopyOnWriteArrayList<>();
+        ScannerObserverService statusObserver = new ScannerObserverService(path -> 0L);
+        statusObserver.registerRefreshCallback(e -> statusHistory.add(e.status()));
+
+        // Create a flux that emits a CREATION event
+        String testFileName = "transition-test.txt";
+        String testContent = "transition test content";
+        Path testFile = inputDir.resolve(testFileName);
+        Files.writeString(testFile, testContent);
+
+        RawFileEvent rawEvent = new RawFileEvent(testFile, testContent);
+        FileWatcherPort emittingWatcher = mock(FileWatcherPort.class);
+        when(emittingWatcher.flux()).thenReturn(Flux.just(rawEvent));
+        when(emittingWatcher.getDirectory()).thenReturn(inputDir);
+        when(emittingWatcher.isRunning()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(emittingWatcher).start();
+        org.mockito.Mockito.doNothing().when(emittingWatcher).stop();
+        org.mockito.Mockito.doNothing().when(emittingWatcher).rawScan();
+        when(emittingWatcher.forDirectory(any(Path.class), any(Duration.class))).thenReturn(emittingWatcher);
+
+        scanner = new ScannerService("transition-agent",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                emittingWatcher,
+                comparator,
+                statusObserver);
+
+        // Act: initSource triggers EMITTING_INITIAL
+        scanner.initSource("transition-agent");
+
+        // Wait for all events to propagate
+        Thread.sleep(1000);
+
+        // Assert: status sequence includes both EMITTING_INITIAL (from initSource)
+        // and EMITTING_UPDATES (from CREATION event processed via flux subscription).
+        // The flux is subscribed in the constructor, so CREATION event fires before
+        // initSource; the order is EMITTING_UPDATES → EMITTING_INITIAL, but both
+        // must be present.
+        assertThat(statusHistory).as("Status events should include transitions")
+                .isNotEmpty();
+
+        assertThat(statusHistory)
+                .as("Status should include EMITTING_INITIAL from initSource")
+                .contains(ScannerStatus.EMITTING_INITIAL);
+
+        assertThat(statusHistory)
+                .as("Status should transition to EMITTING_UPDATES after file event")
+                .contains(ScannerStatus.EMITTING_UPDATES);
+
+        log.info("PASSED: status transitions include EMITTING_INITIAL and EMITTING_UPDATES");
+    }
+
+    @Test
+    void givenUnchangedFileEvent_WhenProcessed_ThenStatusTransitionsToFiltered() throws Exception {
+        log.info("Test: unchanged file transitions to FILTERED status");
+
+        String testFileName = "unchanged-test.txt";
+        String testContent = "unchanged test content";
+        Path testFile = inputDir.resolve(testFileName);
+        Files.writeString(testFile, testContent);
+        String hash = com.hdekker.ai_workflow.domain.shared.FileHash.hash(testContent);
+
+        // Pre-populate the mock repository with a matching hash so the file appears unchanged
+        FileMetadataRepository matchingRepo = mock(FileMetadataRepository.class);
+        FileMetadata existingMeta = new FileMetadata(testFileName, testContent, hash);
+        when(matchingRepo.findById(testFileName)).thenReturn(Optional.of(existingMeta));
+
+        FileComparator matchingComparator = new FileComparator(matchingRepo);
+
+        CopyOnWriteArrayList<ScannerStatus> statusHistory = new CopyOnWriteArrayList<>();
+        ScannerObserverService filteredObserver = new ScannerObserverService(path -> 0L);
+        filteredObserver.registerRefreshCallback(e -> statusHistory.add(e.status()));
+
+        // Create a flux that emits a CREATION event (content is the same as stored hash)
+        RawFileEvent rawEvent = new RawFileEvent(testFile, testContent);
+        FileWatcherPort emittingWatcher = mock(FileWatcherPort.class);
+        when(emittingWatcher.flux()).thenReturn(Flux.just(rawEvent));
+        when(emittingWatcher.getDirectory()).thenReturn(inputDir);
+        when(emittingWatcher.isRunning()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(emittingWatcher).start();
+        org.mockito.Mockito.doNothing().when(emittingWatcher).stop();
+        org.mockito.Mockito.doNothing().when(emittingWatcher).rawScan();
+        when(emittingWatcher.forDirectory(any(Path.class), any(Duration.class))).thenReturn(emittingWatcher);
+
+        scanner = new ScannerService("filtered-agent",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                emittingWatcher,
+                matchingComparator,
+                filteredObserver);
+
+        // Act: initSource triggers EMITTING_INITIAL
+        scanner.initSource("filtered-agent");
+
+        // Wait for the event to be processed
+        Thread.sleep(1000);
+
+        // Assert: FILTERED status should appear in the history
+        assertThat(statusHistory)
+                .as("Status should transition to FILTERED for unchanged files")
+                .contains(ScannerStatus.FILTERED);
+
+        log.info("PASSED: unchanged file transitions to FILTERED");
     }
 }

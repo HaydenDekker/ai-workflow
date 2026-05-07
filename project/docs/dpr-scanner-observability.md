@@ -6,12 +6,12 @@
 
 ## Overview
 
-Scanners are the bridge between the file system and the AI pipeline. They watch directories for file changes and emit `FileHistory` events through a reactive stream. Observability lets operators see what scanners are doing in real time: how many files they've discovered, how many were filtered (unchanged), the current file count per directory, and the scanner's current status.
+Scanners are the bridge between the file system and the AI pipeline. They watch directories for file changes and emit `FileHistory` events through a reactive stream. Observability lets operators see what scanners are doing in real time: the actual file count per directory, the scanner's current status, and timestamps of the last emission.
 
 The observability layer consists of three parts:
-1. **Metrics tracking** — `ScannerObserverUseCase` tracks discovered, unchanged, and fileCount per agent
-2. **Spring events** — `ScannerMetricsChangedEvent` published on file activity
-3. **Real-time UI** — `ScannerListView` updates the grid via `UI.access()`
+1. **Metrics tracking** — `ScannerObserverService` tracks discovered counts, emission timestamps, and file counts per agent
+2. **Status push chain** — `ScannerObserverService` callbacks push status changes to the Vaadin UI
+3. **Real-time UI** — `ScannerListView` updates the grid via `grid.setItems()` when status or file events arrive
 
 ---
 
@@ -23,26 +23,30 @@ Three metrics are tracked per scanner, identified by `agentId`:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| **Current file count** | Gauge | Files currently in target directory |
-| **Files discovered** | Counter | Total files found (initial scan + incremental) |
-| **Files unchanged** | Counter | Files whose hash matches previous record (filtered/skipped) |
+| **Current file count** | Gauge | Files currently in target directory (computed on-demand via `FileCounterPort`) |
+| **Files discovered** | Counter | Total files found (CREATION/MODIFICATION events, monotonically incrementing) |
+| **Last emission timestamp** | Timestamp | When the last file was emitted (used for idle detection) |
 
-### 1.2 Why ScannerObserverUseCase, Not Micrometer
+### 1.2 Service Architecture
 
-- The scanner metrics are lightweight and don't need the full Micrometer stack
-- `ScannerObserverUseCase` provides a simple in-memory tracking mechanism with zero external dependencies
-- No persistence layer needed — metrics are for real-time UI display only
-- Simpler to test and mock in unit tests
+`ScannerObserverService` is the central metrics tracker. It is a `@Service` that implements `ScannerMetricsPort` — the application-layer port for scanner metrics. It provides:
+
+- Per-agent metrics storage via `ConcurrentHashMap<String, AgentMetrics>`
+- Per-agent folder path tracking via `ConcurrentHashMap<String, String> agentFolders`
+- Callback registration for real-time UI push notifications
+- On-demand file counting via `FileCounterPort`
+
+There is no Micrometer, no Spring events, no separate push service. The observer service directly holds the callback list and pushes to it.
 
 ### 1.3 AgentId Tag Strategy
 
-All metrics are keyed by `agentId` (a `ConcurrentHashMap<String, ScannerMetricsSnapshot>`):
+All metrics are keyed by `agentId` (a `ConcurrentHashMap<String, AgentMetrics>`):
 
 ```
 agentId = "my-agent"
-  fileCount = 42
   totalDiscovered = 150
-  unchanged = 108
+  lastEmissionTimestamp = 2026-05-07T10:30:00
+  folderPath = "/tmp/my-agent"
 ```
 
 - **`agentId`** — used by the UI to look up the correct metrics per scanner row
@@ -50,89 +54,110 @@ agentId = "my-agent"
 
 ---
 
-## 2. ScannerObserverUseCase
+## 2. ScannerObserverService
 
-`ScannerObserverUseCase` is the central metrics tracker. It is a simple in-memory service that tracks counters per agent and publishes events to registered callbacks.
+`ScannerObserverService` is the central metrics tracker. It is a `@Service` that implements `ScannerMetricsPort` and provides in-memory tracking with callback-based push notifications.
 
 ### 2.1 API
 
 ```java
-public class ScannerObserverUseCase {
+@Service
+public class ScannerObserverService implements ScannerMetricsPort {
 
     // Core tracking methods
-    void recordDiscovery(String agentId);      // Increment discovered counter
-    void recordUnchanged(String agentId);      // Increment unchanged counter
-    void updateFileCount(String agentId, long count);  // Set file count
+    void recordEvent(String agentId, ScannerEventType eventType,
+                     ScannerStatus status, String folderPath, String errorMessage);
+    void recordEmission(String agentId);
 
     // Queries
-    ScannerMetricsSnapshot getMetrics(String agentId);  // Snapshot for one agent
-    List<ScannerMetricsSnapshot> getAllMetrics();       // Snapshots for all agents
+    ScannerMetrics getMetrics(String agentId);              // Snapshot for one agent
+    long countFiles(String agentId);                        // On-demand file count
+    List<ScannerMetrics> getAllMetrics();                   // Snapshots for all agents
+    boolean isIdle(String agentId);
+    LocalDateTime getLastEmissionTimestamp(String agentId);
 
     // Callbacks
-    void registerRefreshCallback(Consumer<ScannerMetricsChangedEvent> callback);
-    void unregisterRefreshCallback(Consumer<ScannerMetricsChangedEvent> callback);
+    void registerRefreshCallback(Consumer<ScannerMetricsEvent> callback);
+    void unregisterRefreshCallback(Consumer<ScannerMetricsEvent> callback);
+
+    // Folder management
+    void storeFolder(String agentId, String folderPath);
+
+    // Push
+    void pushToUI(String agentId, ScannerStatus status);
 }
 ```
 
-### 2.2 Event Publishing
+### 2.2 Event Dispatch Logic
 
-Each tracking method publishes a `ScannerMetricsChangedEvent` to all registered callbacks:
+`recordEvent()` dispatches based on `eventType`:
+
+| eventType | Action |
+|-----------|--------|
+| `CREATION` / `MODIFICATION` | Store folder, increment `totalDiscovered`, update emission timestamp |
+| `DELETION` / `UNCHANGED` | Store folder, no discovered increment |
+| `null` (lifecycle events) | Update emission timestamp if status is `EMITTING_UPDATES` |
+
+After dispatch, `pushToUI()` is called with the event details, which iterates all registered callbacks.
+
+### 2.3 Thread Safety
+
+- `ConcurrentHashMap` for metrics and folder storage — thread-safe reads/writes
+- `CopyOnWriteArrayList` for callbacks — safe for concurrent iteration
+- Individual callback failures are caught and logged (don't break other callbacks)
+- `volatile` fields for scanner status in `ScannerService`
+
+### 2.4 countFiles()
+
+The file count is **computed on-demand** by walking the watched directory via `FileCounterPort`:
 
 ```java
-public void recordDiscovery(String agentId) {
-    AtomicInteger count = discovered.computeIfAbsent(agentId, k -> new AtomicInteger(0));
-    count.incrementAndGet();
-    publishEvent(ScannerMetricsChangedEvent.discoveryOccurred(agentId));
-}
-
-private void publishEvent(ScannerMetricsChangedEvent event) {
-    for (Consumer<ScannerMetricsChangedEvent> callback : callbacks) {
-        try {
-            callback.accept(event);
-        } catch (Exception e) {
-            log.warn("Error in refresh callback: {}", e.getMessage());
-        }
+public long countFiles(String agentId) {
+    String folderPath = agentFolders.get(agentId);
+    if (folderPath == null) return 0;
+    try {
+        return fileCounter.countFiles(folderPath);
+    } catch (Exception e) {
+        log.warn("Failed to count files for folder {}: {}", folderPath, e.getMessage());
+        return 0;
     }
 }
 ```
 
-### 2.3 Thread Safety
-
-- All counters are `AtomicInteger` — thread-safe for concurrent increments
-- Callbacks are stored in `CopyOnWriteArrayList` — safe for concurrent iteration
-- Individual callback failures are caught and logged (don't break other callbacks)
+The folder must be registered via `storeFolder()` first (now called in `ScannerService.initSource()`). If no folder is stored, or if the file counter throws, the method returns `0` gracefully.
 
 ---
 
-## 3. Scanner Metrics Snapshot
+## 3. ScannerMetrics
 
 ```java
-public record ScannerMetricsSnapshot(
+public record ScannerMetrics(
     String agentId,
-    long fileCount,        // current files in target directory
-    long totalDiscovered,  // files found since scanner started
-    long unchanged         // files matching previous hash (skipped)
+    long totalDiscovered,       // files found since scanner started
+    LocalDateTime lastEmissionTimestamp
 ) {}
 ```
+
+Note: `totalDiscovered` is a monotonically incrementing counter. The UI no longer uses it for the Files column — `countFiles()` is used instead, which walks the directory on each render.
 
 ---
 
 ## 4. Scanner Status Tracking
 
-In addition to numeric metrics, scanners track a **status** that is managed by `ScannerRegistry`:
+Status is managed by `ScannerService` (the per-scanner orchestrator) and pushed via `ScannerObserverService`:
 
 | Status | Description |
 |--------|-------------|
-| `IDLE` | No event for 30 seconds; watching, waiting |
-| `EMITTING_INITIAL` | Performing a full scan |
+| `IDLE` | No emission for 30 seconds; watching, waiting |
+| `EMITTING_INITIAL` | Performing an initial full scan |
 | `EMITTING_UPDATES` | File system event detected and file emitted |
 | `FILTERED` | Hash filter rejected a file (transient, resets after 2s) |
 | `ERROR` | Unrecoverable error; manual recovery required |
 
-The status is exposed via `ScannerInfo` DTO and displayed in the `ScannerListView`:
+The status is exposed via `ScannerService.ScannerInfo` (internal record) and converted to `ScannerInfoDTO` by the UI service layer.
 
 ```java
-public record ScannerInfo(
+public record ScannerInfoDTO(
     String id,
     String agentId,
     String targetDirectory,
@@ -143,117 +168,93 @@ public record ScannerInfo(
 ) {}
 ```
 
+### Status Transitions
+
+```
+IDLE
+  └─ initSource() → EMITTING_INITIAL
+       ├─ files buffered → EMITTING_UPDATES
+       └─ no files → IDLE
+EMITTING_UPDATES
+  └─ no emission for 30s → IDLE (idle checker)
+EMITTING_UPDATES
+  └─ unchanged file → FILTERED → (2s timer) → IDLE
+ERROR
+  └─ recover() → IDLE
+```
+
 ---
 
 ## 5. Event-Driven UI Updates
 
-The UI updates in real time when files are created, modified, or filtered. This is an **event-driven push** from the scanner thread to the Vaadin UI thread.
+The UI updates in real time when files are created, modified, or filtered. This is an **event-driven push** from the observer service to the Vaadin UI thread.
 
-### 5.1 Event Flow
+### 5.1 Push Chain
 
 ```
-WatchService thread (background)
-  └─ NativeFileWatcher.emitFile()
-       ├─ observer.recordDiscovery(agentId)  /  observer.recordUnchanged(agentId)
-       │    └─ publishEvent(ScannerMetricsChangedEvent)
-       │         └─ callbacks.forEach(cb -> cb.accept(event))
-       │              └─ ScannerMetricsPushService.onScannerMetricsChanged()
-       │                   └─ metricsService.pushToUI(event)
-       │                        └─ callback.accept(event)
-       │                             └─ ui.access(() → grid.refreshAll())
-       └─ emitCallback.accept(history)
-            └─ metricsEventPublisher.accept(ScannerMetricsChangedEvent.fileCountUpdated(agentId))
+ScannerService (background thread)
+  └─ notifyStatusChange(newStatus)
+       ├─ this.status = newStatus (volatile)
+       └─ observer.pushToUI(effectiveAgentId, newStatus)
+            └─ callbacks.forEach(cb -> cb.accept(new ScannerMetricsEvent(agentId, status, ...)))
+                 └─ ScannerListView.refreshCallback (registered on attach)
+                      └─ ui.access(() → refreshScanners())
+                           └─ scannerService.getAllScannerInfos()
+                                └─ scannerRegistry.listAll()
+                                     └─ scanner.toInfo() → new ScannerInfo record each call
+                                          └─ reads volatile status.name()
+                           └─ updateGrid(scanners, false)
+                                └─ grid.setItems(scanners)  ← Vaadin re-renders all rows
 ```
 
-### 5.2 ScannerMetricsChangedEvent
+### 5.2 Key Design Decisions
+
+1. **`toInfo()` creates a new record each call** — The status value is baked in at construction time. `grid.getDataProvider().refreshAll()` would NOT update the status because it re-renders existing items without re-fetching data. `grid.setItems()` replaces the entire item list, forcing Vaadin to re-render all rows with fresh data.
+
+2. **`volatile status` field** — The `ScannerService.status` field is `volatile`, so `toInfo().status()` always reads the latest value. The push chain ensures the status is updated before callbacks fire.
+
+3. **No Spring events** — Unlike the old architecture, there is no `ScannerMetricsChangedEvent` or `ScannerMetricsPushService`. The observer service directly holds and invokes callbacks.
+
+### 5.3 ScannerMetricsEvent (domain event)
+
+This is the event type used by the observer service for callback notifications:
 
 ```java
-public class ScannerMetricsChangedEvent {
-    private final String agentId;
-    private final String type;  // "discovered", "unchanged", "file_count"
-
-    // Factory methods
-    public static ScannerMetricsChangedEvent discoveryOccurred(String agentId) { ... }
-    public static ScannerMetricsChangedEvent unchangedOccurred(String agentId) { ... }
-    public static ScannerMetricsChangedEvent fileCountUpdated(String agentId) { ... }
-    public static ScannerMetricsChangedEvent errorOccurred(String agentId, String reason) { ... }
-    public static ScannerMetricsChangedEvent recoveredFromError(String agentId) { ... }
-    public static ScannerMetricsChangedEvent idleReached(String agentId) { ... }
-}
+public record ScannerMetricsEvent(
+    String agentId,
+    ScannerStatus status,
+    ScannerEventType eventType,
+    String folderPath,
+    String errorMessage
+) {}
 ```
 
-### 5.3 ScannerMetricsPushService
+This is distinct from `ScannerMetricsChangedEvent` (Spring event, if it still exists elsewhere) — `ScannerMetricsEvent` is the domain event emitted by `ScannerObserverService.pushToUI()`.
 
-`@Service` that receives Spring events and delegates to the registered UI callback:
+### 5.4 ScannerListView Callback
+
+The view registers a callback on attach that wraps the refresh in `ui.access()`:
 
 ```java
-@Service
-public class ScannerMetricsPushService {
-    private final ScannerMetricsService metricsService;
+addAttachListener(event -> {
+    com.vaadin.flow.component.UI ui = event.getUI();
+    refreshCallback = e -> {
+        log.debug("UI refresh callback triggered: agent={}, type={}",
+                e.agentId(), e.eventType() != null ? e.eventType().name().toLowerCase() : e.status().name().toLowerCase());
+        ui.access(() -> refreshScanners());
+    };
+    observer.registerRefreshCallback(refreshCallback);
+});
 
-    @EventListener
-    public void onScannerMetricsChanged(ScannerMetricsChangedEvent event) {
-        metricsService.pushToUI(event);
+addDetachListener(event -> {
+    if (refreshCallback != null) {
+        observer.unregisterRefreshCallback(refreshCallback);
+        refreshCallback = null;
     }
-}
+});
 ```
 
-### 5.4 ScannerMetricsService
-
-Holds the reference to the UI callback (registered by the view on attach):
-
-```java
-@Service
-public class ScannerMetricsService {
-    private final AtomicReference<Consumer<ScannerMetricsChangedEvent>> refreshCallbackRef
-            = new AtomicReference<>(event -> {});
-
-    public void registerRefreshCallback(Consumer<ScannerMetricsChangedEvent> callback) {
-        this.refreshCallbackRef.set(callback);
-    }
-
-    void pushToUI(ScannerMetricsChangedEvent event) {
-        Consumer<ScannerMetricsChangedEvent> callback = refreshCallbackRef.get();
-        if (callback != null) {
-            callback.accept(event);
-        }
-    }
-}
-```
-
-### 5.5 ScannerListView
-
-The view registers a callback on attach that wraps the refresh in `UI.access()`:
-
-```java
-public class ScannerListView extends VerticalLayout {
-    private final ScannerService scannerService;
-    private final ScannerMetricsService metricsService;
-
-    @AttachListener
-    void onAttach(AttachEvent event) {
-        com.vaadin.flow.component.UI ui = event.getUI();
-        metricsService.registerRefreshCallback(e -> {
-            log.debug("UI refresh callback triggered: agent={}, type={}",
-                    e.getAgentId(), e.getType());
-            ui.access(() -> {
-                grid.getDataProvider().refreshAll();
-                // Update file count column from snapshot
-                scannerService.refreshScannerInfo();
-            });
-        });
-    }
-
-    @DetachListener
-    void onDetach(DetachEvent event) {
-        metricsService.registerRefreshCallback(e -> {});
-    }
-}
-```
-
-### 5.6 Why Not @EventListener on the View
-
-> **Important**: `@EventListener` only works on Spring `@Component`/`@Service` beans. Vaadin views are not Spring beans, so the event listener cannot be placed directly on `ScannerListView`. The `ScannerMetricsPushService` (`@Service`) acts as the bridge.
+`refreshScanners()` calls `scannerService.getAllScannerInfos()` (the UI-layer thin wrapper) which re-fetches all scanner data, then calls `grid.setItems(scanners)` to re-render.
 
 ---
 
@@ -262,31 +263,39 @@ public class ScannerListView extends VerticalLayout {
 ### 6.1 Column Definitions
 
 ```java
-// File count column
+// Agent column
+grid.addColumn(ScannerInfoDTO::agentId)
+    .setHeader("Agent").setAutoWidth(true);
+
+// Target Directory column
+grid.addColumn(ScannerInfoDTO::targetDirectory)
+    .setHeader("Target Directory").setFlexGrow(2).setSortable(true);
+
+// Status column: component column with colored dot + text
+grid.addComponentColumn(this::renderStatusComponent)
+    .setHeader("Status").setAutoWidth(true);
+
+// Created column (formatted)
+grid.addColumn(info -> info.createdAt() != null ? info.createdAt().format(DATE_TIME_FMT) : "N/A")
+    .setHeader("Created").setAutoWidth(true).setSortable(true);
+
+// Last Emitted column (formatted)
+grid.addColumn(info -> info.lastEmittedAt() != null ? info.lastEmittedAt().format(DATE_TIME_FMT) : "N/A")
+    .setHeader("Last Emitted").setAutoWidth(true).setSortable(true);
+
+// Files column: actual file count from countFiles()
 grid.addColumn(info -> {
     try {
-        ScannerMetricsSnapshot m = metricsService.getMetrics(info.agentId());
-        return m.fileCount() + " files";
+        long count = observer.countFiles(info.agentId());
+        return count + " files";
     } catch (Exception e) {
         return "—";
     }
 }).setHeader("Files").setAutoWidth(true);
 
-// Status column with color coding
-grid.addColumn(ScannerInfo::status)
-    .setHeader("Status")
-    .setAutoWidth(true)
-    .setRenderer(new HtmlRenderer(status -> {
-        switch (status) {
-            case "FILTERED":   return "<span style='color:#e67e22'>FILTERED</span>";
-            case "ERROR":      return "<span style='color:#e74c3c'>ERROR</span>";
-            case "IDLE":       return "<span style='color:#95a5a6'>IDLE</span>";
-            case "EMITTING_INITIAL":
-            case "EMITTING_UPDATES":
-                               return "<span style='color:#2ecc71'>ACTIVE</span>";
-            default:           return status;
-        }
-    }));
+// Actions column: delete button
+grid.addComponentColumn(this::renderActionsColumn)
+    .setHeader("Actions").setAutoWidth(true);
 ```
 
 ### 6.2 Status Colors
@@ -295,14 +304,50 @@ grid.addColumn(ScannerInfo::status)
 |--------|-------|---------|
 | `FILTERED` | Orange (`#e67e22`) | File was rejected by hash filter (brief, transient) |
 | `ERROR` | Red (`#e74c3c`) | Scanner encountered an unrecoverable error |
-| `IDLE` | Gray (`#95a5a6`) | No event for 30 seconds; waiting for changes |
-| `EMITTING_INITIAL` / `EMITTING_UPDATES` | Green (`#2ecc71`) | Scanner is actively processing files |
+| `IDLE` | Green (`#27ae60`) | No emission for 30 seconds; waiting for changes |
+| `EMITTING_INITIAL` | Amber (`#f5a623`) | Scanner is performing an initial full scan |
+| `EMITTING_UPDATES` | Blue (`#4a90d9`) | Scanner is actively processing file events |
+
+### 6.3 StatusWrapper Component
+
+Status is rendered as a `StatusWrapper` (extends `Div`) containing a colored dot (`Div` with circular style) and a text `Span`, displayed horizontally via flexbox:
+
+```java
+private static class StatusWrapper extends Div {
+    public StatusWrapper(Div dot, Span text) {
+        super(dot, text);
+        getElement().getStyle().set("display", "flex");
+        getElement().getStyle().set("align-items", "center");
+    }
+}
+```
+
+### 6.4 Grid Refresh Strategy
+
+Two refresh paths:
+
+| Path | Trigger | Method |
+|------|---------|--------|
+| **Quiet refresh** | Real-time callback (file event) | `refreshScanners()` → `grid.setItems()` |
+| **Full refresh** | Manual button / auto-refresh (30s) | `loadScanners()` → `grid.setItems()` |
+
+Both use `grid.setItems(scanners)` rather than `grid.getDataProvider().refreshAll()` because `ScannerInfoDTO` is an immutable record — the status value is baked in at construction. `refreshAll()` only re-renders existing items; it does not re-fetch data from the service.
 
 ---
 
-## 7. Configuration
+## 7. Hexagonal Layering
 
-No special configuration is required. The `ScannerObserverUseCase` is a simple Spring component with no external dependencies.
+| Layer | Component | Role |
+|-------|-----------|------|
+| **Domain** | `ScannerMetrics`, `ScannerStatus`, `ScannerMetricsEvent`, `ScannerEventType` | Value objects for metrics and status |
+| **Application (port)** | `ScannerMetricsPort` | Interface for metrics observation and file counting |
+| **Application (use case)** | `ScannerObserverService` | Tracks metrics, `countFiles()`, UI push callbacks |
+| **Application (use case)** | `ScannerService` | Per-scanner orchestrator: status, idle timer, emission logic |
+| **Inbound adapter** | `ScannerListView` | Vaadin view rendering the grid, callback registration |
+| **Inbound adapter** | `ScannerService` (UI) | Thin wrapper around `ScannerRegistry` for the view |
+| **Outbound adapter** | `FileSystemFileCounter` | Walks real filesystem via `Files.walk()` |
+
+All changes stay within their layers. The inbound adapter (`ScannerListView`) calls through the application port (`ScannerObserverService` / `ScannerMetricsPort`). No cross-layer dependencies are introduced.
 
 ---
 
@@ -310,53 +355,57 @@ No special configuration is required. The `ScannerObserverUseCase` is a simple S
 
 ### 8.1 Test Classes
 
-| Test | Type | What it verifies |
-|------|------|-----------------|
-| `ScannerObserverUseCaseTest` | Unit | Metrics tracking, callback registration, thread safety, missing agent returns zeroed snapshot |
-| `FileSystemScannerAdapterMetricsTest` | Unit (Mockito) | Metrics counters increment on discovery, events published correctly |
-| `NativeFileWatcherMetricsTest` | Unit | NativeFileWatcher callbacks invoked correctly during initial scan |
-| `FileSystemScannerAdapterFilteredStatusTest` | Unit (Mockito) | FILTERED status emitted for unchanged files, not for new files |
+| Test Class | Layer | What it covers |
+|------------|-------|---------------|
+| `ScannerObserverServiceTest` | Application | Metrics tracking, callback registration, concurrency, `countFiles()` with mocked file counter, error handling |
+| `ScannerServiceTest` (app) | Application | Scanner lifecycle, flux, full scan, raw event processing, `initSource()` folder storage, status transitions |
+| `ScannerServiceTest` (UI) | Inbound adapter | `getAllScannerInfos()` conversion, error handling |
+| `ScannerListViewTest` | Inbound adapter | Route and page title annotations |
+| `ScannerRegistryTest` | Application | Registry CRUD operations |
+| `ScannerRegistryIntegrationTest` | Application | Full scanner lifecycle with registry |
 
-### 8.2 Example: ScannerObserverUseCaseTest
-
-```java
-@Test
-void givenDiscoveryEvent_WhenRecorded_ThenDiscoveredCountIncrements() {
-    useCase.recordDiscovery("agent-1");
-
-    ScannerMetricsSnapshot snapshot = useCase.getMetrics("agent-1");
-
-    assertThat(snapshot.totalDiscovered()).isEqualTo(1);
-    assertThat(snapshot.unchanged()).isZero();
-}
-
-@Test
-void givenCallbackRegistered_WhenDiscoveryOccurs_ThenCallbackInvoked() {
-    CopyOnWriteArrayList<ScannerMetricsChangedEvent> events = new CopyOnWriteArrayList<>();
-    useCase.registerRefreshCallback(events::add);
-
-    useCase.recordDiscovery("agent-1");
-
-    assertThat(events).hasSize(1);
-    assertThat(events.get(0).getType()).isEqualTo("discovered");
-}
-```
-
-### 8.3 Example: Testing FILTERED Status
+### 8.2 Key New Tests
 
 ```java
+// countFiles() returns mocked non-zero value when folder is stored
 @Test
-void givenExistingFileWithStoredHash_WhenInitSourceCalled_ThenStatusFilteredEmitted() {
-    // Pre-populate metadata store with file's hash
-    when(fileMetadataStore.findById("known-file.txt"))
-        .thenReturn(Optional.of(new FileMetadata("known-file.txt", content, hash)));
+void givenAgentWithFolder_WhenCountFilesCalled_ThenReturnsMockedCount() {
+    useCase.storeFolder(agentId, folderPath);
+    when(fileCounter.countFiles(folderPath)).thenReturn(7L);
+    assertThat(useCase.countFiles(agentId)).isEqualTo(7L);
+}
 
-    // Create adapter with status callback
-    adapter = new FileSystemScannerAdapter(..., statusChanges::add, ...);
-    adapter.initSource(agentId);
+// countFiles() returns 0 when no folder stored
+@Test
+void givenAgentWithoutFolder_WhenCountFilesCalled_ThenReturnsZero() {
+    assertThat(useCase.countFiles("nonexistent-agent")).isZero();
+}
 
-    // Verify FILTERED was emitted
-    assertThat(statusChanges).contains("FILTERED");
+// countFiles() handles exceptions gracefully
+@Test
+void givenFileCounterThrows_WhenCountFilesCalled_ThenReturnsZero() {
+    useCase.storeFolder(agentId, folderPath);
+    doThrow(new RuntimeException("disk full")).when(fileCounter).countFiles(folderPath);
+    assertThat(useCase.countFiles(agentId)).isZero();
+}
+
+// initSource() stores folder so countFiles() works
+@Test
+void givenScannerCreated_WhenInitSourceCalled_ThenFolderStoredInObserver() {
+    // Non-zero FileCounterPort mock → proves folder was stored
+    assertThat(statusObserver.countFiles(agentId)).isEqualTo(42L);
+}
+
+// Status transitions include EMITTING_INITIAL and EMITTING_UPDATES
+@Test
+void givenNewFileEvent_WhenProcessed_ThenStatusTransitionsToEmittingUpdates() {
+    assertThat(statusHistory).contains(EMITTING_INITIAL, EMITTING_UPDATES);
+}
+
+// Unchanged files transition to FILTERED
+@Test
+void givenUnchangedFileEvent_WhenProcessed_ThenStatusTransitionsToFiltered() {
+    assertThat(statusHistory).contains(FILTERED);
 }
 ```
 
@@ -366,21 +415,22 @@ void givenExistingFileWithStoredHash_WhenInitSourceCalled_ThenStatusFilteredEmit
 
 ### 9.1 Memory
 
-- Each scanner has 3 `AtomicInteger` counters + 1 `AtomicLong` file count in memory — minimal overhead
+- Each scanner has per-agent `AgentMetrics` (long + LocalDateTime) + folder path (String) in `ConcurrentHashMap` — minimal overhead
 - The `CopyOnWriteArrayList` of callbacks is safe for concurrent reads (typical case)
 - Snapshots are immutable records — no synchronization needed when reading
 
 ### 9.2 Event Frequency
 
-- Events are published on every file discovery, unchanged detection, and file count update
-- For large directories with rapid changes, this could result in many events
-- The UI debounces via `UI.access()` which batches UI updates
+- Events are pushed on every status change (CREATION, MODIFICATION, DELETION, UNCHANGED, idle detection)
+- The UI debounces via `ui.access()` which batches UI updates
+- `countFiles()` walks the directory on every grid render (quiet refresh or auto-refresh) — acceptable for now; cache with TTL if performance becomes an issue
 
 ### 9.3 Thread Safety
 
-- `AtomicInteger` is thread-safe for counter increments
+- `ConcurrentHashMap` is thread-safe for metrics and folder storage
 - `CopyOnWriteArrayList` is thread-safe for callback iteration
-- The `emitCallback` is called from the watch service thread; `UI.access()` ensures UI updates happen on the UI thread
+- `volatile status` in `ScannerService` ensures `toInfo()` reads the latest value
+- `UI.access()` ensures UI updates happen on the Vaadin UI thread, not the background watch thread
 
 ---
 
@@ -394,4 +444,4 @@ void givenExistingFileWithStoredHash_WhenInitSourceCalled_ThenStatusFilteredEmit
 
 ---
 
-*Scanner observability is implemented with `ScannerObserverUseCase` for in-memory metrics tracking, Spring events for real-time UI updates, and direct service injection into the Vaadin view. No database persistence, no Micrometer — just counters, gauges, and event-driven updates.*
+*Scanner observability is implemented with `ScannerObserverService` for in-memory metrics tracking, direct callback-based push for real-time UI updates, and `grid.setItems()` for full grid re-renders. No database persistence, no Micrometer, no Spring events — just counters, on-demand file counts, and event-driven updates.*

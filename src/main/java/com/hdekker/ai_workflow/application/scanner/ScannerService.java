@@ -172,7 +172,6 @@ public class ScannerService implements FileScanner {
                 observer.recordEvent(effectiveAgentId, eventType,
                         ScannerStatus.EMITTING_UPDATES, folderPath, null);
                 log.debug("{} file: {}", eventType == ScannerEventType.CREATION ? "New" : "Changed", relativePath);
-                observer.storeFolder(effectiveAgentId, folderPath);
                 emitWithDelay(history);
             } else {
                 observer.recordEvent(effectiveAgentId, ScannerEventType.UNCHANGED,
@@ -273,6 +272,9 @@ public class ScannerService implements FileScanner {
     public void initSource(String effectiveAgentId) {
         try {
             log.info("Setting up scanner for folder: {}", fileWatcherPort.getDirectory());
+
+            // Store the folder in the observer so countFiles() can walk the directory
+            observer.storeFolder(effectiveAgentId, folderPath);
 
             // Transition to EMITTING_INITIAL before the initial full scan
             notifyStatusChange(ScannerStatus.EMITTING_INITIAL);

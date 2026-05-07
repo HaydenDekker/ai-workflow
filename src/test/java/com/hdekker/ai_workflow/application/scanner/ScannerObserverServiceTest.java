@@ -2,6 +2,7 @@ package com.hdekker.ai_workflow.application.scanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -252,6 +253,41 @@ public class ScannerObserverServiceTest {
     @Test
     void givenNoEvents_WhenIsIdle_ThenReturnsTrue() {
         assertThat(useCase.isIdle("agent-1")).isTrue();
+    }
+
+    // -- countFiles() tests --
+
+    @Test
+    void givenAgentWithFolder_WhenCountFilesCalled_ThenReturnsMockedCount() {
+        String agentId = "count-agent";
+        String folderPath = "/tmp/count-test";
+
+        // Store a folder, then verify countFiles delegates to the mock
+        useCase.storeFolder(agentId, folderPath);
+        when(fileCounter.countFiles(folderPath)).thenReturn(7L);
+
+        long count = useCase.countFiles(agentId);
+        assertThat(count).isEqualTo(7L);
+    }
+
+    @Test
+    void givenAgentWithoutFolder_WhenCountFilesCalled_ThenReturnsZero() {
+        // No folder stored — should return 0 regardless of the file counter
+        long count = useCase.countFiles("nonexistent-agent");
+        assertThat(count).isZero();
+    }
+
+    @Test
+    void givenFileCounterThrows_WhenCountFilesCalled_ThenReturnsZero() {
+        String agentId = "error-agent";
+        String folderPath = "/tmp/error-test";
+
+        useCase.storeFolder(agentId, folderPath);
+        doThrow(new RuntimeException("disk full")).when(fileCounter).countFiles(folderPath);
+
+        // countFiles should handle the exception gracefully
+        long count = useCase.countFiles(agentId);
+        assertThat(count).isZero();
     }
 
     @Test
