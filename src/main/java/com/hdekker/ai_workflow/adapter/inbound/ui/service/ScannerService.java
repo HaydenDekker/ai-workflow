@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
-import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
+import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,13 +24,13 @@ public class ScannerService {
     private static final Logger log = LoggerFactory.getLogger(ScannerService.class);
 
     private final ScannerRegistry scannerRegistry;
-    private final ScannerMetricsPort metrics;
+    private final ScannerObservabilityUseCase observability;
 
     @Autowired
     public ScannerService(com.hdekker.ai_workflow.application.pipeline.ScannerRegistry scannerRegistry,
-                          ScannerMetricsPort metrics) {
+                          ScannerObservabilityUseCase observability) {
         this.scannerRegistry = scannerRegistry;
-        this.metrics = metrics;
+        this.observability = observability;
     }
 
     /**
@@ -41,7 +41,7 @@ public class ScannerService {
             List<com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo> domainScanners = scannerRegistry.listAll();
             List<ScannerInfoDTO> result = new java.util.ArrayList<>();
             for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
-                long fileCount = metrics.getMetrics(d.agentId()).fileCount();
+                long fileCount = observability.getMetrics(d.agentId()).fileCount();
                 result.add(new ScannerInfoDTO(
                         d.id(),
                         d.agentId(),
