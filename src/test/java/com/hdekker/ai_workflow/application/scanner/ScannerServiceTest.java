@@ -544,4 +544,96 @@ public class ScannerServiceTest {
 
         log.info("PASSED: unchanged file produces FILTERED event");
     }
+
+    @Test
+    void givenFileCreatedThenDeletedThenReaddedWithSameContent_WhenProcessed_ThenProducesFiltered()
+            throws Exception {
+        log.info("Test: delete-then-re-add same content produces FILTERED");
+
+        String testFileName = "delete-readd-test.txt";
+        String testContent = "same content re-added";
+        Path testFile = inputDir.resolve(testFileName);
+        String hash = com.hdekker.ai_workflow.domain.shared.FileHash.hash(testContent);
+
+        // 1. Mock repo returns the stored hash for the file (simulating it was saved from step 1)
+        FileMetadataRepository matchingRepo = mock(FileMetadataRepository.class);
+        FileMetadata existingMeta = new FileMetadata(testFileName, testContent, hash);
+        when(matchingRepo.findById(testFileName)).thenReturn(Optional.of(existingMeta));
+        org.mockito.Mockito.doAnswer(inv -> null).when(matchingRepo).save(any());
+        FileComparator matchingComparator = new FileComparator(matchingRepo);
+
+        // 2. Create flux with DELETE event (file was removed)
+        RawFileEvent deleteEvent = new RawFileEvent(testFile, null, RawFileEvent.RawFileEventType.DELETE);
+        FileWatcherPort deleteWatcher = mock(FileWatcherPort.class);
+        when(deleteWatcher.flux()).thenReturn(Flux.just(deleteEvent));
+        when(deleteWatcher.getDirectory()).thenReturn(inputDir);
+        when(deleteWatcher.isRunning()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(deleteWatcher).start();
+        org.mockito.Mockito.doNothing().when(deleteWatcher).stop();
+        org.mockito.Mockito.doNothing().when(deleteWatcher).rawScan();
+        when(deleteWatcher.forDirectory(any(Path.class), any(Duration.class)))
+                .thenReturn(deleteWatcher);
+
+        CopyOnWriteArrayList<String> eventResults = new CopyOnWriteArrayList<>();
+        ScannerEventBus testEventBus = new ScannerEventBus();
+        testEventBus.registerCallback(e -> eventResults.add(e.result().name()));
+        ScannerObservabilityUseCase deleteObservability = new ScannerObservabilityUseCase(metrics, testEventBus);
+
+        scanner = new ScannerService("delete-agent",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                deleteWatcher,
+                matchingComparator,
+                fileCounter,
+                deleteObservability);
+
+        // Act: DELETE event fires → EMITTED (early return, hash stays in repo)
+        scanner.initSource("delete-agent");
+        Thread.sleep(1000);
+
+        assertThat(eventResults)
+                .as("DELETE and EMITTING_INITIAL should both produce EMITTED")
+                .hasSize(2)
+                .containsExactly("EMITTED", "EMITTED");
+
+        // 3. Create flux with CREATION event (file re-added with same content)
+        Files.writeString(testFile, testContent); // re-add the file
+        RawFileEvent creationEvent = new RawFileEvent(testFile, testContent);
+        FileWatcherPort createWatcher = mock(FileWatcherPort.class);
+        when(createWatcher.flux()).thenReturn(Flux.just(creationEvent));
+        when(createWatcher.getDirectory()).thenReturn(inputDir);
+        when(createWatcher.isRunning()).thenReturn(true);
+        org.mockito.Mockito.doNothing().when(createWatcher).start();
+        org.mockito.Mockito.doNothing().when(createWatcher).stop();
+        org.mockito.Mockito.doNothing().when(createWatcher).rawScan();
+        when(createWatcher.forDirectory(any(Path.class), any(Duration.class)))
+                .thenReturn(createWatcher);
+
+        scanner = new ScannerService("delete-agent",
+                inputDir.toString(),
+                Duration.ofMillis(500),
+                Duration.ZERO,
+                createWatcher,
+                matchingComparator,
+                fileCounter,
+                deleteObservability);
+
+        // Act: CREATION event fires, but hash matches stored → should be FILTERED
+        scanner.initSource("delete-agent");
+        Thread.sleep(1000);
+
+        // Assert: after re-add with same content, the event bus received FILTERED
+        // Events: EMITTING_INITIAL(1) + DELETE(1) + EMITTING_INITIAL(2) + FILTERED(1) = 4
+        assertThat(eventResults)
+                .as("Should have 3 EMITTED (2× initSource + DELETE) and 1 FILTERED")
+                .hasSize(4)
+                .contains("EMITTED", "FILTERED");
+
+        assertThat(eventResults.stream().filter(r -> r.equals("FILTERED")).count())
+                .as("Exactly one FILTERED event for the re-added file")
+                .isEqualTo(1L);
+
+        log.info("PASSED: delete-then-re-add same content produces FILTERED");
+    }
 }
