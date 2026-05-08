@@ -310,4 +310,27 @@ public class AgentControllerTest {
 				.content(jsonBody))
 				.andExpect(status().isNotFound());
 	}
+	// -- Phase 6: Output file count via /metrics/files endpoint --
+
+	@Test
+	void givenObserver_WhenGetMetricsFiles_thenReturnCount() throws Exception {
+		// Arrange
+		when(agentObserverUseCase.getOutputDirectoryFileCount()).thenReturn(23L);
+
+		// Act & Assert
+		mockMvc.perform(get("/api/agents/metrics/files"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$").value(23L));
+	}
+
+	@Test
+	void givenObserver_WhenNoOutputFilesViaMetricsFiles_thenReturnZero() throws Exception {
+		// Arrange
+		when(agentObserverUseCase.getOutputDirectoryFileCount()).thenReturn(0L);
+
+		// Act & Assert
+		mockMvc.perform(get("/api/agents/metrics/files"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$").value(0L));
+	}
 }

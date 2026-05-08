@@ -120,6 +120,18 @@ public class AgentController {
     }
 
     /**
+     * Get the number of files in the output directory.
+     * Simple numeric endpoint for the UI dashboard.
+     */
+    @GetMapping("/metrics/files")
+    public ResponseEntity<Long> getOutputFileCount() {
+        long count = agentObserverUseCase != null
+                ? agentObserverUseCase.getOutputDirectoryFileCount()
+                : 0L;
+        return ResponseEntity.ok(count);
+    }
+
+    /**
      * Get the total dispatch count across all agents.
      */
     @GetMapping("/dispatch-count")

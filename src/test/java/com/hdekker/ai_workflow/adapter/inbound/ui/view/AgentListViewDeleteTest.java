@@ -17,6 +17,9 @@ import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentDetailDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverEventBus;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverService;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 import com.vaadin.browserless.SpringBrowserlessTest;
@@ -230,9 +233,18 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
         @Bean
         @Primary
+        public AgentObserverUseCase agentObserverUseCase() {
+            return new AgentObserverUseCase(
+                    new AgentObserverService(),
+                    new AgentObserverEventBus());
+        }
+
+        @Bean
+        @Primary
         public AgentInfoService agentInfoService(AgentLifecycleService agentLifecycleService,
-                                                 DirectoryValidationPort directoryValidationPort) {
-            return new AgentInfoService(agentLifecycleService, directoryValidationPort);
+                                                 DirectoryValidationPort directoryValidationPort,
+                                                 AgentObserverUseCase observer) {
+            return new AgentInfoService(agentLifecycleService, directoryValidationPort, observer);
         }
 
         @Bean

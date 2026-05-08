@@ -10,6 +10,7 @@ import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +24,15 @@ public class AgentInfoService {
 
     private final AgentLifecycleService agentLifecycleService;
     private final DirectoryValidationPort directoryValidationPort;
+    private final AgentObserverUseCase observer;
 
     @Autowired
     public AgentInfoService(AgentLifecycleService agentLifecycleService,
-                            DirectoryValidationPort directoryValidationPort) {
+                            DirectoryValidationPort directoryValidationPort,
+                            AgentObserverUseCase observer) {
         this.agentLifecycleService = agentLifecycleService;
         this.directoryValidationPort = directoryValidationPort;
+        this.observer = observer;
     }
 
     public Mono<List<AgentInfoDTO>> getAllAgentInfos() {
@@ -111,6 +115,23 @@ public class AgentInfoService {
         } catch (Exception ex) {
             log.error("Error refreshing agent with id: {}", id, ex);
             return Mono.error(ex);
+        }
+    }
+
+    /**
+     * Get the number of files in the output directory.
+     *
+     * @return a Mono containing the output file count
+     */
+    public Mono<Long> getOutputFileCount() {
+        try {
+            long count = observer != null
+                    ? observer.getOutputDirectoryFileCount()
+                    : 0L;
+            return Mono.just(count);
+        } catch (Exception ex) {
+            log.error("Error fetching output file count", ex);
+            return Mono.just(0L);
         }
     }
 }
