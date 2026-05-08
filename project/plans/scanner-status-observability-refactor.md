@@ -1,5 +1,11 @@
 # Plan: Scanner Status & Observability Refactor
 
+## Implementation Status: ✅ Complete (2026-05-08)
+
+**Branch**: `refactor/scanner-observability` merged to `main`
+**Tests**: 108 tests across 8 classes — all green
+**Knowledge extracted to**: [dpr-scanner-observability.md](../docs/dpr-scanner-observability.md), [dpr-scanner-concept.md](../docs/dpr-scanner-concept.md)
+
 ## Problem
 
 The scanner status system is tangled across concerns. `ScannerObserverService` mixes metrics storage with UI push messaging. The `ScannerStatus` enum conflates file event results (Emitted/Filtered) with scanner lifecycle states (EMITTING_INITIAL/IDLE). The push chain is correct but the *data it carries* is not — status values are computed in the application layer but represent display concerns that belong in the UI.
