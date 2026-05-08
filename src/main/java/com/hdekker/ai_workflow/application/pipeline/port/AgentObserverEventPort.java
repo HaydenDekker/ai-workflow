@@ -33,4 +33,11 @@ public interface AgentObserverEventPort {
      * @param callback the consumer to remove
      */
     void unregisterCallback(Consumer<AgentObserverEvent> callback);
+
+    /**
+     * Publish an agent observer event to all registered callbacks.
+     *
+     * @param event the agent observer event to publish
+     */
+    void publish(AgentObserverEvent event);
 }
