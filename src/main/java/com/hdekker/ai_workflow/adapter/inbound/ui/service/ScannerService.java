@@ -42,6 +42,7 @@ public class ScannerService {
             List<ScannerInfoDTO> result = new java.util.ArrayList<>();
             for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
                 long fileCount = observability.getMetrics(d.agentId()).fileCount();
+                String fileResult = d.fileResult() != null ? d.fileResult().name() : "";
                 result.add(new ScannerInfoDTO(
                         d.id(),
                         d.agentId(),
@@ -50,7 +51,8 @@ public class ScannerService {
                         d.createdAt(),
                         d.lastEmittedAt(),
                         d.errorMessage(),
-                        fileCount
+                        fileCount,
+                        fileResult
                 ));
             }
             return Mono.just(result);

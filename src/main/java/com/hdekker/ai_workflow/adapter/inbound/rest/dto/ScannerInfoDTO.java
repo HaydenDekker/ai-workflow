@@ -9,10 +9,12 @@ import java.time.LocalDateTime;
  * @param id               unique scanner identifier
  * @param agentId          owner agent — never null after creation
  * @param targetDirectory  absolute path the scanner watches
- * @param status           current state: IDLE, EMITTING_INITIAL, EMITTING_UPDATES, ERROR
+ * @param status           current lifecycle state: IDLE, EMITTING_INITIAL, EMITTING_UPDATES, ERROR
  * @param createdAt        when the scanner was created
  * @param lastEmittedAt    timestamp of last file emission (null if none yet)
  * @param errorMessage     error message when status is ERROR (null otherwise)
+ * @param fileCount        number of files in the watched folder (from metrics)
+ * @param fileResult       file-level result: EMITTED, FILTERED, ERROR (from domain)
  */
 public record ScannerInfoDTO(
     String id,
@@ -22,7 +24,8 @@ public record ScannerInfoDTO(
     LocalDateTime createdAt,
     LocalDateTime lastEmittedAt,
     String errorMessage,
-    Long fileCount
+    Long fileCount,
+    String fileResult
 ) {
     /**
      * Backward-compatible constructor for tests.
@@ -36,7 +39,7 @@ public record ScannerInfoDTO(
      */
     public ScannerInfoDTO(String id, String agentId, String targetDirectory,
                        String status, LocalDateTime createdAt, LocalDateTime lastEmittedAt) {
-        this(id, agentId, targetDirectory, status, createdAt, lastEmittedAt, "", 0L);
+        this(id, agentId, targetDirectory, status, createdAt, lastEmittedAt, "", 0L, "");
     }
 
     /**

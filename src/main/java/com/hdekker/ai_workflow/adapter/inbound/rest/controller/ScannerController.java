@@ -46,6 +46,7 @@ public class ScannerController {
         List<ScannerInfoDTO> result = new java.util.ArrayList<>();
         for (com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo d : domainScanners) {
             long fileCount = observability.getMetrics(d.agentId()).fileCount();
+            String fileResult = d.fileResult() != null ? d.fileResult().name() : "";
             result.add(new ScannerInfoDTO(
                     d.id(),
                     d.agentId(),
@@ -54,7 +55,8 @@ public class ScannerController {
                     d.createdAt(),
                     d.lastEmittedAt(),
                     d.errorMessage(),
-                    fileCount
+                    fileCount,
+                    fileResult
             ));
         }
         log.debug("Listed {} scanners", result.size());
