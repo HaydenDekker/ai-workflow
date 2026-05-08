@@ -69,13 +69,15 @@ public record ScannerInfo(
     String id,                     // Unique scanner ID (same as agentId)
     String agentId,                // Owning agent ID
     String targetDirectory,        // Directory being watched
-    String status,                 // IDLE, EMITTING_INITIAL, EMITTING_UPDATES, FILTERED, ERROR
+    String status,                 // IDLE, EMITTING_INITIAL, EMITTING_UPDATES, ERROR
     LocalDateTime createdAt,       // When the scanner was created
     LocalDateTime lastEmittedAt,   // Last time a file was emitted
     String errorMessage,           // Error message, if in ERROR state
     Long fileCount                 // ← pushed from scanner, includes file count
 ) {}
 ```
+
+**Note**: `FILTERED` is no longer a scanner lifecycle status — it is a `ScannerFileResult` domain value. The scanner lifecycle status now only includes `IDLE`, `EMITTING_INITIAL`, `EMITTING_UPDATES`, and `ERROR`. UI display state (`Active`, `Filtered`, `Error`, `Idle`) is managed by `ScannerListView` based on `ScannerFileResult` events and UI-owned timers.
 
 ### ScannerMetadata (Internal)
 
@@ -125,11 +127,11 @@ ScannerRegistry.createForAgent(agentId, targetDir, delaySeconds)
         │     ├── Transition to EMITTING_INITIAL
         │     ├── Start NativeFileWatcher (initial full scan)
         │     ├── Hash filter processes all existing files
-        │     │     ├── New/changed → recordEvent(CREATION, fileCount), emit FileHistory
-        │     │     └── Unchanged → recordEvent(UNCHANGED, fileCount), STATUS_FILTERED
+        │     │     ├── New/changed → observability.recordFileEvent(CREATION, EMITTED, fileCount), emit FileHistory
+        │     │     └── Unchanged → observability.recordFileEvent(UNCHANGED, FILTERED, fileCount)
         │     ├── Transition to EMITTING_UPDATES (if files buffered)
         │     │     or stays IDLE (if all files unchanged)
-        │     └── Push initial fileCount to observer
+        │     └── Push initial fileCount to metrics service
         │
         └── Return ScannerInfo DTO
 ```
@@ -172,7 +174,7 @@ ScannerRegistry.refreshAgent(scannerId)
         │     ├── Transition to EMITTING_INITIAL
         │     ├── scanAllFiles() — walk directory, emit new files
         │     │     ├── Hash mismatch → emit FileHistory
-        │     │     └── Hash match → STATUS_FILTERED
+        │     │     └── Hash match → ScannerFileResult.FILTERED (via observability use case)
         │     └── Transition to EMITTING_UPDATES
         │
         └── Log refresh complete
@@ -244,7 +246,7 @@ If a scanner encounters an unrecoverable error (e.g., directory becomes inaccess
 
 1. `FileSystemScannerAdapter` calls the error callback: `onErrorCallback.accept(errorMsg)`
 2. `ScannerRegistry.transitionToError(agentId, reason)` transitions the scanner to `ERROR` status
-3. The error is logged and a `ScannerMetricsChangedEvent.errorOccurred()` event is published
+3. `ScannerObservabilityUseCase.transitionToError(agentId, reason, fileCount)` records the error in metrics and publishes a `ScannerEvent` with `result = ERROR`
 4. Recovery is manual: `ScannerRegistry.recoverFromError(agentId)` resets to `EMITTING_INITIAL` and triggers a full rescan
 
 ```java
@@ -254,7 +256,7 @@ public void recoverFromError(String agentId) {
                                    .withError(null);
     scanners.put(key, updated);
     meta.scanner().resetToFullScan();
-    pushMetricsEvent(ScannerMetricsChangedEvent.recoveredFromError(agentId));
+    observability.transitionToError(agentId, "Recovered", fileCount);
 }
 ```
 
@@ -262,7 +264,7 @@ public void recoverFromError(String agentId) {
 
 ## Idle Detection
 
-A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners for inactivity:
+A shared `ScheduledExecutorService` runs every 10 seconds to check all scanners for inactivity at the **lifecycle** level:
 
 ```java
 private void checkAllScannersForIdle() {
@@ -281,12 +283,17 @@ private void checkAllScannersForIdle() {
             Duration sinceLastEmission = Duration.between(lastEmit, now);
             if (sinceLastEmission.compareTo(IDLE_TIMEOUT) >= 0) {
                 updateStatus(meta.agentId(), STATUS_IDLE);
-                pushMetricsEvent(ScannerMetricsChangedEvent.idleReached(meta.agentId()));
+                // No more pushMetricsEvent — UI owns display state via ScannerEvent
             }
         }
     }
 }
 ```
+
+**Key distinction**:
+- **Lifecycle idle** (application layer): 30s timeout transitions `EMITTING_UPDATES → IDLE` scanner status. This is about scanner behavior.
+- **Display idle** (UI layer): 10s after a recent `EMITTED` file event, the UI fades to `Idle` display state. This is about presentation.
+- **Display filtered** (UI layer): 2s after a `FILTERED` file event, the UI fades to `Idle` display state. No more application-layer scheduled reset.
 
 ---
 
@@ -299,7 +306,10 @@ The agent-scanner relationship is covered by the following test classes:
 | `ScannerRegistryTest` | Unit | CRUD operations, status updates, duplicate handling |
 | `ScannerRegistryIntegrationTest` | Integration | Full agent-scanner lifecycle, flux connectivity, multiple agents, refresh, delete |
 | `FileSystemScannerAdapterTest` | Integration | Adapter lifecycle, flux behavior, watch service events |
-| `FileSystemScannerAdapterFilteredStatusTest` | Unit | FILTERED status emission for unchanged files |
+| `ScannerFileResultTest` | Domain | ScannerFileResult enum values (EMITTED, FILTERED, ERROR) |
+| `ScannerMetricsServiceTest` | Application | Pure metrics storage (file counts, discovered counts, timestamps) |
+| `ScannerEventBusTest` | Application | Push/callback behavior (no metrics storage) |
+| `ScannerObservabilityUseCaseTest` | Application | Integration: metrics + event publishing coordination |
 
 ### Example: Integration Test
 
@@ -331,6 +341,6 @@ void givenAgentAdded_WhenAgentRemoved_ThenScannerDestroyed() {
 
 ## See Also
 
-- [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, status transitions, hash-based change detection
-- [DPR: Scanner Observability](dpr-scanner-observability.md) — Metrics tracking and real-time UI updates
+- [DPR: Scanner Concept](dpr-scanner-concept.md) — Scanner lifecycle, ScannerFileResult enum, observability use case
+- [DPR: Scanner Observability](dpr-scanner-observability.md) — Metrics store, event push, UI-owned display timers
 - [DPR: File History Model](dpr-file-history-model.md) — FileHistory event model, hashing, and metadata storage

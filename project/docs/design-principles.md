@@ -181,11 +181,11 @@ A DPR should follow this structure:
 | DPR | Title | Parent ADR |
 |-----|-------|------------|
 | [DPR: Testing Strategy](dpr-testing-strategy.md) | Six-tier testing pyramid with code examples, commands, and isolation rules | ADR-001 |
-| [DPR: Scanner Concept](dpr-scanner-concept.md) | How scanners watch directories, manage status lifecycle (IDLE/EMITTING/FILTERED/ERROR), emit FileHistory events | - |
+| [DPR: Scanner Concept](dpr-scanner-concept.md) | How scanners watch directories, manage status lifecycle (IDLE/EMITTING/ERROR), ScannerFileResult (EMITTED/FILTERED/ERROR), observability use case | - |
 | [DPR: File History Model](dpr-file-history-model.md) | FileHistory event model, SHA-256 hashing, and metadata storage | - |
-| [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) | How agents subscribe to scanners, ScannerRegistry/Factory APIs, RegexParser | - |
+| [DPR: Agent-Scanner Relationship](dpr-agent-scanner-relationship.md) | How agents subscribe to scanners, ScannerRegistry/Factory APIs, RegexParser, lifecycle idle detection | - |
 | [DPR: Database Configuration](dpr-database-configuration.md) | How to add new SQLite databases and tables - step-by-step tutorial | ADR-007 |
-| [DPR: Scanner Observability](dpr-scanner-observability.md) | Scanner health monitoring and status tracking | - |
+| [DPR: Scanner Observability](dpr-scanner-observability.md) | Metrics store (ScannerMetricsService), event push (ScannerEventBus), observability orchestrator (ScannerObservabilityUseCase), UI-owned display timers | - |
 
 ---
 
