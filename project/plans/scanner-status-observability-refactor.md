@@ -357,6 +357,45 @@ The use case orchestrates both. Each port is independently swappable.
 **Total renamed files**: ~1 (`ScannerObserverService.java` → `ScannerMetricsService.java`)
 **Total modified files**: ~18 (ScannerService, ScannerRegistry, controllers, views, configuration, tests, docs)
 
+## Infrastructure Fixes (non-phase changes)
+
+Changes made alongside the refactor that don't fit the phased plan — they fix bugs/improve behaviour rather than restructure observability.
+
+### NativeFileWatcher debounce — fix duplicate OS events
+
+**Problem**: Windows NIO `WatchService` fires multiple `ENTRY_MODIFY` events per single file save (write, metadata update, buffer flush). The watcher logged and emitted a `RawFileEvent` for every OS event. `ScannerService` hash-dedup caught the duplicate downstream, but wasted cycles and log noise.
+
+**Fix**: Added path-keyed debounce in `NativeFileWatcher.processEvent()` (commit `e699663`).
+
+- `shouldDebounce(Path)` — checks `lastEventTimes` map against 200ms monotonic window per path
+- Events within the window are silently coalesced (first wins)
+- DELETE events bypass debounce (emit immediately)
+- Debounce map cleared on `stop()` to prevent memory leaks
+- Backward-compatible: existing 2-arg constructor delegates to new 3-arg with `Duration.ofMillis(200)` default
+- Uses `System.nanoTime()` (monotonic clock) — immune to system clock changes
+
+**Files**: `src/main/java/.../adapter/outbound/file/NativeFileWatcher.java`
+
+**Before**: `File save → OS fires 2× MODIFY → Watcher logs & emits 2× → ScannerService hash-dedup catches 2nd`
+
+**After**: `File save → OS fires 2× MODIFY → Watcher debounces 2nd → ScannerService sees 1 event`
+
+### ScannerService — persist metadata after emit
+
+**Problem**: When a file was emitted, the new hash was never saved to `FileMetadataRepository`. If the same file was scanned again (e.g. overflow rescan, manual reset), it would always appear as a new change instead of `UNCHANGED`.
+
+**Fix**: Added `fileMetadataRepository.save(history.currentFile())` after successful emit in `processRawEvent()`. Requires `FileMetadataRepository` as a constructor dependency, wired through `ScannerRegistry`.
+
+**Files**: `src/main/java/.../application/scanner/ScannerService.java`, `src/main/java/.../application/pipeline/ScannerRegistry.java`
+
+**Test**: `test(harness): add delete-then-re-add same-content produces FILTERED test` (commit `5ee5fa7`) — verifies re-added file with same content is detected as `FILTERED` instead of re-emitted.
+
+### ScannerService — DELETE event handling
+
+**Fix**: Added `DELETE` event type support in `processRawEvent()` — removes metadata from repository when file is deleted.
+
+**Files**: `src/main/java/.../application/scanner/ScannerService.java`, `src/main/java/.../domain/scanner/RawFileEvent.java` (DELETE enum value)
+
 ## Notes
 
 - **TDD order**: Each phase ends with green tests. Phase 0 adds a new domain enum (no existing code broken). Phases 1-2 split existing code. Phase 3 adds the use case orchestrator. Phases 4-7 rewire. Phase 8 rewrites tests to match new model.
