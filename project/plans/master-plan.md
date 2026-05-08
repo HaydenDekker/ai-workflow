@@ -1,80 +1,104 @@
 # Master Plan — Project Index
 
-Central index of all active, completed, and archived plans for the AI Workflow project.
+> **Last Updated:** 2026-05-08
+
+## How to Add a Plan Overview
+
+Each plan file must contain a **title** (e.g. `# Plan: Plan Name`) and **date created** (e.g. `> **Created:** 2026-05-05`).
+
+To add it to this index:
+
+1. Add a row to the table below: number, link, status, date.
+2. Optionally add a section below with **name** and **goal** only. The goal should state **what** the plan covers — not why or how. Full details belong in the plan file.
+
+**Ordering:** Plans are ordered by creation date, latest first. Unknown dates (`—`) appear last.
+
+**Branch lifecycle:** Each plan owns a feature branch from Draft→Active through Complete. Branch is `{prefix}/{plan-slug}` (default prefix: `refactor`). Merge to `main` on completion.
 
 ---
 
-## Active Plans
+## Purging Old Completed Plans
 
-| Plan | File | Status | Created | Description |
-|------|------|--------|---------|-------------|
-| Design Principles Update | [design-principles-update.md](design-principles-update.md) | 🔄 In Progress | 2026-04-28 | ADR cleanup and DPR migration; Phase 0 done, remaining phases pending. |
-| Scanner Metrics Refactor | [scanner-metrics-refactor.md](scanner-metrics-refactor.md) | ⬜ Draft | 2026-05-07 | Push fileCount from scanner to observer; remove storeFolder/countFiles; simplify port. |
-| Scanner Refactor | [scanner-refactor.md](scanner-refactor.md) | ⬜ Draft | — | Make `Scanner` the domain concept; consolidate status, idle detection, error handling, and metrics. |
-| Scanner View Regression Fix | [scanner-view-regression-fix.md](scanner-view-regression-fix.md) | ⬜ Draft | 2026-05-07 | Fix Files column showing incrementing counter and status not updating when files are added. |
-| Scanner Status Rework | [scanner-status-rework.md](scanner-status-rework.md) | ⬜ Draft (superseded) | 2026-04-29 | Fix static scanner status lifecycle; introduce idle detection and proper ERROR state transitions. Superseded by scanner-status-observability-refactor. |
-| Scanner Event Refactor | [scanner-event-refactor.md](scanner-event-refactor.md) | ⬜ Draft (superseded) | — | Simplify `ScannerObserverUseCase` to single `recordScannerEvent()` method with combined status + event type. Superseded by scanner-status-observability-refactor. |
-| Potential Features | [potential-features.md](potential-features.md) | ⬜ Backlog | — | Feature backlog (dynamic model discovery, etc.) from the Ollama → OpenAI refactor. |
+When updating `master-plan.md`, **remove any plan that is `✅ Complete` and meets this criteria:**
 
----
+1. **Completed more than 4 weeks ago** — use completion date from the plan file's Implementation Status
 
-## Completed Plans
+Rationale: Once a plan has been complete for a significant period, its status in the index no longer provides active value. The plan file itself (in `project/plans/`) remains as historical documentation. Only the index entry in `master-plan.md` is removed.
 
-| Plan | File | Status | Created | Description |
-|------|------|--------|---------|-------------|
-| Hexagonal Architecture Refactor | [hex-arch-refactor.md](hex-arch-refactor.md) | ✅ Complete | — | Full restructure into domain → application → adapter layers across all 7 phases. |
-| Clean Up Scanner-Agent Relation | [clean-up-scanner-agent-relation.md](clean-up-scanner-agent-relation.md) | ✅ Complete | — | Remove backwards FK (`scannerId` on `AgentEntity`); scanner references agent directly. |
-| Scanner Observer Use Case | [scanner-observer-usecase.md](scanner-observer-usecase.md) | ✅ Complete | 2026-04-29 | Replace Micrometer scanner metrics with `ScannerObserverUseCase`. |
-| Phase 5 Cleanup | [phase-5-cleanup-plan.md](phase-5-cleanup-plan.md) | ✅ Complete | — | Detailed cleanup of old packages after hex-arch refactor (imports, Javadoc, test moves, deletions). |
+**What to remove:**
+- The row from the **Master Progress Table**
+- Any overview section for that plan
 
----
+**What to keep:**
+- The plan file in `project/plans/` — it serves as historical documentation
+- **Do not renumber** — leave gaps in numbering to preserve historical references
 
-## Archived Plans (Removed from Repository)
-
-Plans that were completed and subsequently removed from the repository.
-
-| Plan | File | Created | Deleted | Description |
-|------|------|---------|---------|-------------|
-| Agent Terminology Refactor | ~~agent-terminology-refactor.md~~ | 2026-04-13 | 2026-04-13 | Rename infrastructure from "pipeline" to "agent" terminology. |
-| LLM Observability | ~~llm-observability.md~~ | 2026-04-13 | 2026-04-19 | Standalone `/observability` route with adapter health checks and SQLite status persistence. |
-| Ollama → OpenAI Term Refactor | ~~ollama-term-refactor.md~~ | 2026-04-13 | 2026-04-20 | Replace Ollama-specific terminology with OpenAI API terminology across the codebase. |
-| FileSystem Workflow Integration Test Refactor | ~~FileSystemWorkflowIntegrationTest_refactor.md~~ | 2026-02-02 | 2026-04-14 | Simplify integration test to focus on core file system workflow with a single adapter. |
-| Integrating Non-Standard Chat Mocks | ~~Integrating non-standard chat mocks into ChatClientMockBuilder.md~~ | 2026-02-02 | 2026-04-14 | Unify all test ChatClient mocks through `ChatClientMockBuilder` pattern. |
-| PipelineInfo Refactoring | ~~pipelineinfo-refactoring.md~~ | 2026-02-02 | 2026-04-14 | Refactor `PipelineInfo` to include full `AgentDefinition` as a 1-to-1 relationship. |
-| Grid View Implementation | ~~grid-view-implementation.md~~ | 2026-02-02 | 2026-04-14 | Initial Vaadin Flow grid view displaying `PipelineInfo` objects. |
-| Fix Integration Test Failures | ~~fix-integration-test-failures.md~~ | 2026-04-14 | 2026-04-20 | Fix 12 failing integration tests caused by external LLM HTTP calls at bean creation time. |
-| Add SQLite Database | ~~add-sqldb.md~~ | 2026-04-14 | 2026-04-20 | Add SQLite database configuration for `FileMetadataEntity` with multi-database foundation. |
-| LLM Observability UI Component | ~~llm-observability-ui-component.md~~ | 2026-04-19 | 2026-04-20 | Reusable Vaadin components for LLM endpoint health display with auto-refresh. |
-| Observability TDD Setup | ~~observabiltiy_tdd.md~~ | 2026-02-02 | 2026-04-20 | TDD-driven observability foundation (metrics, logs, tracing). |
-| Agent Definition UI | ~~UI.md~~ | 2026-02-02 | 2026-04-20 | Form-based UI for CRUD of `AgentDefinition` records in `PipelineRestController`. |
-| Agent Creation Dialog | ~~agent-creation-dialog-plan.md~~ | 2026-04-21 | 2026-04-28 | Agent creation modal dialog + test view. |
-| Agent Persistence | ~~agent-persistence.md~~ | 2026-04-25 | 2026-04-28 | Migrate agent state from in-memory `ConcurrentHashMap` to SQLite via JPA. |
-| Agent Scanners | ~~agent-scanners.md~~ | 2026-04-25 | 2026-04-28 | First-class scanner lifecycle management with dynamic registration. |
-| Agent Modification | ~~agent-modification.md~~ | 2026-04-26 | 2026-04-28 | Agent detail dialog for editing and deleting agents. |
-| Direct Integration FileSystem Adapter | ~~direct-integration-filesystem-adapter.md~~ | 2026-04-27 | 2026-04-28 | Fix `FluxMessageChannel` delivery failure with direct adapter integration. |
-| Spring Integration Deprecation | ~~spring-integration-deprecation.md~~ | 2026-04-27 | 2026-04-28 | Migrate from Spring Integration DSL to native Java NIO and Reactor for file watching. |
-| Use-Case Refactor | ~~usecase-refactor.md~~ | 2026-04-27 | 2026-04-28 | Update domain layer terminology from "services/managers" to "usecases". |
-| Advanced Metrics | ~~advanced_metrics.md~~ | 2026-02-02 | 2026-04-28 | Naming/tagging conventions and metric definitions for pipeline observability. |
-| Observability Plan | ~~observability-plan.md~~ | 2026-02-02 | 2026-04-28 | High-level observability goals: visibility, performance, and reliability tracking. |
-| Scanners Metrics | ~~scanners_metrics.md~~ | 2026-04-28 | 2026-04-28 | Scanner metrics instrumentation with Micrometer (later replaced by ScannerObserverUseCase). |
-| Scanner Status & Observability Refactor | ~~scanner-status-observability-refactor.md~~ | 2026-05-08 | 2026-05-08 | Split `ScannerObserverService` into metrics + event bus via `ScannerObservabilityUseCase`; `ScannerFileResult` domain enum; UI owns display timers. 112 tests, 0 failures. Knowledge extracted to dpr-scanner-observability.md and dpr-scanner-concept.md. |
+**What NOT to remove:**
+- Plans marked `🟡 In Progress`, `⬜ Planned`, or `❌ Blocked` — regardless of age
+- Plans marked as superseded — they provide historical context for why a different approach was taken
+- Plans that are `✅ Complete` but completed within the last 4 weeks
+- Plans with active dependencies (other plans that reference this one as a prerequisite)
 
 ---
 
-## Legend
+## Master Progress Table
 
-| Marker | Meaning |
-|--------|---------|
-| ✅ Complete | All phases implemented, verified, and merged (plan file retained) |
-| 🔄 In Progress | Work started but not yet finished |
-| ⬜ Draft | Design written, implementation not started |
-| ⬜ Backlog | Ideas/requirements captured for future consideration |
-| ~~strikethrough~~ | Plan file removed from repository after completion |
+| # | Plan | Status | Created |
+|---|------|--------|---------|
+| 8 | [Scanner Status & Observability Refactor](scanner-status-observability-refactor.md) | ✅ Complete | 2026-05-08 |
+| 1 | [Scanner Metrics Refactor](scanner-metrics-refactor.md) | ⬜ Planned | 2026-05-07 |
+| 2 | [Scanner View Regression Fix](scanner-view-regression-fix.md) | ⬜ Planned | 2026-05-07 |
+| 3 | [Scanner Status Rework](scanner-status-rework.md) | ⬜ Planned (superseded by scanner-status-observability-refactor) | 2026-04-29 |
+| 4 | [Design Principles Update](design-principles-update.md) | 🟡 In Progress | 2026-04-28 |
+| 5 | [Scanner Event Refactor](scanner-event-refactor.md) | ⬜ Planned (superseded by scanner-status-observability-refactor) | — |
+| 6 | [Potential Features](potential-features.md) | ⬜ Planned (backlog) | — |
+| 7 | [Scanner Refactor](scanner-refactor.md) | ⬜ Planned | — |
 
 ---
 
-## Status Summary
+## Plan Overviews
 
-- **Active:** 6 plans
-- **Completed (retained):** 4 plans
-- **Archived (removed):** 23 plans
+### 8. Scanner Status & Observability Refactor
+
+**Status:** ✅ Complete
+**Created:** 2026-05-08
+**Completed:** 2026-05-08
+**Goal:** Split `ScannerObserverService` into pure metrics + event bus via `ScannerObservabilityUseCase`; introduce `ScannerFileResult` domain enum; move display timers to UI layer.
+
+Full details in [scanner-status-observability-refactor.md](scanner-status-observability-refactor.md).
+Knowledge extracted to [dpr-scanner-observability.md](../docs/dpr-scanner-observability.md) and [dpr-scanner-concept.md](../docs/dpr-scanner-concept.md).
+Branch `refactor/scanner-observability` merged to `main`.
+
+### 4. Design Principles Update
+
+**Status:** 🟡 In Progress
+**Created:** 2026-04-28
+**Goal:** ADR cleanup and DPR migration across the project documentation.
+
+Full details in [design-principles-update.md](design-principles-update.md).
+
+---
+
+## Status Symbols
+
+| Symbol | Meaning | When to Use |
+|--------|---------|-------------|
+| `✅ Complete` | Fully implemented and verified | All deliverables done, code matches plan, branch merged to main |
+| `🟡 In Progress` | Actively being worked on | Partial implementation, phases in progress, on feature branch |
+| `⬜ Planned` | Defined but not started | Plan written, work not yet begun, no branch yet |
+| `❌ Blocked` | Cannot proceed | Blocked by dependency, decision, or issue |
+
+---
+
+## Best Practices
+
+1. **One source of truth** — `master-plan.md` is the single index. Never maintain a separate status list.
+2. **Filename-only links** — Since all plans are in the same directory, links are always just the filename (e.g. `[My Plan](my-plan.md)`).
+3. **Progressive numbering** — Don't renumber when removing plans. Gaps preserve history and avoid broken references.
+4. **Verify before marking complete** — Read the actual code, don't just trust the plan's own status claim.
+5. **Update dates** — Always update `Last Updated` in master-plan.md when making changes.
+6. **Keep goals concise** — The overview goal should be one line. Details belong in the plan file.
+7. **Branch per plan** — Each active plan owns a feature branch (`refactor/<slug>`). Merge to `main` on completion.
+8. **Superseded plans stay** — They provide historical context for why a different approach was taken. Never purge superseded entries.
+9. **Auto-purge keeps the file** — Only the index entry is removed after 4 weeks. Git preserves everything.
+10. **Completion date matters** — Always add a completion date to the plan file when marking complete. This drives the auto-purge timer.
