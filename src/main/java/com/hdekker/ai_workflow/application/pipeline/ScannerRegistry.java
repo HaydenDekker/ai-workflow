@@ -14,6 +14,7 @@ import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
+import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
@@ -225,12 +226,18 @@ public class ScannerRegistry implements DisposableBean {
 
     /**
      * Update the status of a scanner.
+     * <p>
+     * Cast to ScannerObserverService to access pushToUI() — this method lives on
+     * the concrete service, not the port interface. Will be replaced by
+     * ScannerEventPort in a later phase.
      */
     public void updateStatus(String scannerId, ScannerStatus status) {
         ScannerService scanner = scanners.get(scannerId);
         if (scanner != null) {
             scanner.updateStatus(status);
-            observer.pushToUI(scannerId, status);
+            if (observer instanceof ScannerObserverService observerService) {
+                observerService.pushToUI(scannerId, status);
+            }
             log.debug("Updated scanner {} status to {}", scannerId, status);
         }
     }

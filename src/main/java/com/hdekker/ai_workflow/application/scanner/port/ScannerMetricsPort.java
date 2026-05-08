@@ -5,20 +5,19 @@ import java.util.List;
 
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
-import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 /**
  * Port interface for scanner metrics observation.
  * <p>
- * Declares the metrics query and update contract the application layer
- * needs from the scanner observer. Infrastructure adapters (UI push,
- * REST polling) consume these metrics without the application layer
- * knowing about their implementation.
+ * Pure metrics store — tracks file counts, discovered counts, and emission
+ * timestamps. No push, no callbacks, no UI concerns.
+ * <p>
+ * Event publishing (push to UI) is handled by {@link ScannerEventPort}.
  */
 public interface ScannerMetricsPort {
 
     /**
-     * Record a scanner event for the given agent.
+     * Record a scanner file event for the given agent.
      * <p>
      * Updates internal counters based on the event type:
      * <ul>
@@ -27,29 +26,20 @@ public interface ScannerMetricsPort {
      *   <li>UNCHANGED — no counter change</li>
      * </ul>
      *
-     * @param agentId      the owning agent's ID
-     * @param eventType    the type of file event
-     * @param status       current scanner status
-     * @param folderPath   the folder being scanned
-     * @param errorMessage error message if status is ERROR
-     * @param fileCount    the current file count in the watched folder
+     * @param agentId   the owning agent's ID
+     * @param eventType the type of file event
+     * @param fileCount the current file count in the watched folder
      */
-    void recordEvent(String agentId, ScannerEventType eventType,
-                     ScannerStatus status, String folderPath, String errorMessage,
-                     long fileCount);
+    void recordEvent(String agentId, ScannerEventType eventType, long fileCount);
 
     /**
      * Record a scanner event for the given agent (file count defaults to 0).
      *
-     * @param agentId      the owning agent's ID
-     * @param eventType    the type of file event
-     * @param status       current scanner status
-     * @param folderPath   the folder being scanned
-     * @param errorMessage error message if status is ERROR
+     * @param agentId   the owning agent's ID
+     * @param eventType the type of file event
      */
-    default void recordEvent(String agentId, ScannerEventType eventType,
-                             ScannerStatus status, String folderPath, String errorMessage) {
-        recordEvent(agentId, eventType, status, folderPath, errorMessage, 0L);
+    default void recordEvent(String agentId, ScannerEventType eventType) {
+        recordEvent(agentId, eventType, 0L);
     }
 
     /**
@@ -58,16 +48,6 @@ public interface ScannerMetricsPort {
      * @param agentId the owning agent's ID
      */
     void recordEmission(String agentId);
-
-    /**
-     * Push a status change to UI observers.
-     * <p>
-     * Used by the application layer to notify UI adapters of status transitions.
-     *
-     * @param agentId  the owning agent's ID
-     * @param status   the new scanner status
-     */
-    void pushToUI(String agentId, ScannerStatus status);
 
     /**
      * Get a metrics snapshot for a specific agent.

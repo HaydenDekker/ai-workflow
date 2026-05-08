@@ -143,7 +143,7 @@ def run_phase_rpc(phase, prompt, stall_minutes=STALL_MINUTES):
     stall_threshold = time.time() + stall_seconds
     tool_calls = 0
     text_parts = []
-    last_event_time = time.time()
+    last_llm_activity = time.time()   # only reset on LLM thinking/calling, NOT on tool output
 
     pi_cmd = resolve_pi_cli()
     if pi_cmd:
@@ -189,13 +189,14 @@ def run_phase_rpc(phase, prompt, stall_minutes=STALL_MINUTES):
 
             etype = event.get("type", "")
 
-            # Stall detection: reset timer on any meaningful event
-            if etype in ("message_update", "tool_execution_start", "tool_execution_end",
-                         "tool_execution_update", "agent_end"):
-                last_event_time = now
-                if now > stall_threshold:
-                    # Already past stall - check every 60s from now
-                    stall_threshold = now + stall_seconds
+            # Stall detection: only reset on LLM activity (thinking, calling tools).
+            # Do NOT reset on tool_execution_update - that fires during long Maven runs
+            # and would mask a real LLM stall.
+            if etype == "message_update":
+                delta = event.get("assistantMessageEvent", {})
+                dtype = delta.get("type", "")
+                if dtype in ("text_delta", "thinking_delta", "toolcall_delta"):
+                    last_llm_activity = now
 
             if etype == "message_update":
                 delta = event.get("assistantMessageEvent", {})
@@ -235,28 +236,21 @@ def run_phase_rpc(phase, prompt, stall_minutes=STALL_MINUTES):
                             print(f"    {l}")
                         if len(lines) > 5:
                             print(f"    ... ({len(lines)-5} more lines)")
-                last_event_time = now
 
             elif etype == "agent_end":
                 print(f"\n  Agent finished ({tool_calls} tool calls).")
                 return True, "".join(text_parts), tool_calls
 
-            else:
-                # Other events (agent_start, turn_start, response, etc.)
-                last_event_time = now
-
-            # Stall check
-            elapsed = now - last_event_time
-            # We track stall from the *last meaningful event*, not wall clock
-            # Reset stall_threshold whenever we see a meaningful event above
+            # Stall check: is the LLM stuck (not just waiting for a tool to finish)?
+            elapsed = now - last_llm_activity
             if elapsed > stall_seconds * 2:  # generous: 2x stall_minutes
-                print(f"\n  [!]️  STALL DETECTED - no meaningful events for {elapsed:.0f}s. Killing sub-agent.")
+                print(f"\n  [!] STALL DETECTED - no LLM activity for {elapsed:.0f}s. Killing sub-agent.")
                 proc.kill()
                 proc.wait()
                 return False, "".join(text_parts) + "\n\n[STALLED - sub-agent killed]", tool_calls
 
     except KeyboardInterrupt:
-        print("\n  [!]️  Interrupted by user.")
+        print("\n  [!]  Interrupted by user.")
         proc.kill()
         proc.wait()
         return False, "".join(text_parts) + "\n\n[INTERRUPTED]", tool_calls

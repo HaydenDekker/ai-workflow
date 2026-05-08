@@ -15,6 +15,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileEvent;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
@@ -43,23 +45,18 @@ public class ScannerObserverServiceTest {
     record CallbackScenario(
             String name,
             ScannerEventType eventType,
-            ScannerStatus status,
             int expectedCallbackCount,
-            ScannerEventType expectedType,
-            ScannerStatus expectedStatus
+            ScannerEventType expectedType
     ) {}
 
     private static Stream<CallbackScenario> callbackScenarios() {
         return Stream.of(
                 new CallbackScenario("creation event triggers callback",
-                        ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                        1, ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES),
+                        ScannerEventType.CREATION, 1, ScannerEventType.CREATION),
                 new CallbackScenario("deletion event triggers callback",
-                        ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES,
-                        1, ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES),
+                        ScannerEventType.DELETION, 1, ScannerEventType.DELETION),
                 new CallbackScenario("unchanged event triggers callback",
-                        ScannerEventType.UNCHANGED, ScannerStatus.FILTERED,
-                        1, ScannerEventType.UNCHANGED, ScannerStatus.FILTERED)
+                        ScannerEventType.UNCHANGED, 1, ScannerEventType.UNCHANGED)
         );
     }
 
@@ -69,12 +66,14 @@ public class ScannerObserverServiceTest {
         CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
         useCase.registerRefreshCallback(events::add);
 
-        useCase.recordEvent("agent-1", scenario.eventType(), scenario.status(), "/tmp/test", null);
+        useCase.recordEvent("agent-1", scenario.eventType(), 0L);
 
         assertThat(events).hasSize(scenario.expectedCallbackCount());
         assertThat(events.get(0).agentId()).isEqualTo("agent-1");
         assertThat(events.get(0).eventType()).isEqualTo(scenario.expectedType());
-        assertThat(events.get(0).status()).isEqualTo(scenario.expectedStatus());
+        // Callbacks receive events pushed internally — status is null from the port
+        // (status was removed from recordEvent; it's now a UI/push concern)
+        assertThat(events.get(0).status()).isNull();
     }
 
     @Test
@@ -99,7 +98,7 @@ public class ScannerObserverServiceTest {
         useCase.registerRefreshCallback(e -> count1.incrementAndGet());
         useCase.registerRefreshCallback(e -> count2.incrementAndGet());
 
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
 
         assertThat(count1).hasValue(1);
         assertThat(count2).hasValue(1);
@@ -112,7 +111,7 @@ public class ScannerObserverServiceTest {
         useCase.registerRefreshCallback(callback);
         useCase.unregisterRefreshCallback(callback);
 
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
 
         assertThat(count).hasValue(0);
     }
@@ -126,15 +125,15 @@ public class ScannerObserverServiceTest {
         });
         useCase.registerRefreshCallback(goodEvents::add);
 
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
 
         assertThat(goodEvents).hasSize(1);
     }
 
     @Test
     void givenNoCallbacksRegistered_WhenEventRecorded_ThenNoException() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
-        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, 0L);
         useCase.pushToUI("agent-1", ScannerStatus.ERROR);
     }
 
@@ -150,8 +149,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenEventWithFileCount_WhenRecorded_ThenStoredInMetrics() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 42L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 42L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.fileCount()).isEqualTo(42L);
@@ -159,10 +157,8 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenMetricsWithFileCount_ThenFileCountReturned() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 100L);
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 150L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 100L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 150L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.fileCount()).isEqualTo(150L);
@@ -171,8 +167,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenEventWithoutFileCount_WhenRecorded_ThenFileCountDefaultsToZero() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.fileCount()).isZero();
@@ -183,8 +178,7 @@ public class ScannerObserverServiceTest {
         CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
         useCase.registerRefreshCallback(events::add);
 
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 77L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 77L);
 
         assertThat(events).hasSize(1);
         assertThat(events.get(0).fileCount()).isEqualTo(77L);
@@ -192,8 +186,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenDeletionEvent_WhenRecordedWithFileCount_ThenFileCountStored() {
-        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 33L);
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, 33L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.fileCount()).isEqualTo(33L);
@@ -210,7 +203,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenCreationEvent_WhenGettingMetrics_ThenDiscoveredIsOne() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.totalDiscovered()).isEqualTo(1);
@@ -218,7 +211,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenModificationEvent_WhenGettingMetrics_ThenDiscoveredIsOne() {
-        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, 0L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.totalDiscovered()).isEqualTo(1);
@@ -226,7 +219,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenDeletionEvent_WhenGettingMetrics_ThenDiscoveredIsZero() {
-        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, 0L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.totalDiscovered()).isZero();
@@ -234,7 +227,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenUnchangedEvent_WhenGettingMetrics_ThenDiscoveredIsZero() {
-        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, ScannerStatus.FILTERED, "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, 0L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.totalDiscovered()).isZero();
@@ -242,9 +235,9 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenMultipleCreations_WhenGettingMetrics_ThenAccumulates() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.totalDiscovered()).isEqualTo(3);
@@ -252,10 +245,10 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenMixedEvents_WhenGettingMetrics_ThenCountsOnlyCreationAndModification() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
-        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
-        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-1", null);
-        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, ScannerStatus.FILTERED, "/tmp/agent-1", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, 0L);
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, 0L);
+        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, 0L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.totalDiscovered()).isEqualTo(2);
@@ -263,10 +256,10 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenMultipleAgents_WhenGettingMetrics_ThenReturnsCorrectPerAgent() {
-        useCase.recordEvent("agent-a", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-a", null);
-        useCase.recordEvent("agent-a", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-a", null);
-        useCase.recordEvent("agent-b", ScannerEventType.MODIFICATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-b", null);
-        useCase.recordEvent("agent-b", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-b", null);
+        useCase.recordEvent("agent-a", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-a", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-b", ScannerEventType.MODIFICATION, 0L);
+        useCase.recordEvent("agent-b", ScannerEventType.DELETION, 0L);
 
         assertThat(useCase.getMetrics("agent-a").totalDiscovered()).isEqualTo(2);
         assertThat(useCase.getMetrics("agent-b").totalDiscovered()).isEqualTo(1);
@@ -279,8 +272,8 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenMultipleAgents_WhenGetAllMetrics_ThenReturnsAllSnapshots() {
-        useCase.recordEvent("agent-a", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-a", null);
-        useCase.recordEvent("agent-b", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/agent-b", null);
+        useCase.recordEvent("agent-a", ScannerEventType.CREATION, 0L);
+        useCase.recordEvent("agent-b", ScannerEventType.CREATION, 0L);
 
         List<ScannerMetrics> all = useCase.getAllMetrics();
 
@@ -291,7 +284,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenEmissionRecorded_ThenIdleBecomesFalse() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
         useCase.recordEmission("agent-1");
 
         assertThat(useCase.isIdle("agent-1")).isFalse();
@@ -299,7 +292,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenNoEmission_WhenIsIdle_ThenReturnsTrue() {
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, "/tmp/test", null);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 0L);
 
         assertThat(useCase.isIdle("agent-1")).isTrue();
     }
@@ -314,8 +307,7 @@ public class ScannerObserverServiceTest {
         CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
         useCase.registerRefreshCallback(events::add);
 
-        useCase.recordEvent("agent-1", ScannerEventType.DELETION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 5L);
+        useCase.recordEvent("agent-1", ScannerEventType.DELETION, 5L);
 
         assertThat(events).hasSize(1);
         assertThat(events.get(0).fileCount()).isEqualTo(5L);
@@ -326,8 +318,7 @@ public class ScannerObserverServiceTest {
         CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
         useCase.registerRefreshCallback(events::add);
 
-        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, ScannerStatus.FILTERED,
-                "/tmp/agent-1", null, 10L);
+        useCase.recordEvent("agent-1", ScannerEventType.UNCHANGED, 10L);
 
         assertThat(events).hasSize(1);
         assertThat(events.get(0).fileCount()).isEqualTo(10L);
@@ -335,7 +326,7 @@ public class ScannerObserverServiceTest {
 
     @Test
     void givenLifecycleEvent_WhenRecordedWithFileCount_ThenFileCountStored() {
-        useCase.recordEvent("agent-1", null, ScannerStatus.EMITTING_UPDATES, null, null, 20L);
+        useCase.recordEvent("agent-1", null, 20L);
 
         ScannerMetrics metrics = useCase.getMetrics("agent-1");
         assertThat(metrics.fileCount()).isEqualTo(20L);
@@ -346,24 +337,22 @@ public class ScannerObserverServiceTest {
     @Test
     void givenFileEventWithCount_WhenEmissionRecorded_ThenFileCountPreserved() {
         // Simulates: file event sets count to 7, then emission callback fires
-        useCase.recordEvent("agent-1", ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 7L);
+        useCase.recordEvent("agent-1", ScannerEventType.CREATION, 7L);
         assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(7L);
 
         // Emission event should NOT reset fileCount to 0
         useCase.recordEmission("agent-1");
-        useCase.recordEvent("agent-1", null, ScannerStatus.EMITTING_UPDATES, null, null, 7L);
+        useCase.recordEvent("agent-1", null, 7L);
 
         assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(7L);
     }
 
     @Test
     void givenFileEventWithCount_WhenLifecycleEventRecorded_ThenFileCountPreserved() {
-        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, ScannerStatus.EMITTING_UPDATES,
-                "/tmp/agent-1", null, 42L);
+        useCase.recordEvent("agent-1", ScannerEventType.MODIFICATION, 42L);
 
         // Lifecycle event with null eventType — should preserve fileCount
-        useCase.recordEvent("agent-1", null, ScannerStatus.EMITTING_UPDATES, null, null, 42L);
+        useCase.recordEvent("agent-1", null, 42L);
 
         assertThat(useCase.getMetrics("agent-1").fileCount()).isEqualTo(42L);
     }
@@ -380,9 +369,9 @@ public class ScannerObserverServiceTest {
             threads[i] = new Thread(() -> {
                 for (int j = 0; j < updatesPerThread; j++) {
                     if (j % 3 == 0) {
-                        useCase.recordEvent(agentId, ScannerEventType.CREATION, ScannerStatus.EMITTING_UPDATES, folderPath, null);
+                        useCase.recordEvent(agentId, ScannerEventType.CREATION, 0L);
                     } else if (j % 3 == 1) {
-                        useCase.recordEvent(agentId, ScannerEventType.UNCHANGED, ScannerStatus.FILTERED, folderPath, null);
+                        useCase.recordEvent(agentId, ScannerEventType.UNCHANGED, 0L);
                     } else {
                         useCase.recordEmission(agentId);
                     }
@@ -396,5 +385,44 @@ public class ScannerObserverServiceTest {
         }
 
         assertThat(useCase.getMetrics(agentId).totalDiscovered()).isGreaterThan(0);
+    }
+
+    // -- ScannerFileEvent / publishFileEvent tests --
+
+    @Test
+    void givenEmittedFileEvent_WhenPublished_ThenCallbackReceivesEmittedStatus() {
+        CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+        useCase.registerRefreshCallback(events::add);
+
+        useCase.publishFileEvent(ScannerFileEvent.emitted("agent-1", "/tmp/test"));
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).agentId()).isEqualTo("agent-1");
+        assertThat(events.get(0).status()).isEqualTo(ScannerStatus.EMITTING_UPDATES);
+    }
+
+    @Test
+    void givenFilteredFileEvent_WhenPublished_ThenCallbackReceivesFilteredStatus() {
+        CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+        useCase.registerRefreshCallback(events::add);
+
+        useCase.publishFileEvent(ScannerFileEvent.filtered("agent-1", "/tmp/test"));
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).agentId()).isEqualTo("agent-1");
+        assertThat(events.get(0).status()).isEqualTo(ScannerStatus.FILTERED);
+    }
+
+    @Test
+    void givenErrorFileEvent_WhenPublished_ThenCallbackReceivesErrorStatus() {
+        CopyOnWriteArrayList<ScannerMetricsEvent> events = new CopyOnWriteArrayList<>();
+        useCase.registerRefreshCallback(events::add);
+
+        useCase.publishFileEvent(ScannerFileEvent.error("agent-1", "disk full"));
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).agentId()).isEqualTo("agent-1");
+        assertThat(events.get(0).status()).isEqualTo(ScannerStatus.ERROR);
+        assertThat(events.get(0).errorMessage()).isEqualTo("disk full");
     }
 }

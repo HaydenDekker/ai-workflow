@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 
 import org.slf4j.Logger;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileEvent;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
@@ -28,14 +31,13 @@ import org.springframework.stereotype.Service;
  * <p>
  * Core responsibilities:
  * <ul>
- *   <li>Accept events via {@link #recordEvent(String, ScannerEventType, ScannerStatus, String, String, long)}</li>
+ *   <li>Accept events via {@link #recordEvent(String, ScannerEventType, long)}</li>
  *   <li>Track per-agent discovered count and last emission timestamp</li>
  *   <li>Store file count received from the scanner</li>
  *   <li>Expose query methods for the application layer</li>
  *   <li>Support callback registration for real-time UI push notifications</li>
  * </ul>
  *
- * @see ScannerMetricsPort
  * @see ScannerMetricsPort
  */
 @Service
@@ -51,7 +53,7 @@ public class ScannerObserverService implements ScannerMetricsPort {
     /**
      * Registered callbacks for real-time UI push.
      */
-    private final java.util.concurrent.CopyOnWriteArrayList<java.util.function.Consumer<ScannerMetricsEvent>> refreshCallbacks
+    private final java.util.concurrent.CopyOnWriteArrayList<Consumer<ScannerMetricsEvent>> refreshCallbacks
             = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     /**
@@ -101,24 +103,13 @@ public class ScannerObserverService implements ScannerMetricsPort {
      * <p>
      * Dispatch logic on {@code eventType}:
      * <ul>
-     *   <li>CREATION / MODIFICATION — increment discovered, store file count, update emission timestamp</li>
+     *   <li>CREATION / MODIFICATION — increment discovered, store file count</li>
      *   <li>DELETION / UNCHANGED — store file count, no discovered increment</li>
-     *   <li>null (emission, error, recovery) — update emission timestamp if EMITTING_UPDATES</li>
+     *   <li>null (lifecycle events) — store file count only</li>
      * </ul>
      */
     @Override
-    public void recordEvent(String agentId, ScannerEventType eventType,
-                            ScannerStatus status, String folderPath, String errorMessage) {
-        recordEvent(agentId, eventType, status, folderPath, errorMessage, 0L);
-    }
-
-    /**
-     * Record a scanner event for the given agent with a file count.
-     */
-    @Override
-    public void recordEvent(String agentId, ScannerEventType eventType,
-                            ScannerStatus status, String folderPath, String errorMessage,
-                            long fileCount) {
+    public void recordEvent(String agentId, ScannerEventType eventType, long fileCount) {
         if (eventType == ScannerEventType.CREATION || eventType == ScannerEventType.MODIFICATION) {
             metricsStore.compute(agentId, (key, existing) -> {
                 if (existing == null) {
@@ -134,23 +125,16 @@ public class ScannerObserverService implements ScannerMetricsPort {
                 return existing.withFileCount(fileCount);
             });
         } else if (eventType == null) {
-            // Lifecycle events (emission, error, recovery, init)
-            // Always store the file count; update emission timestamp if EMITTING_UPDATES
+            // Lifecycle events — store file count only
             metricsStore.compute(agentId, (key, existing) -> {
                 if (existing == null) {
-                    if (status == ScannerStatus.EMITTING_UPDATES) {
-                        return new AgentMetrics(0, LocalDateTime.now(), fileCount);
-                    }
                     return new AgentMetrics(0, null, fileCount);
-                }
-                if (status == ScannerStatus.EMITTING_UPDATES) {
-                    return existing.withLastEmission(LocalDateTime.now()).withFileCount(fileCount);
                 }
                 return existing.withFileCount(fileCount);
             });
         }
 
-        pushToUI(agentId, status, eventType, folderPath, errorMessage, fileCount);
+        pushToUI(agentId, null, eventType, null, null, fileCount);
     }
 
     /**
@@ -169,8 +153,13 @@ public class ScannerObserverService implements ScannerMetricsPort {
 
     /**
      * Push a status change to all registered UI callbacks.
+     * <p>
+     * Public instance method — not part of {@link ScannerMetricsPort}.
+     * Called by {@link ScannerService} for lifecycle status pushes.
+     *
+     * @param agentId the owning agent's ID
+     * @param status  the scanner status
      */
-    @Override
     public void pushToUI(String agentId, ScannerStatus status) {
         pushToUI(agentId, status, null, null, null, 0L);
     }
@@ -180,14 +169,35 @@ public class ScannerObserverService implements ScannerMetricsPort {
      */
     private void pushToUI(String agentId, ScannerStatus status, ScannerEventType eventType,
                           String folderPath, String errorMessage, long fileCount) {
-        for (java.util.function.Consumer<ScannerMetricsEvent> callback : refreshCallbacks) {
+        for (Consumer<ScannerMetricsEvent> callback : refreshCallbacks) {
             try {
-                callback.accept(new ScannerMetricsEvent(agentId, status, eventType, folderPath, errorMessage, fileCount));
+                callback.accept(new ScannerMetricsEvent(agentId, status, eventType,
+                        folderPath, errorMessage, fileCount));
             } catch (Exception e) {
                 log.warn("Error in metrics refresh callback for agent {}: {}",
                         agentId, e.getMessage());
             }
         }
+    }
+
+    /**
+     * Publish a file-level event to all registered callbacks.
+     * <p>
+     * Converts the file result into a {@link ScannerMetricsEvent} for backward
+     * compatibility with existing callback consumers.
+     *
+     * @param event the file event to publish
+     */
+    public void publishFileEvent(ScannerFileEvent event) {
+        ScannerStatus status = switch (event.result()) {
+            case EMITTED -> ScannerStatus.EMITTING_UPDATES;
+            case FILTERED -> ScannerStatus.FILTERED;
+            case ERROR -> ScannerStatus.ERROR;
+        };
+        ScannerEventType eventType = event.result() == ScannerFileResult.EMITTED
+                ? ScannerEventType.MODIFICATION : ScannerEventType.UNCHANGED;
+        pushToUI(event.agentId(), status, eventType, event.folderPath(),
+                event.errorMessage(), 0L);
     }
 
     /**
@@ -244,7 +254,7 @@ public class ScannerObserverService implements ScannerMetricsPort {
      * Called by the UI view when attaching, so background threads (watch service)
      * can push updates via {@link #pushToUI(String, ScannerStatus)}.
      */
-    public void registerRefreshCallback(java.util.function.Consumer<ScannerMetricsEvent> callback) {
+    public void registerRefreshCallback(Consumer<ScannerMetricsEvent> callback) {
         refreshCallbacks.add(callback);
         log.debug("Scanner metrics refresh callback registered");
     }
@@ -252,7 +262,7 @@ public class ScannerObserverService implements ScannerMetricsPort {
     /**
      * Unregister a previously registered callback.
      */
-    public void unregisterRefreshCallback(java.util.function.Consumer<ScannerMetricsEvent> callback) {
+    public void unregisterRefreshCallback(Consumer<ScannerMetricsEvent> callback) {
         refreshCallbacks.remove(callback);
         log.debug("Scanner metrics refresh callback unregistered");
     }

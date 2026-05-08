@@ -143,8 +143,7 @@ public class ScannerService implements FileScanner {
                 error -> {
                     log.error("Error in raw event subscription for agent {}: {}",
                             effectiveAgentId, error.getMessage());
-                    observer.recordEvent(effectiveAgentId, null, ScannerStatus.ERROR, null,
-                            "Error processing raw event: " + error.getMessage(), 0L);
+                    observer.recordEvent(effectiveAgentId, null, 0L);
                 }
         );
     }
@@ -161,8 +160,7 @@ public class ScannerService implements FileScanner {
             if (rawEvent.eventType() == RawFileEvent.RawFileEventType.DELETE) {
                 long fileCount = countFiles();
                 notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
-                observer.recordEvent(effectiveAgentId, ScannerEventType.DELETION,
-                        ScannerStatus.EMITTING_UPDATES, folderPath, null, fileCount);
+                observer.recordEvent(effectiveAgentId, ScannerEventType.DELETION, fileCount);
                 log.debug("Deleted file: {}", path);
                 return;
             }
@@ -178,23 +176,20 @@ public class ScannerService implements FileScanner {
                         ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
                 long fileCount = countFiles();
                 notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
-                observer.recordEvent(effectiveAgentId, eventType,
-                        ScannerStatus.EMITTING_UPDATES, folderPath, null, fileCount);
+                observer.recordEvent(effectiveAgentId, eventType, fileCount);
                 log.debug("{} file: {}", eventType == ScannerEventType.CREATION ? "New" : "Changed", relativePath);
                 emitWithDelay(history);
             } else {
                 long fileCount = countFiles();
                 notifyStatusChange(ScannerStatus.FILTERED);
-                observer.recordEvent(effectiveAgentId, ScannerEventType.UNCHANGED,
-                        ScannerStatus.FILTERED, folderPath, null, fileCount);
+                observer.recordEvent(effectiveAgentId, ScannerEventType.UNCHANGED, fileCount);
                 cancelAndScheduleFilteredReset();
                 log.debug("Unchanged file (skipped): {}", relativePath);
             }
         } catch (Exception e) {
             log.warn("Failed to process raw event for path {}: {}", path, e.getMessage());
             notifyStatusChange(ScannerStatus.ERROR);
-            observer.recordEvent(effectiveAgentId, null, ScannerStatus.ERROR, null,
-                    "Failed to process raw event: " + e.getMessage());
+            observer.recordEvent(effectiveAgentId, null, 0L);
         }
     }
 
@@ -277,7 +272,7 @@ public class ScannerService implements FileScanner {
         this.lastEmittedAt = LocalDateTime.now();
         observer.recordEmission(effectiveAgentId);
         long fileCount = observer.getMetrics(effectiveAgentId).fileCount();
-        observer.recordEvent(effectiveAgentId, null, ScannerStatus.EMITTING_UPDATES, null, null, fileCount);
+        observer.recordEvent(effectiveAgentId, null, fileCount);
     }
 
     /**
@@ -306,16 +301,15 @@ public class ScannerService implements FileScanner {
                 log.info("Scanner initialised for folder: {} – no new files, staying IDLE", folderPath);
             }
 
-            // Store the initial file count with the observer (after status transitions
-            // to avoid pushToUI overwriting fileCount with 0L)
-            observer.recordEvent(effectiveAgentId, null, status, folderPath, null, initialFileCount);
+            // Store the initial file count with the observer
+            observer.recordEvent(effectiveAgentId, null, initialFileCount);
 
             log.info("Scanner initialised for folder: {}", folderPath);
 
         } catch (Exception e) {
             String errorMsg = "Failed to initialise scanner: " + e.getMessage();
             log.error("Failed to initialise scanner for folder: {}", folderPath, e);
-            observer.recordEvent(effectiveAgentId, null, ScannerStatus.ERROR, null, errorMsg, 0L);
+            observer.recordEvent(effectiveAgentId, null, 0L);
         }
     }
 
@@ -338,7 +332,7 @@ public class ScannerService implements FileScanner {
      */
     public void transitionToError(String reason) {
         this.errorMessage = reason;
-        observer.recordEvent(effectiveAgentId, null, ScannerStatus.ERROR, null, reason, 0L);
+        observer.recordEvent(effectiveAgentId, null, 0L);
         notifyStatusChange(ScannerStatus.ERROR);
         log.error("Scanner for agent {} entered ERROR state: {}", effectiveAgentId, reason);
     }
@@ -368,7 +362,7 @@ public class ScannerService implements FileScanner {
         this.lastEmittedAt = LocalDateTime.now();
         observer.recordEmission(effectiveAgentId);
         long fileCount = observer.getMetrics(effectiveAgentId).fileCount();
-        observer.recordEvent(effectiveAgentId, null, ScannerStatus.EMITTING_UPDATES, null, null, fileCount);
+        observer.recordEvent(effectiveAgentId, null, fileCount);
         log.debug("Recorded emission for agent {} – resetting idle timer", effectiveAgentId);
     }
 
@@ -422,10 +416,16 @@ public class ScannerService implements FileScanner {
 
     /**
      * Update the scanner's status and notify the observer.
+     * <p>
+     * Cast to ScannerObserverService to access pushToUI() — this method lives on
+     * the concrete service, not the port interface. Will be replaced by
+     * ScannerEventPort in a later phase.
      */
     private void notifyStatusChange(ScannerStatus newStatus) {
         this.status = newStatus;
-        observer.pushToUI(effectiveAgentId, newStatus);
+        if (observer instanceof ScannerObserverService observerService) {
+            observerService.pushToUI(effectiveAgentId, newStatus);
+        }
     }
 
     // -- Backward-compatible string constants --
@@ -454,8 +454,7 @@ public class ScannerService implements FileScanner {
         try {
             if (!java.nio.file.Files.exists(Path.of(folderPath))) {
                 log.warn("Target folder does not exist: {}", folderPath);
-                observer.recordEvent(effectiveAgentId, null, ScannerStatus.ERROR, null,
-                        "Target folder does not exist: " + folderPath, 0L);
+                observer.recordEvent(effectiveAgentId, null, 0L);
                 return;
             }
 
@@ -466,7 +465,7 @@ public class ScannerService implements FileScanner {
         } catch (Exception e) {
             String errorMsg = "Failed to walk folder during full scan: " + e.getMessage();
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
-            observer.recordEvent(effectiveAgentId, null, ScannerStatus.ERROR, null, errorMsg, 0L);
+            observer.recordEvent(effectiveAgentId, null, 0L);
         }
 
         notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
