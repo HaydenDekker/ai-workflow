@@ -342,16 +342,16 @@ The use case orchestrates both. Each port is independently swappable.
 
 | Phase | Status | Changes |
 |-------|--------|---------|
-| 0 | ⬜ | `ScannerFileResult` domain enum |
-| 1 | ⬜ | Split ports — `ScannerMetricsPort` (metrics) + `ScannerEventPort` (push) |
-| 2 | ⬜ | Implement port adapters — `ScannerMetricsService` + `ScannerEventBus` |
-| 3 | ⬜ | Create `ScannerObservabilityUseCase` orchestrator |
-| 4 | ⬜ | Refactor `ScannerService` — call use case instead of ports |
-| 5 | ⬜ | Update `ScannerRegistry` wiring |
-| 6 | ⬜ | Update inbound adapters |
-| 7 | ⬜ | Rewrite `ScannerListView` with UI timers |
-| 8 | ⬜ | Rewrite tests |
-| 9 | ⬜ | Update documentation |
+| 0 | ✅ | `ScannerFileResult` domain enum |
+| 1 | ✅ | Split ports — `ScannerMetricsPort` (metrics) + `ScannerEventPort` (push) |
+| 2 | ✅ | Implement port adapters — `ScannerMetricsService` + `ScannerEventBus` |
+| 3 | ✅ | Create `ScannerObservabilityUseCase` orchestrator |
+| 4 | ✅ | Refactor `ScannerService` — call use case instead of ports |
+| 5 | ✅ | Update `ScannerRegistry` wiring |
+| 6 | ✅ | Update inbound adapters |
+| 7 | ✅ | Rewrite `ScannerListView` with UI timers |
+| 8 | ✅ | Rewrite tests |
+| 9 | ✅ | Update documentation |
 
 **Total new files**: ~6 (`ScannerFileResult.java`, `ScannerFileEvent.java`, `ScannerEventPort.java`, `ScannerEventBus.java`, `ScannerObservabilityUseCase.java`, `ScannerMetricsService.java`)
 **Total renamed files**: ~1 (`ScannerObserverService.java` → `ScannerMetricsService.java`)
