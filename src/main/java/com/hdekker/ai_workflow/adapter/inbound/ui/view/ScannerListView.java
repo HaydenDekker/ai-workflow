@@ -237,7 +237,9 @@ public class ScannerListView extends VerticalLayout
      * the dot is wrapped in a tooltip showing the error.
      */
     private Div renderStatusComponent(ScannerInfoDTO info) {
-        String displayState = displayTimers.getOrDefault(info.agentId(), null);
+        String displayState = displayTimers.containsKey(info.agentId())
+                ? displayTimers.get(info.agentId()).state()
+                : null;
         String status = displayState != null ? displayState
                 : (info.status() != null ? info.status() : "UNKNOWN");
         String color = displayColorForState(status);
