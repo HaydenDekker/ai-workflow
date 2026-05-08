@@ -31,6 +31,7 @@ public class AgentConfigurator {
 	private final ChatClient chatClient;
 	private final Consumer<PromptResponse> persister;
 	private final FileWritePort fileWritePort;
+	private final AgentObserverUseCase observer;
 
 	/**
 	 * Creates an AgentConfigurator with a direct persister consumer.
@@ -39,7 +40,7 @@ public class AgentConfigurator {
 			Flux<FileHistory> fileInputFlux,
 			ChatClient chatClient,
 			Consumer<PromptResponse> persister) {
-		this(fileInputFlux, chatClient, persister, null);
+		this(fileInputFlux, chatClient, persister, null, null);
 	}
 
 	/**
@@ -51,10 +52,32 @@ public class AgentConfigurator {
 			ChatClient chatClient,
 			Consumer<PromptResponse> persister,
 			FileWritePort fileWritePort) {
+		this(fileInputFlux, chatClient, persister, fileWritePort, null);
+	}
+
+	/**
+	 * Creates an AgentConfigurator with an agent observer for pipeline-level
+	 * dispatch and storage tracking.
+	 *
+	 * @param fileInputFlux the file input flux from the scanner
+	 * @param chatClient    the LLM chat client
+	 * @param persister     the response persister consumer (fallback when
+	 *                      fileWritePort is null)
+	 * @param fileWritePort the file write port (nullable, used when available)
+	 * @param observer      the agent observer use case (nullable for backward
+	 *                      compatibility)
+	 */
+	public AgentConfigurator(
+			Flux<FileHistory> fileInputFlux,
+			ChatClient chatClient,
+			Consumer<PromptResponse> persister,
+			FileWritePort fileWritePort,
+			AgentObserverUseCase observer) {
 		this.fileInputFlux = fileInputFlux;
 		this.chatClient = chatClient;
 		this.persister = persister;
 		this.fileWritePort = fileWritePort;
+		this.observer = observer;
 	}
 
 	/**
@@ -72,13 +95,30 @@ public class AgentConfigurator {
 				? fileWritePort.createPersister(null)
 				: persister;
 
-		return AgentBuilder.instance()
+		// Build pipeline without real persister — we add dispatch/storage hooks
+		// separately below. No-op consumer satisfies the Persistable interface.
+		Flux<PromptResponse> basePipeline = AgentBuilder.instance()
 				.withDefinition(agentDefinition)
 				.withTrigger(fileInputFlux
 						.map(fh -> fh.to()))
 				.prompting(adapter::call)
-				.persist(effectivePersister)
+				.persist(response -> { })
 				.split(SplittableStrategy.noSPLT())
 				.build();
+
+		// Dispatch hook fires first — after LLM returns, before persist
+		Flux<PromptResponse> withDispatch = basePipeline.doOnNext(response -> {
+			if (observer != null) {
+				observer.recordDispatch(agentDefinition.title(), response.fileName());
+			}
+		});
+
+		// Storage hook fires second — after dispatch, during persist
+		return withDispatch.doOnNext(response -> {
+			effectivePersister.accept(response);
+			if (observer != null) {
+				observer.recordStorage(agentDefinition.title(), response.fileName(), null);
+			}
+		});
 	}
 }
