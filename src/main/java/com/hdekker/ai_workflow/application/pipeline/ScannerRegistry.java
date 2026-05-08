@@ -16,8 +16,6 @@ import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
-import com.hdekker.ai_workflow.application.scanner.port.ScannerEventPort;
-import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 import org.springframework.beans.factory.DisposableBean;
@@ -33,10 +31,11 @@ import reactor.core.publisher.Flux;
  * Depends on port interfaces, not concrete infrastructure:
  * <ul>
  *   <li>{@link FileMetadataRepository} — for file metadata change detection</li>
- *   <li>{@link ScannerMetricsPort} — for metrics observation and UI push</li>
+ *   <li>{@link ScannerObservabilityUseCase} — for metrics + event orchestration</li>
  * </ul>
  *
  * @see ScannerService
+ * @see ScannerObservabilityUseCase
  */
 public class ScannerRegistry implements DisposableBean {
 
@@ -44,33 +43,30 @@ public class ScannerRegistry implements DisposableBean {
 
     private final ConcurrentHashMap<String, ScannerService> scanners = new ConcurrentHashMap<>();
     private final FileMetadataRepository fileMetadataRepository;
-    private final ScannerMetricsPort metrics;
-    private final ScannerEventPort eventBus;
+    private final ScannerObservabilityUseCase observability;
     private final FileWatcherPort fileWatcherFactory;
     private final FileCounterPort fileCounter;
     private final Duration defaultEmissionDelay;
     private final Duration defaultPollInterval;
 
     /**
-     * Creates a new ScannerRegistry with port dependencies.
+     * Creates a new ScannerRegistry with the observability use case.
      *
      * @param fileMetadataRepository  repository for file metadata change detection
-     * @param observer                scanner observer port for metrics and UI push
+     * @param observability           orchestrator for metrics recording + event publishing
      * @param fileWatcherFactory      factory for creating file watcher instances
      * @param fileCounter             file counter port for computing file counts
      * @param defaultEmissionDelay    default emission delay between consecutive file emissions
      * @param defaultPollInterval     default poll interval for the watch service
      */
     public ScannerRegistry(FileMetadataRepository fileMetadataRepository,
-                           ScannerMetricsPort metrics,
-                           ScannerEventPort eventBus,
+                           ScannerObservabilityUseCase observability,
                            FileWatcherPort fileWatcherFactory,
                            FileCounterPort fileCounter,
                            Duration defaultEmissionDelay,
                            Duration defaultPollInterval) {
         this.fileMetadataRepository = fileMetadataRepository;
-        this.metrics = metrics;
-        this.eventBus = eventBus;
+        this.observability = observability;
         this.fileWatcherFactory = fileWatcherFactory;
         this.fileCounter = fileCounter;
         this.defaultEmissionDelay = defaultEmissionDelay;
@@ -81,11 +77,10 @@ public class ScannerRegistry implements DisposableBean {
      * Creates a ScannerRegistry with default emission delay and poll interval (1 second).
      */
     public ScannerRegistry(FileMetadataRepository fileMetadataRepository,
-                           ScannerMetricsPort metrics,
-                           ScannerEventPort eventBus,
+                           ScannerObservabilityUseCase observability,
                            FileWatcherPort fileWatcherFactory,
                            FileCounterPort fileCounter) {
-        this(fileMetadataRepository, metrics, eventBus, fileWatcherFactory,
+        this(fileMetadataRepository, observability, fileWatcherFactory,
                 fileCounter, Duration.ofSeconds(2), Duration.ofSeconds(1));
     }
 
@@ -131,10 +126,7 @@ public class ScannerRegistry implements DisposableBean {
         // Create the comparator
         FileComparator comparator = new FileComparator(fileMetadataRepository);
 
-        // Create the use case that coordinates metrics + event publishing
-        ScannerObservabilityUseCase observability = new ScannerObservabilityUseCase(metrics, eventBus);
-
-        // Create the scanner — delegates observability to the use case
+        // Create the scanner — delegates observability to the injected use case
         ScannerService scanner = new ScannerService(
                 agentId,
                 targetDirectory,
@@ -233,7 +225,7 @@ public class ScannerRegistry implements DisposableBean {
     }
 
     /**
-     * Update the status of a scanner and publish the change to the event bus.
+     * Update the status of a scanner and publish the change through the event bus.
      */
     public void updateStatus(String scannerId, ScannerStatus status) {
         ScannerService scanner = scanners.get(scannerId);
@@ -243,7 +235,7 @@ public class ScannerRegistry implements DisposableBean {
                     = status == ScannerStatus.ERROR
                     ? com.hdekker.ai_workflow.domain.scanner.ScannerFileResult.ERROR
                     : com.hdekker.ai_workflow.domain.scanner.ScannerFileResult.EMITTED;
-            eventBus.publish(scannerId, result, null, null);
+            observability.publish(scannerId, result, null, null);
             log.debug("Updated scanner {} status to {}", scannerId, status);
         }
     }

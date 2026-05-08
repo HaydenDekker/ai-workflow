@@ -14,6 +14,7 @@ import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
 
@@ -56,6 +57,7 @@ public class ScannerService implements FileScanner {
     private volatile ScannerStatus status = ScannerStatus.IDLE;
     private volatile String errorMessage;
     private volatile LocalDateTime lastEmittedAt;
+    private volatile ScannerFileResult lastFileResult = ScannerFileResult.EMITTED;
     private final LocalDateTime createdAt;
 
     // -- Emission throttle state --
@@ -133,6 +135,7 @@ public class ScannerService implements FileScanner {
             // Handle DELETE events — content is not available
             if (rawEvent.eventType() == RawFileEvent.RawFileEventType.DELETE) {
                 long fileCount = countFiles();
+                this.lastFileResult = ScannerFileResult.EMITTED;
                 observability.recordFileEvent(effectiveAgentId, ScannerEventType.DELETION,
                         fileCount, folderPath);
                 log.debug("Deleted file: {}", path);
@@ -148,12 +151,14 @@ public class ScannerService implements FileScanner {
             if (!history.hashMatches()) {
                 ScannerEventType eventType = history.previousFile().isEmpty()
                         ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
+                this.lastFileResult = ScannerFileResult.EMITTED;
                 long fileCount = countFiles();
                 observability.recordFileEvent(effectiveAgentId, eventType, fileCount, folderPath);
                 log.debug("{} file: {}", eventType == ScannerEventType.CREATION
                         ? "New" : "Changed", relativePath);
                 emitWithDelay(history);
             } else {
+                this.lastFileResult = ScannerFileResult.FILTERED;
                 long fileCount = countFiles();
                 observability.recordFileEvent(effectiveAgentId, ScannerEventType.UNCHANGED,
                         fileCount, folderPath);
@@ -450,6 +455,7 @@ public class ScannerService implements FileScanner {
                 effectiveAgentId,
                 folderPath,
                 status.name(),
+                lastFileResult,
                 createdAt,
                 lastEmittedAt,
                 errorMessage
@@ -464,17 +470,20 @@ public class ScannerService implements FileScanner {
         private final String id;
         private final String folderPath;
         private final String status;
+        private final ScannerFileResult fileResult;
         private final LocalDateTime createdAt;
         private final LocalDateTime lastEmittedAt;
         private final String errorMessage;
 
         public ScannerInfo(String agentId, String id, String folderPath,
-                           String status, LocalDateTime createdAt,
-                           LocalDateTime lastEmittedAt, String errorMessage) {
+                           String status, ScannerFileResult fileResult,
+                           LocalDateTime createdAt, LocalDateTime lastEmittedAt,
+                           String errorMessage) {
             this.agentId = agentId;
             this.id = id;
             this.folderPath = folderPath;
             this.status = status;
+            this.fileResult = fileResult;
             this.createdAt = createdAt;
             this.lastEmittedAt = lastEmittedAt;
             this.errorMessage = errorMessage;
@@ -484,6 +493,7 @@ public class ScannerService implements FileScanner {
         public String id() { return id; }
         public String folderPath() { return folderPath; }
         public String status() { return status; }
+        public ScannerFileResult fileResult() { return fileResult; }
         public LocalDateTime createdAt() { return createdAt; }
         public LocalDateTime lastEmittedAt() { return lastEmittedAt; }
         public String errorMessage() { return errorMessage; }

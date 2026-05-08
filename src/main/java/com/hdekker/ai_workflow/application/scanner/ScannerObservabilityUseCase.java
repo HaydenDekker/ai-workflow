@@ -158,4 +158,22 @@ public class ScannerObservabilityUseCase {
 
         log.error("Scanner for agent {} entered ERROR state: {}", agentId, message);
     }
+
+    /**
+     * Convenience method to publish a file-level event directly.
+     * <p>
+     * Used by callers (e.g. {@link com.hdekker.ai_workflow.application.pipeline.ScannerRegistry})
+     * that need to push an event without recording additional metrics.
+     *
+     * @param agentId      the owning agent's ID
+     * @param result       the file-level result (EMITTED, FILTERED, ERROR)
+     * @param folderPath   the folder being scanned (nullable)
+     * @param errorMessage error message when result is ERROR (nullable)
+     */
+    public void publish(String agentId, ScannerFileResult result,
+                        String folderPath, String errorMessage) {
+        eventBus.publish(agentId, result, folderPath, errorMessage);
+
+        log.debug("Published event for agent {}: result={}", agentId, result);
+    }
 }

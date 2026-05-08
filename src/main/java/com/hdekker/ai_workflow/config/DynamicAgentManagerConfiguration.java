@@ -16,8 +16,7 @@ import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
-import com.hdekker.ai_workflow.application.scanner.port.ScannerEventPort;
-import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
+import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;
@@ -48,14 +47,12 @@ public class DynamicAgentManagerConfiguration {
 	@Bean
 	public ScannerRegistry scannerRegistry(
 			FileMetadataRepository fileMetadataRepository,
-			ScannerMetricsPort metrics,
-			ScannerEventPort eventBus,
+			ScannerObservabilityUseCase observability,
 			FileWatcherPort fileWatcherFactory,
 			FileCounterPort fileCounterPort) {
 		return new ScannerRegistry(
 				fileMetadataRepository,
-				metrics,
-				eventBus,
+				observability,
 				fileWatcherFactory,
 				fileCounterPort,
 				Duration.ofSeconds(2),

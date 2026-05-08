@@ -64,7 +64,7 @@ public class AgentLifecycleServiceScannerRestoreTest {
             String targetDir = invocation.getArgument(1);
             ScannerService.ScannerInfo info = new ScannerService.ScannerInfo(
                     agentId, "scanner-" + agentId, targetDir,
-                    "IDLE", LocalDateTime.now(), null, null);
+                    "IDLE", null, LocalDateTime.now(), null, null);
             createdScanners.add(info);
             return info;
         });

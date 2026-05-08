@@ -58,6 +58,7 @@ public class AgentLifecycleServiceTest {
                     "scanner-" + agentId,
                     targetDir,
                     "IDLE",
+                    null,
                     LocalDateTime.now(),
                     null,
                     null);

@@ -62,7 +62,7 @@ public class AgentLifecycleServicePersistenceTest {
 			String targetDir = invocation.getArgument(1);
 			return new ScannerService.ScannerInfo(
 					agentId, "scanner-" + agentId, targetDir,
-					"IDLE", LocalDateTime.now(), null, null);
+					"IDLE", null, LocalDateTime.now(), null, null);
 		});
 		when(mockScannerRegistry.getScannerFlux(anyString())).thenReturn(Flux.<FileHistory>empty());
 

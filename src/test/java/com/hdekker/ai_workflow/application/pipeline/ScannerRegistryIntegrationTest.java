@@ -30,6 +30,7 @@ import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
 import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
+import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
@@ -63,6 +64,7 @@ public class ScannerRegistryIntegrationTest {
     private FileWatcherPort mockWatcher;
     private ScannerMetricsService metrics;
     private ScannerEventBus eventBus;
+    private ScannerObservabilityUseCase observability;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -75,6 +77,7 @@ public class ScannerRegistryIntegrationTest {
         when(fileCounter.countFiles(any())).thenReturn(0L);
         metrics = new ScannerMetricsService();
         eventBus = new ScannerEventBus();
+        observability = new ScannerObservabilityUseCase(metrics, eventBus);
 
         // Mock FileWatcherPort
         mockWatcherFactory = mock(FileWatcherPort.class);
@@ -85,7 +88,7 @@ public class ScannerRegistryIntegrationTest {
         when(mockWatcher.isRunning()).thenReturn(false);
 
         // Create the real scanner registry
-        scannerRegistry = new ScannerRegistry(fileMetadataRepo, metrics, eventBus, mockWatcherFactory, fileCounter);
+        scannerRegistry = new ScannerRegistry(fileMetadataRepo, observability, mockWatcherFactory, fileCounter);
 
         // Create a mock ChatClient and FileWriter for the agent manager
         String mockResponse = "## Analysis\n\nDocument processed successfully.";

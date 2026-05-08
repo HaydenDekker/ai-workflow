@@ -47,10 +47,10 @@ public class ScannerServiceTest {
     public void givenRegistryWithScanners_ExpectAllReturned() {
         com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo domainInfo1 =
                 new com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo(
-                        "agent-1", "id-1", "/dir/1", "IDLE", LocalDateTime.now(), null, null);
+                        "agent-1", "id-1", "/dir/1", "IDLE", null, LocalDateTime.now(), null, null);
         com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo domainInfo2 =
                 new com.hdekker.ai_workflow.application.scanner.ScannerService.ScannerInfo(
-                        "agent-2", "id-2", "/dir/2", "ERROR",
+                        "agent-2", "id-2", "/dir/2", "ERROR", null,
                         LocalDateTime.now().minusHours(1), LocalDateTime.now().minusHours(1), "Some error");
 
         when(registry.listAll()).thenReturn(List.of(domainInfo1, domainInfo2));

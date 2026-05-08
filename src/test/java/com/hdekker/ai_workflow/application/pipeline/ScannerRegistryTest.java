@@ -23,6 +23,7 @@ import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
 import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
+import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.scanner.ScannerFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
@@ -36,6 +37,7 @@ public class ScannerRegistryTest {
     private FileMetadataRepository fileMetadataRepo;
     private ScannerMetricsService metrics;
     private ScannerEventBus eventBus;
+    private ScannerObservabilityUseCase observability;
     private FileCounterPort fileCounter;
     private Path tempDir;
     private List<ScannerFileEvent> capturedEvents;
@@ -52,6 +54,7 @@ public class ScannerRegistryTest {
         when(fileCounter.countFiles(any())).thenReturn(0L);
         metrics = new ScannerMetricsService();
         eventBus = new ScannerEventBus();
+        observability = new ScannerObservabilityUseCase(metrics, eventBus);
 
         // Capture events pushed by the event bus
         capturedEvents = new CopyOnWriteArrayList<>();
@@ -65,7 +68,7 @@ public class ScannerRegistryTest {
         when(mockWatcher.getDirectory()).thenReturn(tempDir);
         when(mockWatcher.isRunning()).thenReturn(false);
 
-        registry = new ScannerRegistry(fileMetadataRepo, metrics, eventBus, mockWatcherFactory, fileCounter);
+        registry = new ScannerRegistry(fileMetadataRepo, observability, mockWatcherFactory, fileCounter);
     }
 
     @AfterEach
