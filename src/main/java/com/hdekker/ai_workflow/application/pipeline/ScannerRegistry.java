@@ -14,8 +14,9 @@ import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
+import com.hdekker.ai_workflow.application.scanner.port.ScannerEventPort;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
@@ -43,7 +44,8 @@ public class ScannerRegistry implements DisposableBean {
 
     private final ConcurrentHashMap<String, ScannerService> scanners = new ConcurrentHashMap<>();
     private final FileMetadataRepository fileMetadataRepository;
-    private final ScannerMetricsPort observer;
+    private final ScannerMetricsPort metrics;
+    private final ScannerEventPort eventBus;
     private final FileWatcherPort fileWatcherFactory;
     private final FileCounterPort fileCounter;
     private final Duration defaultEmissionDelay;
@@ -60,13 +62,15 @@ public class ScannerRegistry implements DisposableBean {
      * @param defaultPollInterval     default poll interval for the watch service
      */
     public ScannerRegistry(FileMetadataRepository fileMetadataRepository,
-                           ScannerMetricsPort observer,
+                           ScannerMetricsPort metrics,
+                           ScannerEventPort eventBus,
                            FileWatcherPort fileWatcherFactory,
                            FileCounterPort fileCounter,
                            Duration defaultEmissionDelay,
                            Duration defaultPollInterval) {
         this.fileMetadataRepository = fileMetadataRepository;
-        this.observer = observer;
+        this.metrics = metrics;
+        this.eventBus = eventBus;
         this.fileWatcherFactory = fileWatcherFactory;
         this.fileCounter = fileCounter;
         this.defaultEmissionDelay = defaultEmissionDelay;
@@ -77,10 +81,11 @@ public class ScannerRegistry implements DisposableBean {
      * Creates a ScannerRegistry with default emission delay and poll interval (1 second).
      */
     public ScannerRegistry(FileMetadataRepository fileMetadataRepository,
-                           ScannerMetricsPort observer,
+                           ScannerMetricsPort metrics,
+                           ScannerEventPort eventBus,
                            FileWatcherPort fileWatcherFactory,
                            FileCounterPort fileCounter) {
-        this(fileMetadataRepository, observer, fileWatcherFactory,
+        this(fileMetadataRepository, metrics, eventBus, fileWatcherFactory,
                 fileCounter, Duration.ofSeconds(2), Duration.ofSeconds(1));
     }
 
@@ -126,7 +131,7 @@ public class ScannerRegistry implements DisposableBean {
         // Create the comparator
         FileComparator comparator = new FileComparator(fileMetadataRepository);
 
-        // Create the scanner — it uses the observer for metrics and UI push
+        // Create the scanner — it uses the metrics port and event bus
         ScannerService scanner = new ScannerService(
                 agentId,
                 targetDirectory,
@@ -135,7 +140,8 @@ public class ScannerRegistry implements DisposableBean {
                 watcher,
                 comparator,
                 fileCounter,
-                observer);
+                metrics,
+                eventBus);
 
         // Put in map BEFORE initSource() so callbacks can find it
         scanners.put(agentId, scanner);
@@ -225,19 +231,17 @@ public class ScannerRegistry implements DisposableBean {
     }
 
     /**
-     * Update the status of a scanner.
-     * <p>
-     * Cast to ScannerObserverService to access pushToUI() — this method lives on
-     * the concrete service, not the port interface. Will be replaced by
-     * ScannerEventPort in a later phase.
+     * Update the status of a scanner and publish the change to the event bus.
      */
     public void updateStatus(String scannerId, ScannerStatus status) {
         ScannerService scanner = scanners.get(scannerId);
         if (scanner != null) {
             scanner.updateStatus(status);
-            if (observer instanceof ScannerObserverService observerService) {
-                observerService.pushToUI(scannerId, status);
-            }
+            com.hdekker.ai_workflow.domain.scanner.ScannerFileResult result
+                    = status == ScannerStatus.ERROR
+                    ? com.hdekker.ai_workflow.domain.scanner.ScannerFileResult.ERROR
+                    : com.hdekker.ai_workflow.domain.scanner.ScannerFileResult.EMITTED;
+            eventBus.publish(scannerId, result, null, null);
             log.debug("Updated scanner {} status to {}", scannerId, status);
         }
     }

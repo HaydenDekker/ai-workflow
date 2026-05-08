@@ -28,7 +28,8 @@ import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
+import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
@@ -60,7 +61,8 @@ public class ScannerRegistryIntegrationTest {
     private FileCounterPort fileCounter;
     private FileWatcherPort mockWatcherFactory;
     private FileWatcherPort mockWatcher;
-    private ScannerObserverService observer;
+    private ScannerMetricsService metrics;
+    private ScannerEventBus eventBus;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -71,7 +73,8 @@ public class ScannerRegistryIntegrationTest {
         when(fileMetadataRepo.findById(any())).thenReturn(Optional.empty());
         fileCounter = mock(FileCounterPort.class);
         when(fileCounter.countFiles(any())).thenReturn(0L);
-        observer = new ScannerObserverService();
+        metrics = new ScannerMetricsService();
+        eventBus = new ScannerEventBus();
 
         // Mock FileWatcherPort
         mockWatcherFactory = mock(FileWatcherPort.class);
@@ -82,7 +85,7 @@ public class ScannerRegistryIntegrationTest {
         when(mockWatcher.isRunning()).thenReturn(false);
 
         // Create the real scanner registry
-        scannerRegistry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory, fileCounter);
+        scannerRegistry = new ScannerRegistry(fileMetadataRepo, metrics, eventBus, mockWatcherFactory, fileCounter);
 
         // Create a mock ChatClient and FileWriter for the agent manager
         String mockResponse = "## Analysis\n\nDocument processed successfully.";

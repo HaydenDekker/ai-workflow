@@ -14,11 +14,13 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
+import com.hdekker.ai_workflow.application.scanner.port.ScannerEventPort;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerEventType;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
 
@@ -37,10 +39,12 @@ import reactor.core.publisher.Sinks;
  *   <li>Creates {@link FileMetadata} and compares via {@link FileComparator}</li>
  *   <li>Produces {@link FileHistory} and decides whether to emit</li>
  *   <li>Tracks metrics via {@link ScannerMetricsPort}</li>
+ *   <li>Publishes events via {@link ScannerEventPort}</li>
  *   <li>Applies emission delay throttling</li>
  * </ul>
  *
  * @see ScannerMetricsPort
+ * @see ScannerEventPort
  */
 public class ScannerService implements FileScanner {
 
@@ -51,10 +55,19 @@ public class ScannerService implements FileScanner {
     private final Duration emissionDelay;
     private final FileWatcherPort fileWatcherPort;
     private final FileComparator fileComparator;
-    private final ScannerMetricsPort observer;
+    private final ScannerMetricsPort metrics;
+    private final ScannerEventPort eventBus;
     private final FileCounterPort fileCounter;
 
     private volatile boolean disposed = false;
+
+    /** Map scanner lifecycle status to file result for event bus publishing. */
+    private static ScannerFileResult statusToFileResult(ScannerStatus status) {
+        if (status == ScannerStatus.ERROR) {
+            return ScannerFileResult.ERROR;
+        }
+        return ScannerFileResult.EMITTED;
+    }
 
     // -- Status state --
     private volatile ScannerStatus status = ScannerStatus.IDLE;
@@ -90,7 +103,8 @@ public class ScannerService implements FileScanner {
      * @param fileWatcherPort   file watching infrastructure port
      * @param fileComparator    metadata comparison utility (application layer)
      * @param fileCounter       file counter port for computing file counts
-     * @param observer          scanner observer port for metrics and UI push
+     * @param metrics           scanner metrics port for recording metrics
+     * @param eventBus          scanner event port for publishing file events
      */
     public ScannerService(String agentId,
                           String folderPath,
@@ -99,14 +113,16 @@ public class ScannerService implements FileScanner {
                           FileWatcherPort fileWatcherPort,
                           FileComparator fileComparator,
                           FileCounterPort fileCounter,
-                          ScannerMetricsPort observer) {
+                          ScannerMetricsPort metrics,
+                          ScannerEventPort eventBus) {
         this.folderPath = folderPath;
         this.effectiveAgentId = agentId != null ? agentId : folderPath;
         this.emissionDelay = emissionDelay;
         this.fileWatcherPort = fileWatcherPort;
         this.fileComparator = fileComparator;
         this.fileCounter = fileCounter;
-        this.observer = observer;
+        this.metrics = metrics;
+        this.eventBus = eventBus;
         this.createdAt = LocalDateTime.now();
         this.lastEmissionTime = LocalDateTime.now();
 
@@ -143,7 +159,7 @@ public class ScannerService implements FileScanner {
                 error -> {
                     log.error("Error in raw event subscription for agent {}: {}",
                             effectiveAgentId, error.getMessage());
-                    observer.recordEvent(effectiveAgentId, null, 0L);
+                    metrics.recordEvent(effectiveAgentId, null, 0L);
                 }
         );
     }
@@ -160,7 +176,7 @@ public class ScannerService implements FileScanner {
             if (rawEvent.eventType() == RawFileEvent.RawFileEventType.DELETE) {
                 long fileCount = countFiles();
                 notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
-                observer.recordEvent(effectiveAgentId, ScannerEventType.DELETION, fileCount);
+                metrics.recordEvent(effectiveAgentId, ScannerEventType.DELETION, fileCount);
                 log.debug("Deleted file: {}", path);
                 return;
             }
@@ -176,25 +192,27 @@ public class ScannerService implements FileScanner {
                         ? ScannerEventType.CREATION : ScannerEventType.MODIFICATION;
                 long fileCount = countFiles();
                 notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
-                observer.recordEvent(effectiveAgentId, eventType, fileCount);
-                log.debug("{} file: {}", eventType == ScannerEventType.CREATION ? "New" : "Changed", relativePath);
+                metrics.recordEvent(effectiveAgentId, eventType, fileCount);
+                log.debug("{} file: {}", eventType == ScannerEventType.CREATION
+                        ? "New" : "Changed", relativePath);
                 emitWithDelay(history);
             } else {
                 long fileCount = countFiles();
                 notifyStatusChange(ScannerStatus.FILTERED);
-                observer.recordEvent(effectiveAgentId, ScannerEventType.UNCHANGED, fileCount);
+                metrics.recordEvent(effectiveAgentId, ScannerEventType.UNCHANGED, fileCount);
                 cancelAndScheduleFilteredReset();
                 log.debug("Unchanged file (skipped): {}", relativePath);
             }
         } catch (Exception e) {
             log.warn("Failed to process raw event for path {}: {}", path, e.getMessage());
             notifyStatusChange(ScannerStatus.ERROR);
-            observer.recordEvent(effectiveAgentId, null, 0L);
+            metrics.recordEvent(effectiveAgentId, null, 0L);
         }
     }
 
     /**
-     * Attempt to emit a file history through the scanner's sink, respecting the emission delay.
+     * Attempt to emit a file history through the scanner's sink,
+     * respecting the emission delay.
      */
     private void emitWithDelay(FileHistory history) {
         if (history == null) {
@@ -265,14 +283,14 @@ public class ScannerService implements FileScanner {
     }
 
     /**
-     * Handle the emission callback — record emission with observer and reset idle timer.
+     * Handle the emission callback — record emission and reset idle timer.
      * Preserves the existing fileCount so emission events don't reset it.
      */
     private void onEmitCallback() {
         this.lastEmittedAt = LocalDateTime.now();
-        observer.recordEmission(effectiveAgentId);
-        long fileCount = observer.getMetrics(effectiveAgentId).fileCount();
-        observer.recordEvent(effectiveAgentId, null, fileCount);
+        metrics.recordEmission(effectiveAgentId);
+        long fileCount = metrics.getMetrics(effectiveAgentId).fileCount();
+        metrics.recordEvent(effectiveAgentId, null, fileCount);
     }
 
     /**
@@ -298,18 +316,19 @@ public class ScannerService implements FileScanner {
                 notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
             } else {
                 notifyStatusChange(ScannerStatus.IDLE);
-                log.info("Scanner initialised for folder: {} – no new files, staying IDLE", folderPath);
+                log.info("Scanner initialised for folder: {} - no new files, staying IDLE",
+                        folderPath);
             }
 
-            // Store the initial file count with the observer
-            observer.recordEvent(effectiveAgentId, null, initialFileCount);
+            // Store the initial file count with the metrics
+            metrics.recordEvent(effectiveAgentId, null, initialFileCount);
 
             log.info("Scanner initialised for folder: {}", folderPath);
 
         } catch (Exception e) {
             String errorMsg = "Failed to initialise scanner: " + e.getMessage();
             log.error("Failed to initialise scanner for folder: {}", folderPath, e);
-            observer.recordEvent(effectiveAgentId, null, 0L);
+            metrics.recordEvent(effectiveAgentId, null, 0L);
         }
     }
 
@@ -332,7 +351,7 @@ public class ScannerService implements FileScanner {
      */
     public void transitionToError(String reason) {
         this.errorMessage = reason;
-        observer.recordEvent(effectiveAgentId, null, 0L);
+        metrics.recordEvent(effectiveAgentId, null, 0L);
         notifyStatusChange(ScannerStatus.ERROR);
         log.error("Scanner for agent {} entered ERROR state: {}", effectiveAgentId, reason);
     }
@@ -342,7 +361,7 @@ public class ScannerService implements FileScanner {
      */
     public void recover() {
         this.errorMessage = null;
-        observer.recordEmission(effectiveAgentId);
+        metrics.recordEmission(effectiveAgentId);
         notifyStatusChange(ScannerStatus.IDLE);
         log.info("Recovered scanner for agent {} from ERROR state", effectiveAgentId);
     }
@@ -360,10 +379,10 @@ public class ScannerService implements FileScanner {
      */
     public void recordEmission() {
         this.lastEmittedAt = LocalDateTime.now();
-        observer.recordEmission(effectiveAgentId);
-        long fileCount = observer.getMetrics(effectiveAgentId).fileCount();
-        observer.recordEvent(effectiveAgentId, null, fileCount);
-        log.debug("Recorded emission for agent {} – resetting idle timer", effectiveAgentId);
+        metrics.recordEmission(effectiveAgentId);
+        long fileCount = metrics.getMetrics(effectiveAgentId).fileCount();
+        metrics.recordEvent(effectiveAgentId, null, fileCount);
+        log.debug("Recorded emission for agent {} - resetting idle timer", effectiveAgentId);
     }
 
     /**
@@ -388,7 +407,8 @@ public class ScannerService implements FileScanner {
                 IDLE_CHECK_INTERVAL.toSeconds(),
                 IDLE_CHECK_INTERVAL.toSeconds(),
                 TimeUnit.SECONDS);
-        log.debug("Idle checker started for agent {} (interval={}s)", effectiveAgentId, IDLE_CHECK_INTERVAL.getSeconds());
+        log.debug("Idle checker started for agent {} (interval={}s)",
+                effectiveAgentId, IDLE_CHECK_INTERVAL.getSeconds());
     }
 
     /**
@@ -415,17 +435,16 @@ public class ScannerService implements FileScanner {
     }
 
     /**
-     * Update the scanner's status and notify the observer.
+     * Update the scanner's status and publish to the event bus.
      * <p>
-     * Cast to ScannerObserverService to access pushToUI() — this method lives on
-     * the concrete service, not the port interface. Will be replaced by
-     * ScannerEventPort in a later phase.
+     * Publishes a file-level event through {@link ScannerEventPort} so
+     * registered callbacks (UI push, logging) are notified of the change.
      */
     private void notifyStatusChange(ScannerStatus newStatus) {
         this.status = newStatus;
-        if (observer instanceof ScannerObserverService observerService) {
-            observerService.pushToUI(effectiveAgentId, newStatus);
-        }
+        ScannerFileResult result = statusToFileResult(newStatus);
+        String errorMsg = newStatus == ScannerStatus.ERROR ? errorMessage : null;
+        eventBus.publish(effectiveAgentId, result, folderPath, errorMsg);
     }
 
     // -- Backward-compatible string constants --
@@ -454,7 +473,7 @@ public class ScannerService implements FileScanner {
         try {
             if (!java.nio.file.Files.exists(Path.of(folderPath))) {
                 log.warn("Target folder does not exist: {}", folderPath);
-                observer.recordEvent(effectiveAgentId, null, 0L);
+                metrics.recordEvent(effectiveAgentId, null, 0L);
                 return;
             }
 
@@ -465,7 +484,7 @@ public class ScannerService implements FileScanner {
         } catch (Exception e) {
             String errorMsg = "Failed to walk folder during full scan: " + e.getMessage();
             log.error("Failed to walk folder during full scan: {}", folderPath, e);
-            observer.recordEvent(effectiveAgentId, null, 0L);
+            metrics.recordEvent(effectiveAgentId, null, 0L);
         }
 
         notifyStatusChange(ScannerStatus.EMITTING_UPDATES);
@@ -489,7 +508,8 @@ public class ScannerService implements FileScanner {
         idleChecker.shutdownNow();
         try {
             if (!idleChecker.awaitTermination(5, TimeUnit.SECONDS)) {
-                log.warn("Idle checker for agent {} did not terminate within timeout", effectiveAgentId);
+                log.warn("Idle checker for agent {} did not terminate within timeout",
+                        effectiveAgentId);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

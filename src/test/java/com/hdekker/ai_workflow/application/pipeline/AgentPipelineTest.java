@@ -22,7 +22,8 @@ import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
+import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
@@ -73,7 +74,8 @@ public class AgentPipelineTest {
         FileComparator comparator = new FileComparator(db);
         FileCounterPort fileCounter = mock(FileCounterPort.class);
         when(fileCounter.countFiles(any())).thenReturn(0L);
-        ScannerObserverService observer = new ScannerObserverService();
+        ScannerMetricsService metrics = new ScannerMetricsService();
+        ScannerEventBus eventBus = new ScannerEventBus();
 
         // Create a real FileWatcherPort mock that emits events
         FileWatcherPort watcher = mock(FileWatcherPort.class);
@@ -92,7 +94,8 @@ public class AgentPipelineTest {
                 watcher,
                 comparator,
                 fileCounter,
-                observer);
+                metrics,
+                eventBus);
 
         CopyOnWriteArrayList<String> prompts = new CopyOnWriteArrayList<>();
         CopyOnWriteArrayList<PromptResponse> responses = new CopyOnWriteArrayList<>();
@@ -210,7 +213,8 @@ public class AgentPipelineTest {
         FileComparator comparator = new FileComparator(db);
         FileCounterPort fileCounter = mock(FileCounterPort.class);
         when(fileCounter.countFiles(any())).thenReturn(0L);
-        ScannerObserverService observer = new ScannerObserverService();
+        ScannerMetricsService metrics2 = new ScannerMetricsService();
+        ScannerEventBus eventBus2 = new ScannerEventBus();
 
         FileWatcherPort watcher = mock(FileWatcherPort.class);
         when(watcher.flux()).thenReturn(Flux.empty());
@@ -227,7 +231,8 @@ public class AgentPipelineTest {
                 watcher,
                 comparator,
                 fileCounter,
-                observer);
+                metrics2,
+                eventBus2);
 
         assertThat(scanner).isNotNull();
         assertThat(scanner.flux()).isNotNull();
@@ -258,7 +263,8 @@ public class AgentPipelineTest {
         FileComparator comparator = new FileComparator(db);
         FileCounterPort fileCounter = mock(FileCounterPort.class);
         when(fileCounter.countFiles(any())).thenReturn(0L);
-        ScannerObserverService observer = new ScannerObserverService();
+        ScannerMetricsService metrics3 = new ScannerMetricsService();
+        ScannerEventBus eventBus3 = new ScannerEventBus();
 
         FileWatcherPort watcher = mock(FileWatcherPort.class);
         when(watcher.flux()).thenReturn(Flux.empty());
@@ -275,7 +281,8 @@ public class AgentPipelineTest {
                 watcher,
                 comparator,
                 fileCounter,
-                observer);
+                metrics3,
+                eventBus3);
 
         // Flux should be accessible
         Flux<?> flux = scanner.flux();

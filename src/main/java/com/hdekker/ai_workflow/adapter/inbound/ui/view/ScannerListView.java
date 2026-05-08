@@ -13,9 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.ScannerService;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
-import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
-import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
+import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileEvent;
 
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
@@ -63,14 +62,14 @@ public class ScannerListView extends VerticalLayout
 
     private Grid<ScannerInfoDTO> grid;
     private final ScannerService scannerService;
-    private final ScannerObserverService observer;
+    private final ScannerEventBus eventBus;
     private ProgressBar loadingIndicator;
     private ScheduledExecutorService refreshScheduler;
-    private Consumer<ScannerMetricsEvent> refreshCallback;
+    private java.util.function.Consumer<ScannerFileEvent> refreshCallback;
     @Autowired
-    public ScannerListView(ScannerService scannerService, ScannerObserverService observer) {
+    public ScannerListView(ScannerService scannerService, ScannerEventBus eventBus) {
         this.scannerService = scannerService;
-        this.observer = observer;
+        this.eventBus = eventBus;
         initLayout();
     }
 
@@ -174,21 +173,21 @@ public class ScannerListView extends VerticalLayout
         addAttachListener(event -> {
             com.vaadin.flow.component.UI ui = event.getUI();
             refreshCallback = e -> {
-                log.debug("UI refresh callback triggered: agent={}, type={}",
-                        e.agentId(), e.eventType() != null ? e.eventType().name().toLowerCase() : e.status().name().toLowerCase());
+                log.debug("UI refresh callback triggered: agent={}, result={}",
+                        e.agentId(), e.result());
                 // Use quiet refresh — no loading indicator or toast.
                 // loadScanners() shows loading + notification which is too noisy
                 // for frequent file events. ScannerInfo is an immutable record so
                 // we must re-fetch from the service (not just refreshAll()).
                 ui.access(() -> refreshScanners());
             };
-            observer.registerRefreshCallback(refreshCallback);
+            eventBus.registerCallback(refreshCallback);
         });
 
         addDetachListener(event -> {
             // Clear the callback to avoid stale references
             if (refreshCallback != null) {
-                observer.unregisterRefreshCallback(refreshCallback);
+                eventBus.unregisterCallback(refreshCallback);
                 refreshCallback = null;
             }
         });

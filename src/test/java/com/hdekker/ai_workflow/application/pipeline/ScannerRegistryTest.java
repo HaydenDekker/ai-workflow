@@ -21,11 +21,11 @@ import org.junit.jupiter.api.Test;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
+import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
-import com.hdekker.ai_workflow.domain.file.FileMetadata;
-import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
-import com.hdekker.ai_workflow.domain.scanner.ScannerMetricsEvent;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileEvent;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 
 import reactor.core.publisher.Flux;
@@ -34,10 +34,11 @@ public class ScannerRegistryTest {
 
     private ScannerRegistry registry;
     private FileMetadataRepository fileMetadataRepo;
-    private ScannerObserverService observer;
+    private ScannerMetricsService metrics;
+    private ScannerEventBus eventBus;
     private FileCounterPort fileCounter;
     private Path tempDir;
-    private List<ScannerMetricsEvent> capturedEvents;
+    private List<ScannerFileEvent> capturedEvents;
     private FileWatcherPort mockWatcherFactory;
     private FileWatcherPort mockWatcher;
 
@@ -49,11 +50,12 @@ public class ScannerRegistryTest {
         when(fileMetadataRepo.findById(any())).thenReturn(Optional.empty());
         fileCounter = mock(FileCounterPort.class);
         when(fileCounter.countFiles(any())).thenReturn(0L);
-        observer = new ScannerObserverService();
+        metrics = new ScannerMetricsService();
+        eventBus = new ScannerEventBus();
 
-        // Capture events pushed by the observer
+        // Capture events pushed by the event bus
         capturedEvents = new CopyOnWriteArrayList<>();
-        observer.registerRefreshCallback(capturedEvents::add);
+        eventBus.registerCallback(capturedEvents::add);
 
         // Mock FileWatcherPort factory
         mockWatcherFactory = mock(FileWatcherPort.class);
@@ -63,7 +65,7 @@ public class ScannerRegistryTest {
         when(mockWatcher.getDirectory()).thenReturn(tempDir);
         when(mockWatcher.isRunning()).thenReturn(false);
 
-        registry = new ScannerRegistry(fileMetadataRepo, observer, mockWatcherFactory, fileCounter);
+        registry = new ScannerRegistry(fileMetadataRepo, metrics, eventBus, mockWatcherFactory, fileCounter);
     }
 
     @AfterEach
@@ -261,7 +263,7 @@ public class ScannerRegistryTest {
 
         assertThat(capturedEvents).anySatisfy(event -> {
             assertThat(event.agentId()).isEqualTo(agentId);
-            assertThat(event.status()).isEqualTo(ScannerStatus.EMITTING_UPDATES);
+            assertThat(event.result()).isEqualTo(ScannerFileResult.EMITTED);
         });
     }
 }

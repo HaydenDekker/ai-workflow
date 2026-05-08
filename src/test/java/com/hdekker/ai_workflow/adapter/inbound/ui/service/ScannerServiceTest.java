@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.ScannerInfoDTO;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
+import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 import com.hdekker.ai_workflow.domain.scanner.ScannerMetrics;
 
 import reactor.core.publisher.Mono;
@@ -23,14 +23,14 @@ public class ScannerServiceTest {
 
     private ScannerService service;
     private ScannerRegistry registry;
-    private ScannerObserverService observer;
+    private ScannerMetricsPort metrics;
 
     @BeforeEach
     public void init() {
         registry = mock(ScannerRegistry.class);
-        observer = mock(ScannerObserverService.class);
-        when(observer.getMetrics(anyString())).thenReturn(new ScannerMetrics("", 0, null, 0L));
-        service = new ScannerService(registry, observer);
+        metrics = mock(ScannerMetricsPort.class);
+        when(metrics.getMetrics(anyString())).thenReturn(new ScannerMetrics("", 0, null, 0L));
+        service = new ScannerService(registry, metrics);
     }
 
     @Test

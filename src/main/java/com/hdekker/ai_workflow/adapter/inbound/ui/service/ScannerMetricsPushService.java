@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.ui.event.ScannerMetricsChangedEvent;
-import com.hdekker.ai_workflow.application.scanner.ScannerObserverService;
-import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
+import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
+import com.hdekker.ai_workflow.domain.scanner.ScannerFileResult;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -27,11 +27,11 @@ public class ScannerMetricsPushService {
 
     private static final Logger log = LoggerFactory.getLogger(ScannerMetricsPushService.class);
 
-    private final ScannerObserverService observer;
+    private final ScannerEventBus eventBus;
 
     @Autowired
-    public ScannerMetricsPushService(ScannerObserverService observer) {
-        this.observer = observer;
+    public ScannerMetricsPushService(ScannerEventBus eventBus) {
+        this.eventBus = eventBus;
     }
 
     /**
@@ -47,8 +47,7 @@ public class ScannerMetricsPushService {
     @EventListener
     public void onScannerMetricsChanged(ScannerMetricsChangedEvent event) {
         log.debug("Received scanner metrics event: agent={}, type={}", event.getAgentId(), event.getType());
-        // Convert the event into the new port-based pushToUI signature
-        ScannerStatus status = event.getStatus() != null ? event.getStatus() : ScannerStatus.IDLE;
-        observer.pushToUI(event.getAgentId(), status);
+        ScannerFileResult result = ScannerFileResult.from(event.getEventType());
+        eventBus.publish(event.getAgentId(), result, event.getFolderPath(), event.getErrorMessage());
     }
 }
