@@ -31,6 +31,8 @@ import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.domain.scanner.ScannerStatus;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
+import com.hdekker.ai_workflow.application.scanner.port.ScannerEventPort;
+import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
 
 import reactor.core.publisher.Flux;
 
@@ -55,6 +57,7 @@ public class ScannerServiceTest {
     private FileComparator comparator;
     private ScannerMetricsService metrics;
     private ScannerEventBus eventBus;
+    private ScannerObservabilityUseCase observability;
     private FileCounterPort fileCounter;
     private FileWatcherPort mockWatcher;
 
@@ -77,6 +80,7 @@ public class ScannerServiceTest {
         when(fileCounter.countFiles(any())).thenReturn(0L);
         metrics = new ScannerMetricsService();
         eventBus = new ScannerEventBus();
+        observability = new ScannerObservabilityUseCase(metrics, eventBus);
 
         mockWatcher = mock(FileWatcherPort.class);
         when(mockWatcher.flux()).thenReturn(Flux.empty());
@@ -106,7 +110,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         assertThat(scanner).isNotNull();
         assertThat(scanner.toInfo().folderPath()).isEqualTo(inputDir.toString());
@@ -129,7 +133,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         // Act: destroy
         scanner.destroy();
@@ -148,7 +152,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         scanner.destroy();
 
@@ -169,7 +173,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         long startTime = System.currentTimeMillis();
 
@@ -196,7 +200,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         scanner.resetToFullScan();
         Thread.sleep(500);
@@ -217,7 +221,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         List<Throwable> errors = new CopyOnWriteArrayList<>();
 
@@ -255,7 +259,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         scanner.destroy();
 
@@ -284,7 +288,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         assertThat(scanner.toInfo().folderPath()).isEqualTo(inputDir.toString());
 
@@ -302,7 +306,7 @@ public class ScannerServiceTest {
                 mockWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                observability);
 
         var info = scanner.toInfo();
 
@@ -334,6 +338,7 @@ public class ScannerServiceTest {
         org.mockito.Mockito.doNothing().when(emittingWatcher).rawScan();
         when(emittingWatcher.forDirectory(any(Path.class), any(Duration.class))).thenReturn(emittingWatcher);
 
+        ScannerObservabilityUseCase testObservability = new ScannerObservabilityUseCase(metrics, eventBus);
         scanner = new ScannerService("test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
@@ -341,7 +346,7 @@ public class ScannerServiceTest {
                 emittingWatcher,
                 comparator,
                 fileCounter,
-                metrics, eventBus);
+                testObservability);
 
         // Collect emitted files
         List<com.hdekker.ai_workflow.domain.file.FileHistory> emitted = new CopyOnWriteArrayList<>();
@@ -383,6 +388,8 @@ public class ScannerServiceTest {
         org.mockito.Mockito.doNothing().when(initWatcher).rawScan();
         when(initWatcher.forDirectory(any(Path.class), any(java.time.Duration.class))).thenReturn(initWatcher);
 
+        ScannerObservabilityUseCase countingObservability = new ScannerObservabilityUseCase(
+                countingObserver, eventBus);
         scanner = new ScannerService("init-test-agent",
                 inputDir.toString(),
                 Duration.ofMillis(500),
@@ -390,7 +397,7 @@ public class ScannerServiceTest {
                 initWatcher,
                 comparator,
                 countingCounter,
-                countingObserver, eventBus);
+                countingObservability);
 
         // Act: call initSource — this should compute fileCount via countingCounter
         // and pass it to the countingObserver
@@ -439,6 +446,8 @@ public class ScannerServiceTest {
         CopyOnWriteArrayList<String> eventResults = new CopyOnWriteArrayList<>();
         ScannerEventBus testEventBus = new ScannerEventBus();
         testEventBus.registerCallback(e -> eventResults.add(e.result().name()));
+        ScannerObservabilityUseCase transitionObservability = new ScannerObservabilityUseCase(
+                metrics, testEventBus);
 
         scanner = new ScannerService("transition-agent",
                 inputDir.toString(),
@@ -447,7 +456,7 @@ public class ScannerServiceTest {
                 emittingWatcher,
                 comparator,
                 fileCounter,
-                metrics, testEventBus);
+                transitionObservability);
 
         // Act: initSource triggers EMITTING_INITIAL, then CREATION event fires
         scanner.initSource("transition-agent");
@@ -469,9 +478,9 @@ public class ScannerServiceTest {
     }
 
     @Test
-    void givenUnchangedFileEvent_WhenProcessed_ThenStatusTransitionsToFiltered()
+    void givenUnchangedFileEvent_WhenProcessed_ThenEventBusReceivesFilteredResult()
             throws Exception {
-        log.info("Test: unchanged file transitions to FILTERED status");
+        log.info("Test: unchanged file produces FILTERED event");
 
         String testFileName = "unchanged-test.txt";
         String testContent = "unchanged test content";
@@ -502,6 +511,8 @@ public class ScannerServiceTest {
         CopyOnWriteArrayList<String> eventResults = new CopyOnWriteArrayList<>();
         ScannerEventBus testEventBus = new ScannerEventBus();
         testEventBus.registerCallback(e -> eventResults.add(e.result().name()));
+        ScannerObservabilityUseCase filteredObservability = new ScannerObservabilityUseCase(
+                metrics, testEventBus);
 
         scanner = new ScannerService("filtered-agent",
                 inputDir.toString(),
@@ -510,12 +521,13 @@ public class ScannerServiceTest {
                 emittingWatcher,
                 matchingComparator,
                 fileCounter,
-                metrics, testEventBus);
+                filteredObservability);
 
-        // Flux event fires synchronously during construction, setting status to FILTERED
+        // FILTERED is now a file-level result (not scanner status), so internal
+        // status stays IDLE — the event bus captures the FILTERED result
         assertThat(scanner.getStatus())
-                .as("Status should be FILTERED after unchanged file processed in constructor")
-                .isEqualTo(ScannerStatus.FILTERED);
+                .as("Internal status stays IDLE (FILTERED is a file result, not lifecycle state)")
+                .isEqualTo(ScannerStatus.IDLE);
 
         // Act: initSource runs and overrides status
         scanner.initSource("filtered-agent");
@@ -525,11 +537,11 @@ public class ScannerServiceTest {
                 .as("Status should be IDLE after initSource with no buffered files")
                 .isEqualTo(ScannerStatus.IDLE.name());
 
-        // Event bus should have received events for both FILTERED and IDLE transitions
-        // (both map to ScannerFileResult.EMITTED via statusToFileResult)
-        assertThat(eventResults).as("Event bus should have received events")
-                .isNotEmpty();
+        // Event bus should have received a FILTERED event for the unchanged file
+        assertThat(eventResults)
+                .as("Event bus should have received a FILTERED event for unchanged file")
+                .contains("FILTERED");
 
-        log.info("PASSED: unchanged file transitions to FILTERED");
+        log.info("PASSED: unchanged file produces FILTERED event");
     }
 }

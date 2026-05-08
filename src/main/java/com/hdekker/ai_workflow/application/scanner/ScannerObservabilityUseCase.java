@@ -86,12 +86,11 @@ public class ScannerObservabilityUseCase {
      * Records the emission with the metrics port and publishes an EMITTED
      * event through the event bus.
      *
-     * @param agentId    the owning agent's ID
-     * @param folderPath the folder being scanned (nullable)
+     * @param agentId the owning agent's ID
      */
-    public void recordEmission(String agentId, String folderPath) {
+    public void recordEmission(String agentId) {
         metrics.recordEmission(agentId);
-        eventBus.publish(agentId, ScannerFileResult.EMITTED, folderPath, null);
+        eventBus.publish(agentId, ScannerFileResult.EMITTED, null, null);
 
         log.debug("Recorded emission for agent {}", agentId);
     }

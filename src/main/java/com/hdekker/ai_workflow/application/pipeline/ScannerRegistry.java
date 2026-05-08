@@ -14,7 +14,7 @@ import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
-import com.hdekker.ai_workflow.application.scanner.ScannerEventBus;
+import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerEventPort;
 import com.hdekker.ai_workflow.application.scanner.port.ScannerMetricsPort;
@@ -131,7 +131,10 @@ public class ScannerRegistry implements DisposableBean {
         // Create the comparator
         FileComparator comparator = new FileComparator(fileMetadataRepository);
 
-        // Create the scanner — it uses the metrics port and event bus
+        // Create the use case that coordinates metrics + event publishing
+        ScannerObservabilityUseCase observability = new ScannerObservabilityUseCase(metrics, eventBus);
+
+        // Create the scanner — delegates observability to the use case
         ScannerService scanner = new ScannerService(
                 agentId,
                 targetDirectory,
@@ -140,8 +143,7 @@ public class ScannerRegistry implements DisposableBean {
                 watcher,
                 comparator,
                 fileCounter,
-                metrics,
-                eventBus);
+                observability);
 
         // Put in map BEFORE initSource() so callbacks can find it
         scanners.put(agentId, scanner);

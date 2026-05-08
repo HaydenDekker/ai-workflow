@@ -103,16 +103,7 @@ class ScannerObservabilityUseCaseTest {
 
     @Test
     void whenRecordEmission_ThenMetricsRecordedAndEmittedPublished() {
-        useCase.recordEmission("agent-1", "/tmp/watch");
-
-        verify(metricsPort).recordEmission("agent-1");
-        verify(eventPort).publish(eq("agent-1"), eq(ScannerFileResult.EMITTED),
-                eq("/tmp/watch"), isNull(String.class));
-    }
-
-    @Test
-    void whenRecordEmissionWithNullFolder_ThenNullFolderPathPublished() {
-        useCase.recordEmission("agent-1", null);
+        useCase.recordEmission("agent-1");
 
         verify(metricsPort).recordEmission("agent-1");
         verify(eventPort).publish(eq("agent-1"), eq(ScannerFileResult.EMITTED),
@@ -204,7 +195,7 @@ class ScannerObservabilityUseCaseTest {
         AtomicReference<ScannerFileEvent> receivedEvent = new AtomicReference<>();
         realEventBus.registerCallback(receivedEvent::set);
 
-        useCase.recordEmission("agent-1", "/tmp/watch");
+        useCase.recordEmission("agent-1");
 
         assertThat(receivedEvent.get()).isNotNull();
         assertThat(receivedEvent.get().agentId()).isEqualTo("agent-1");
