@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.application.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.TestData;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
@@ -29,6 +31,7 @@ import reactor.core.publisher.Flux;
 public class AgentConfiguratorTest {
     
     AgentConfigurator configurator;
+    AgentObserverUseCase observerMock;
     
     String expectedMockResult = "This is the expected result";
     
@@ -52,10 +55,14 @@ public class AgentConfiguratorTest {
             persistCalled = true;
         };
         
+        observerMock = mock(AgentObserverUseCase.class);
+        
         configurator = new AgentConfigurator(
                 Flux.just(fh),
                 chatClient,
-                persister);
+                persister,
+                null,
+                observerMock);
     }
     
     
