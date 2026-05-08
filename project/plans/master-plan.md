@@ -11,11 +11,10 @@ Central index of all active, completed, and archived plans for the AI Workflow p
 | Design Principles Update | [design-principles-update.md](design-principles-update.md) | 🔄 In Progress | 2026-04-28 | ADR cleanup and DPR migration; Phase 0 done, remaining phases pending. |
 | Scanner Metrics Refactor | [scanner-metrics-refactor.md](scanner-metrics-refactor.md) | ⬜ Draft | 2026-05-07 | Push fileCount from scanner to observer; remove storeFolder/countFiles; simplify port. |
 | Scanner Refactor | [scanner-refactor.md](scanner-refactor.md) | ⬜ Draft | — | Make `Scanner` the domain concept; consolidate status, idle detection, error handling, and metrics. |
-| Scanner Status & Observability Refactor | [scanner-status-observability-refactor.md](scanner-status-observability-refactor.md) | ⬜ Draft | 2026-05-08 | Split `ScannerObserverService` into metrics + event bus via explicit `ScannerObservabilityUseCase`; introduce `ScannerFileResult`; UI owns display timers. Supersedes scanner-status-rework and scanner-event-refactor. |
+| Scanner View Regression Fix | [scanner-view-regression-fix.md](scanner-view-regression-fix.md) | ⬜ Draft | 2026-05-07 | Fix Files column showing incrementing counter and status not updating when files are added. |
 | Scanner Status Rework | [scanner-status-rework.md](scanner-status-rework.md) | ⬜ Draft (superseded) | 2026-04-29 | Fix static scanner status lifecycle; introduce idle detection and proper ERROR state transitions. Superseded by scanner-status-observability-refactor. |
 | Scanner Event Refactor | [scanner-event-refactor.md](scanner-event-refactor.md) | ⬜ Draft (superseded) | — | Simplify `ScannerObserverUseCase` to single `recordScannerEvent()` method with combined status + event type. Superseded by scanner-status-observability-refactor. |
 | Potential Features | [potential-features.md](potential-features.md) | ⬜ Backlog | — | Feature backlog (dynamic model discovery, etc.) from the Ollama → OpenAI refactor. |
-| Scanner View Regression Fix | [scanner-view-regression-fix.md](scanner-view-regression-fix.md) | ⬜ Draft | 2026-05-07 | Fix Files column showing incrementing counter and status not updating when files are added. |
 
 ---
 
@@ -58,6 +57,7 @@ Plans that were completed and subsequently removed from the repository.
 | Advanced Metrics | ~~advanced_metrics.md~~ | 2026-02-02 | 2026-04-28 | Naming/tagging conventions and metric definitions for pipeline observability. |
 | Observability Plan | ~~observability-plan.md~~ | 2026-02-02 | 2026-04-28 | High-level observability goals: visibility, performance, and reliability tracking. |
 | Scanners Metrics | ~~scanners_metrics.md~~ | 2026-04-28 | 2026-04-28 | Scanner metrics instrumentation with Micrometer (later replaced by ScannerObserverUseCase). |
+| Scanner Status & Observability Refactor | ~~scanner-status-observability-refactor.md~~ | 2026-05-08 | 2026-05-08 | Split `ScannerObserverService` into metrics + event bus via `ScannerObservabilityUseCase`; `ScannerFileResult` domain enum; UI owns display timers. 112 tests, 0 failures. Knowledge extracted to dpr-scanner-observability.md and dpr-scanner-concept.md. |
 
 ---
 
@@ -77,4 +77,4 @@ Plans that were completed and subsequently removed from the repository.
 
 - **Active:** 6 plans
 - **Completed (retained):** 4 plans
-- **Archived (removed):** 22 plans
+- **Archived (removed):** 23 plans
