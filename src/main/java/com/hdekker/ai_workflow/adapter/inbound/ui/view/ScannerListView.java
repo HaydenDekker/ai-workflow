@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import com.vaadin.flow.component.UI;
 
 
 import org.slf4j.Logger;
@@ -39,7 +40,6 @@ import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.component.UI;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -196,7 +196,7 @@ public class ScannerListView extends VerticalLayout
                 log.debug("UI refresh callback triggered: agent={}, result={}",
                         e.agentId(), e.result());
                 // Update per-agent display state from event, schedule auto-reset.
-                ui.access(() -> handleDisplayEvent(e));
+                ui.access(() -> handleDisplayEvent(e, ui));
                 // Also re-fetch lifecycle status so the grid shows updated
                 // service-side state (e.g. EMITTING_INITIAL → EMITTING_UPDATES).
                 ui.access(() -> refreshScanners());
@@ -272,8 +272,9 @@ public class ScannerListView extends VerticalLayout
      * Error state persists until cleared — no auto-reset.
      *
      * @param event the file-level event from the event bus
+     * @param ui the current Vaadin UI instance (required for timer callbacks)
      */
-    private void handleDisplayEvent(ScannerFileEvent event) {
+    private void handleDisplayEvent(ScannerFileEvent event, UI ui) {
         String agentId = event.agentId();
 
         // Cancel any existing timer for this agent
@@ -294,7 +295,7 @@ public class ScannerListView extends VerticalLayout
         long durationMs = timerDurationMsForResult(event.result());
         if (durationMs > 0) {
             ScheduledFuture<?> timer = displayTimerExecutor.schedule(() -> {
-                UI.getCurrent().access(() -> {
+                ui.access(() -> {
                     displayTimers.remove(agentId);
                     if (grid.getUI().isPresent()) {
                         grid.getDataProvider().refreshAll();
@@ -308,7 +309,7 @@ public class ScannerListView extends VerticalLayout
         }
 
         // Refresh grid to show updated display state
-        UI.getCurrent().access(() -> {
+        ui.access(() -> {
             if (grid.getUI().isPresent()) {
                 grid.getDataProvider().refreshAll();
             }
