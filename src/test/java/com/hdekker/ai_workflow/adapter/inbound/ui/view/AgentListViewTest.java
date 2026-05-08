@@ -2,11 +2,12 @@ package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-
 import org.junit.jupiter.api.Test;
 
 /**
- * Test class for AgentListView
+ * Test class for AgentListView.
+ * <p>
+ * Simple reflection tests for the view class structure and annotations.
  */
 public class AgentListViewTest {
 

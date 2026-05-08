@@ -17,6 +17,7 @@ import com.hdekker.ai_workflow.adapter.inbound.ui.component.LlmStatusBadge;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.application.agent.AgentStatusService;
 import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -47,14 +48,17 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
     final Grid<AgentInfoDTO> grid;  // package-private for browserless test access
     private final AgentInfoService agentInfoService;
     private final AgentStatusService llmStatusService;
+    private final AgentObserverUseCase agentObserverUseCase;
     private final ProgressBar loadingIndicator;
     private final LlmStatusBadge llmStatusBadge;
     private ScheduledExecutorService refreshScheduler;
 
     @Autowired
-    public AgentListView(AgentInfoService agentInfoService, AgentStatusService llmStatusService) {
+    public AgentListView(AgentInfoService agentInfoService, AgentStatusService llmStatusService,
+                         AgentObserverUseCase agentObserverUseCase) {
         this.agentInfoService = agentInfoService;
         this.llmStatusService = llmStatusService;
+        this.agentObserverUseCase = agentObserverUseCase;
         
         // Setup layout to fill viewport with padding
         addClassName("main-layout");
@@ -154,6 +158,33 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setHeader("Active")
             .setAutoWidth(true)
             .setSortable(true);
+
+        // Dispatch Count column — per-agent LLM dispatch count
+        grid.addColumn(agent -> {
+            try {
+                String title = agent.definition() != null
+                        ? agent.definition().title()
+                        : agent.id();
+                long count = agentObserverUseCase != null
+                        ? agentObserverUseCase.getDispatchCount(title)
+                        : 0L;
+                return count > 0 ? count : "–";
+            } catch (Exception e) {
+                return "–";
+            }
+        }).setHeader("Dispatches").setAutoWidth(true);
+
+        // Output Files column — global output directory file count
+        grid.addColumn(agent -> {
+            try {
+                long count = agentObserverUseCase != null
+                        ? agentObserverUseCase.getOutputDirectoryFileCount()
+                        : 0L;
+                return count > 0 ? count : "–";
+            } catch (Exception e) {
+                return "–";
+            }
+        }).setHeader("Output Files").setAutoWidth(true);
 
         // Actions column: Refresh button per row (component column)
         grid.addComponentColumn(agent -> {
