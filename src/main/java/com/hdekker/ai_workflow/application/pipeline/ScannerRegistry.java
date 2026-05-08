@@ -134,6 +134,7 @@ public class ScannerRegistry implements DisposableBean {
                 emissionDelay,
                 watcher,
                 comparator,
+                fileMetadataRepository,
                 fileCounter,
                 observability);
 

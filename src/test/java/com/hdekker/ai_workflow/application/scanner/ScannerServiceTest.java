@@ -109,6 +109,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -132,6 +133,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -151,6 +153,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -172,6 +175,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -199,6 +203,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -220,6 +225,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -258,6 +264,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -287,6 +294,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -305,6 +313,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 mockWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 observability);
 
@@ -345,6 +354,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 emittingWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 testObservability);
 
@@ -396,6 +406,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 initWatcher,
                 comparator,
+                fileMetadataRepo,
                 countingCounter,
                 countingObservability);
 
@@ -455,6 +466,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 emittingWatcher,
                 comparator,
+                fileMetadataRepo,
                 fileCounter,
                 transitionObservability);
 
@@ -520,6 +532,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 emittingWatcher,
                 matchingComparator,
+                matchingRepo,
                 fileCounter,
                 filteredObservability);
 
@@ -585,6 +598,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 deleteWatcher,
                 matchingComparator,
+                matchingRepo,
                 fileCounter,
                 deleteObservability);
 
@@ -616,6 +630,7 @@ public class ScannerServiceTest {
                 Duration.ZERO,
                 createWatcher,
                 matchingComparator,
+                matchingRepo,
                 fileCounter,
                 deleteObservability);
 

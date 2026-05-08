@@ -95,6 +95,7 @@ public class AgentPipelineTest {
                 Duration.ZERO,
                 watcher,
                 comparator,
+                db,
                 fileCounter,
                 observability);
 
@@ -232,6 +233,7 @@ public class AgentPipelineTest {
                 Duration.ZERO,
                 watcher,
                 comparator,
+                db,
                 fileCounter,
                 observability2);
 
@@ -282,6 +284,7 @@ public class AgentPipelineTest {
                 Duration.ZERO,
                 watcher,
                 comparator,
+                db,
                 fileCounter,
                 observability3);
 

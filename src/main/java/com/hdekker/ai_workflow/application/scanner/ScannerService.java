@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.application.file.FileComparator;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
+import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
@@ -48,6 +49,7 @@ public class ScannerService implements FileScanner {
     private final Duration emissionDelay;
     private final FileWatcherPort fileWatcherPort;
     private final FileComparator fileComparator;
+    private final FileMetadataRepository fileMetadataRepository;
     private final ScannerObservabilityUseCase observability;
     private final FileCounterPort fileCounter;
 
@@ -86,6 +88,7 @@ public class ScannerService implements FileScanner {
                           Duration emissionDelay,
                           FileWatcherPort fileWatcherPort,
                           FileComparator fileComparator,
+                          FileMetadataRepository fileMetadataRepository,
                           FileCounterPort fileCounter,
                           ScannerObservabilityUseCase observability) {
         this.folderPath = folderPath;
@@ -93,6 +96,7 @@ public class ScannerService implements FileScanner {
         this.emissionDelay = emissionDelay;
         this.fileWatcherPort = fileWatcherPort;
         this.fileComparator = fileComparator;
+        this.fileMetadataRepository = fileMetadataRepository;
         this.fileCounter = fileCounter;
         this.observability = observability;
         this.createdAt = LocalDateTime.now();
@@ -132,6 +136,8 @@ public class ScannerService implements FileScanner {
         String content = rawEvent.content();
 
         try {
+            Path directory = fileWatcherPort.getDirectory();
+
             // Handle DELETE events — content is not available
             if (rawEvent.eventType() == RawFileEvent.RawFileEventType.DELETE) {
                 long fileCount = countFiles();
@@ -143,7 +149,6 @@ public class ScannerService implements FileScanner {
             }
 
             String hash = FileHash.hash(content);
-            Path directory = fileWatcherPort.getDirectory();
             String relativePath = directory.relativize(path).toString().replace("\\", "/");
             FileMetadata metadata = new FileMetadata(relativePath, content, hash);
             FileHistory history = fileComparator.matches(metadata);
@@ -157,6 +162,8 @@ public class ScannerService implements FileScanner {
                 log.debug("{} file: {}", eventType == ScannerEventType.CREATION
                         ? "New" : "Changed", relativePath);
                 emitWithDelay(history);
+                // Persist metadata so future re-adds of the same content are detected as unchanged
+                fileMetadataRepository.save(history.currentFile());
             } else {
                 this.lastFileResult = ScannerFileResult.FILTERED;
                 long fileCount = countFiles();

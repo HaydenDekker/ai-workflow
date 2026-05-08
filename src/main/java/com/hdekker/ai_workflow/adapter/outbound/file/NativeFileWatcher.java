@@ -3,6 +3,8 @@ package com.hdekker.ai_workflow.adapter.outbound.file;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 import org.slf4j.Logger;
@@ -30,21 +32,42 @@ public class NativeFileWatcher {
 
     private final Path directory;
     private final Duration pollInterval;
+    private final Duration debounceInterval;
 
     private final Sinks.Many<RawFileEvent> sink;
     private WatchService watchService;
     private volatile boolean running = false;
     private volatile Thread watchThread;
 
+    // Path -> last event timestamp (epoch millis) for debounce coalescing
+    private final ConcurrentHashMap<Path, AtomicLong> lastEventTimes = new ConcurrentHashMap<>();
+
+    // Monotonic clock for debounce — immune to system clock changes
+    private static long nowMillis() {
+        return System.nanoTime() / 1_000_000;
+    }
+
     /**
-     * Creates a new file watcher.
+     * Creates a new file watcher with default 200ms debounce.
      *
      * @param directory    absolute path to watch
      * @param pollInterval interval for polling the watch service
      */
     public NativeFileWatcher(Path directory, Duration pollInterval) {
+        this(directory, pollInterval, Duration.ofMillis(200));
+    }
+
+    /**
+     * Creates a new file watcher.
+     *
+     * @param directory        absolute path to watch
+     * @param pollInterval     interval for polling the watch service
+     * @param debounceInterval window to coalesce rapid events for the same file
+     */
+    public NativeFileWatcher(Path directory, Duration pollInterval, Duration debounceInterval) {
         this.directory = directory.toAbsolutePath().normalize();
         this.pollInterval = pollInterval;
+        this.debounceInterval = debounceInterval;
         this.sink = Sinks.many().multicast().directBestEffort();
     }
 
@@ -151,28 +174,38 @@ public class NativeFileWatcher {
     /**
      * Process a single file system event.
      * Reads file content and emits a raw event through the sink.
+     * <p>
+     * Applies path-keyed debouncing: if an event for the same path arrives
+     * within the debounce window, it is silently coalesced. DELETE events
+     * bypass the debounce and emit immediately.
      */
     private void processEvent(WatchEvent.Kind<?> kind, Path eventPath) {
         try {
             switch (kind.name()) {
                 case "ENTRY_CREATE" -> {
                     if (Files.isRegularFile(eventPath)) {
+                        if (shouldDebounce(eventPath)) {
+                            return;
+                        }
                         log.info("CREATE event: {}", eventPath);
-                        // Small delay to ensure file is fully written
                         Thread.sleep(100);
                         emitRawFile(eventPath);
                     }
                 }
                 case "ENTRY_MODIFY" -> {
                     if (Files.isRegularFile(eventPath)) {
+                        if (shouldDebounce(eventPath)) {
+                            return;
+                        }
                         log.info("MODIFY event: {}", eventPath);
-                        // Small delay to ensure file is fully written
                         Thread.sleep(100);
                         emitRawFile(eventPath);
                     }
                 }
                 case "ENTRY_DELETE" -> {
+                    // Deletes are not debounced — emit immediately
                     log.info("DELETE event: {}", eventPath);
+                    lastEventTimes.remove(eventPath);
                     emitDeleteEvent(eventPath);
                 }
                 default -> log.info("Unknown event kind: {} for: {}", kind, eventPath);
@@ -182,6 +215,31 @@ public class NativeFileWatcher {
         } catch (Exception e) {
             log.error("Error processing event {} for path {}: {}", kind, eventPath, e.getMessage());
         }
+    }
+
+    /**
+     * Check whether this event should be debounced (coalesced with a prior event for the same path).
+     * <p>
+     * Returns {@code true} if an event for this path was already processed within the debounce window.
+     * Records the current timestamp when an event passes through.
+     */
+    private boolean shouldDebounce(Path path) {
+        if (debounceInterval.isZero() || debounceInterval.isNegative()) {
+            return false;
+        }
+
+        AtomicLong lastTime = lastEventTimes.computeIfAbsent(path, p -> new AtomicLong(0));
+        long current = nowMillis();
+        long last = lastTime.get();
+
+        // First event for this path (or debounce window expired) — allow through
+        if (current - last >= debounceInterval.toMillis()) {
+            lastTime.set(current);
+            return false;
+        }
+
+        // Within debounce window — coalesce
+        return true;
     }
 
     /**
@@ -230,6 +288,7 @@ public class NativeFileWatcher {
         }
         running = false;
         sink.tryEmitComplete();
+        lastEventTimes.clear();
 
         if (watchThread != null) {
             watchThread.interrupt();
