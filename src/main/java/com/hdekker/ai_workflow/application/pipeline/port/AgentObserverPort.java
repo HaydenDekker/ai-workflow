@@ -59,4 +59,14 @@ public interface AgentObserverPort {
      * @return the sum of storage events across all agents
      */
     long getTotalStorageCount();
+
+    /**
+     * Get the number of files in the output directory.
+     * <p>
+     * Delegates to {@link com.hdekker.ai_workflow.application.file.port.FileCounterPort}
+     * when configured. Returns 0 when no output directory is set.
+     *
+     * @return the number of files in the output directory, or 0 if not configured
+     */
+    long getOutputDirectoryFileCount();
 }

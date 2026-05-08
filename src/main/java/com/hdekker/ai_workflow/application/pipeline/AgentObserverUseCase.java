@@ -137,4 +137,15 @@ public class AgentObserverUseCase {
     public long getTotalStorageCount() {
         return metrics.getTotalStorageCount();
     }
+
+    /**
+     * Get the number of files in the output directory.
+     * <p>
+     * Delegates to the metrics port only — no event publishing.
+     *
+     * @return the number of files in the output directory
+     */
+    public long getOutputDirectoryFileCount() {
+        return metrics.getOutputDirectoryFileCount();
+    }
 }

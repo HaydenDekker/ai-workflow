@@ -267,4 +267,34 @@ class AgentObserverUseCaseTest {
         verify(metricsPort).getDispatchCount("agent-b");
         verify(metricsPort).getTotalDispatchCount();
     }
+
+    // -- output directory file count tests --
+
+    @Test
+    void whenGetOutputDirectoryFileCount_ThenDelegatesToMetricsPort() {
+        when(metricsPort.getOutputDirectoryFileCount()).thenReturn(25L);
+
+        long result = useCase.getOutputDirectoryFileCount();
+
+        assertThat(result).isEqualTo(25L);
+        verify(metricsPort).getOutputDirectoryFileCount();
+    }
+
+    @Test
+    void whenGetOutputDirectoryFileCount_NoEventPortInteraction() {
+        when(metricsPort.getOutputDirectoryFileCount()).thenReturn(0L);
+
+        useCase.getOutputDirectoryFileCount();
+
+        verifyNoMoreInteractions(eventPort);
+    }
+
+    @Test
+    void whenGetOutputDirectoryFileCount_ZeroFiles_ThenReturnsZero() {
+        when(metricsPort.getOutputDirectoryFileCount()).thenReturn(0L);
+
+        long result = useCase.getOutputDirectoryFileCount();
+
+        assertThat(result).isZero();
+    }
 }

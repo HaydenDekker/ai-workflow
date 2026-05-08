@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,9 @@ public class AgentControllerTest {
 
 	@MockitoBean
 	private DirectoryValidationPort directoryValidationPort;
+
+	@MockitoBean
+	private AgentObserverUseCase agentObserverUseCase;
 
 	private AgentDefinition testAgent;
 
@@ -236,6 +240,52 @@ public class AgentControllerTest {
 				.andExpect(jsonPath("$.id").value("agent-1"))
 				.andExpect(jsonPath("$.definition.title").value("Updated Agent"))
 				.andExpect(jsonPath("$.definition.agentType").value("Reduction"));
+	}
+
+	// -- Phase 4: Agent observer REST endpoint tests --
+
+	@Test
+	void givenObserver_WhenGetOutputDirectoryFileCount_thenReturnCount() throws Exception {
+		// Arrange
+		when(agentObserverUseCase.getOutputDirectoryFileCount()).thenReturn(15L);
+
+		// Act & Assert
+		mockMvc.perform(get("/api/agents/output-file-count"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.outputDirectoryFileCount").value(15));
+	}
+
+	@Test
+	void givenObserver_WhenNoOutputFiles_thenReturnZero() throws Exception {
+		// Arrange
+		when(agentObserverUseCase.getOutputDirectoryFileCount()).thenReturn(0L);
+
+		// Act & Assert
+		mockMvc.perform(get("/api/agents/output-file-count"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.outputDirectoryFileCount").value(0));
+	}
+
+	@Test
+	void givenObserver_WhenGetDispatchCount_thenReturnCount() throws Exception {
+		// Arrange
+		when(agentObserverUseCase.getTotalDispatchCount()).thenReturn(42L);
+
+		// Act & Assert
+		mockMvc.perform(get("/api/agents/dispatch-count"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalDispatchCount").value(42));
+	}
+
+	@Test
+	void givenObserver_WhenNoDispatches_thenReturnZero() throws Exception {
+		// Arrange
+		when(agentObserverUseCase.getTotalDispatchCount()).thenReturn(0L);
+
+		// Act & Assert
+		mockMvc.perform(get("/api/agents/dispatch-count"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalDispatchCount").value(0));
 	}
 
 	@Test

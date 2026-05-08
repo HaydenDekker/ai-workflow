@@ -1,6 +1,9 @@
 package com.hdekker.ai_workflow.application.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.nio.file.Paths;
 
@@ -171,5 +174,46 @@ class AgentObserverServiceTest {
         assertThat(service.getStorageCount(agentId)).isEqualTo(threadCount * updatesPerThread / 2);
         assertThat(service.getTotalDispatchCount()).isEqualTo(threadCount * updatesPerThread / 2);
         assertThat(service.getTotalStorageCount()).isEqualTo(threadCount * updatesPerThread / 2);
+    }
+
+    // -- output directory file count tests --
+
+    @Test
+    void givenNoOutputDirectory_WhenGetOutputDirectoryFileCount_ThenReturnsZero() {
+        AgentObserverService serviceWithoutDir = new AgentObserverService();
+
+        assertThat(serviceWithoutDir.getOutputDirectoryFileCount()).isZero();
+    }
+
+    @Test
+    void givenOutputDirectoryWithFileCounter_WhenFileCountQueried_ThenDelegatesToFileCounter() {
+        var fileCounter = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
+        when(fileCounter.countFiles("/tmp/output")).thenReturn(42L);
+
+        AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/output");
+
+        long result = serviceWithDir.getOutputDirectoryFileCount();
+
+        assertThat(result).isEqualTo(42L);
+    }
+
+    @Test
+    void givenOutputDirectoryWithFileCounter_WhenNoFiles_ThenReturnsZero() {
+        var fileCounter = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
+        when(fileCounter.countFiles("/tmp/empty-output")).thenReturn(0L);
+
+        AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/empty-output");
+
+        assertThat(serviceWithDir.getOutputDirectoryFileCount()).isZero();
+    }
+
+    @Test
+    void givenOutputDirectoryWithFileCounter_WhenMultipleFiles_ThenReturnsCorrectCount() {
+        var fileCounter = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
+        when(fileCounter.countFiles("/tmp/output")).thenReturn(7L);
+
+        AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/output");
+
+        assertThat(serviceWithDir.getOutputDirectoryFileCount()).isEqualTo(7L);
     }
 }

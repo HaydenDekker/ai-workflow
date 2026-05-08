@@ -1,11 +1,13 @@
 package com.hdekker.ai_workflow.adapter.inbound.rest.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class AgentController {
 
     @Autowired
     private DirectoryValidationPort directoryValidationPort;
+
+    @Autowired(required = false)
+    private AgentObserverUseCase agentObserverUseCase;
 
     @PostMapping
     public ResponseEntity<?> createAgent(@RequestBody AgentDefinition agentDefinition) {
@@ -101,5 +106,27 @@ public class AgentController {
                     domainInfo.createdAt(), domainInfo.active(), domainInfo.source()));
         }
         return ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Get the number of files in the output directory.
+     */
+    @GetMapping("/output-file-count")
+    public ResponseEntity<Map<String, Long>> getOutputDirectoryFileCount() {
+        long count = agentObserverUseCase != null
+                ? agentObserverUseCase.getOutputDirectoryFileCount()
+                : 0L;
+        return ResponseEntity.ok(Map.of("outputDirectoryFileCount", count));
+    }
+
+    /**
+     * Get the total dispatch count across all agents.
+     */
+    @GetMapping("/dispatch-count")
+    public ResponseEntity<Map<String, Long>> getDispatchCount() {
+        long count = agentObserverUseCase != null
+                ? agentObserverUseCase.getTotalDispatchCount()
+                : 0L;
+        return ResponseEntity.ok(Map.of("totalDispatchCount", count));
     }
 }
