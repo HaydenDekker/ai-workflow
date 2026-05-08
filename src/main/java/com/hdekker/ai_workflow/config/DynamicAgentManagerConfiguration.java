@@ -15,6 +15,7 @@ import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.file.port.FileMetadataRepository;
 import com.hdekker.ai_workflow.application.file.port.FileWatcherPort;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 
@@ -66,7 +67,8 @@ public class DynamicAgentManagerConfiguration {
 			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
 			AgentRepository agentRepository,
-			DirectoryValidationPort directoryValidationPort) throws IOException {
+			DirectoryValidationPort directoryValidationPort,
+			AgentObserverUseCase observer) throws IOException {
 		Path outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
 		return new AgentLifecycleService(
 				scannerRegistry,
@@ -74,6 +76,7 @@ public class DynamicAgentManagerConfiguration {
 				outputFolderPath,
 				chatClient,
 				agentRepository,
-				directoryValidationPort);
+				directoryValidationPort,
+				observer);
 	}
 }

@@ -40,6 +40,7 @@ import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
 
+import org.mockito.Mockito;
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
@@ -110,13 +111,15 @@ public class ScannerRegistryIntegrationTest {
         when(validator.validate(anyString())).thenReturn(DirectoryValidationPort.ValidationResult.success());
 
         // Create agent manager with real scanner registry
+        AgentObserverUseCase observerMock = Mockito.mock(AgentObserverUseCase.class);
         agentManager = new AgentLifecycleService(
                 scannerRegistry,
                 fileWritePort,
                 outputDir,
                 chatClient,
                 agentRepository,
-                validator);
+                validator,
+                observerMock);
     }
 
     @AfterEach

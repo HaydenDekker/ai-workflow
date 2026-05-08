@@ -17,6 +17,7 @@ import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
 import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
 import com.hdekker.ai_workflow.application.pipeline.AgentConfigurator;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
@@ -59,6 +60,7 @@ public class AgentLifecycleService {
     private final ChatClient chatClient;
     private final AgentRepository agentRepository;
     private final DirectoryValidationPort directoryValidationPort;
+    private final AgentObserverUseCase observer;
 
     /**
      * Default constructor for use outside Spring (no persistence, no scanner registry).
@@ -71,6 +73,7 @@ public class AgentLifecycleService {
         this.chatClient = null;
         this.agentRepository = null;
         this.directoryValidationPort = null;
+        this.observer = null;
     }
 
     /**
@@ -82,19 +85,22 @@ public class AgentLifecycleService {
      * @param chatClient              LLM chat client
      * @param agentRepository         agent persistence port (may be null)
      * @param directoryValidationPort target directory validator
+     * @param observer                agent observer use case (nullable)
      */
     public AgentLifecycleService(ScannerRegistry scannerRegistry,
                                  FileWritePort fileWritePort,
                                  Path outputDirectory,
                                  ChatClient chatClient,
                                  AgentRepository agentRepository,
-                                 DirectoryValidationPort directoryValidationPort) {
+                                 DirectoryValidationPort directoryValidationPort,
+                                 AgentObserverUseCase observer) {
         this.scannerRegistry = scannerRegistry;
         this.fileWritePort = fileWritePort;
         this.outputDirectory = outputDirectory;
         this.chatClient = chatClient;
         this.agentRepository = agentRepository;
         this.directoryValidationPort = directoryValidationPort;
+        this.observer = observer;
     }
 
     /**
@@ -213,14 +219,18 @@ public class AgentLifecycleService {
             return new AgentConfigurator(
                     scannerFlux,
                     chatClient,
-                    fileWritePort.createPersister(outputDirectory))
+                    fileWritePort.createPersister(outputDirectory),
+                    fileWritePort,
+                    observer)
                     .configure(def);
         } else {
             // No scanner registry — use empty flux
             return new AgentConfigurator(
                     Flux.empty(),
                     chatClient,
-                    fileWritePort.createPersister(outputDirectory))
+                    fileWritePort.createPersister(outputDirectory),
+                    fileWritePort,
+                    observer)
                     .configure(def);
         }
     }
@@ -234,13 +244,17 @@ public class AgentLifecycleService {
             return new AgentConfigurator(
                     scannerFlux,
                     chatClient,
-                    fileWritePort.createPersister(outputDirectory))
+                    fileWritePort.createPersister(outputDirectory),
+                    fileWritePort,
+                    observer)
                     .configure(def);
         } else {
             return new AgentConfigurator(
                     Flux.empty(),
                     chatClient,
-                    fileWritePort.createPersister(outputDirectory))
+                    fileWritePort.createPersister(outputDirectory),
+                    fileWritePort,
+                    observer)
                     .configure(def);
         }
     }

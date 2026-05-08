@@ -16,6 +16,7 @@ import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
@@ -26,6 +27,7 @@ import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
 
 import reactor.core.publisher.Flux;
 
+import org.mockito.Mockito;
 import org.springframework.ai.chat.client.ChatClient;
 
 /**
@@ -79,13 +81,16 @@ public class AgentLifecycleServiceScannerRestoreTest {
         DirectoryValidationPort validator = mock(DirectoryValidationPort.class);
         when(validator.validate(anyString())).thenReturn(DirectoryValidationPort.ValidationResult.success());
 
+        AgentObserverUseCase observerMock = Mockito.mock(AgentObserverUseCase.class);
+
         manager = new AgentLifecycleService(
                 mockScannerRegistry,
                 fileWritePort,
                 outputDirectory,
                 chatClient,
                 mockPersistenceService,
-                validator);
+                validator,
+                observerMock);
     }
 
     @Test

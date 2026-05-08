@@ -16,6 +16,7 @@ import com.hdekker.ai_workflow.TestData;
 import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
+import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
@@ -32,6 +33,7 @@ public class AgentLifecycleServiceTest {
     AgentLifecycleService manager;
     ScannerRegistry scannerRegistry;
     AgentRepository mockPersistenceService;
+    AgentObserverUseCase observerMock;
 
     String expectedMockResult = "This is the expected result";
 
@@ -76,6 +78,9 @@ public class AgentLifecycleServiceTest {
         DirectoryValidationPort validator = mock(DirectoryValidationPort.class);
         when(validator.validate(anyString())).thenReturn(DirectoryValidationPort.ValidationResult.success());
 
+        // Mock observer
+        observerMock = mock(AgentObserverUseCase.class);
+
         // Use the new constructor with ports
         manager = new AgentLifecycleService(
                 scannerRegistry,
@@ -83,7 +88,8 @@ public class AgentLifecycleServiceTest {
                 outputDirectory,
                 chatClient,
                 mockPersistenceService,
-                validator);
+                validator,
+                observerMock);
     }
 
     @Test
