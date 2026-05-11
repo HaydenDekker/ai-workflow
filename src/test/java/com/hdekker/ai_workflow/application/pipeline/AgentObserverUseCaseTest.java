@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -19,8 +20,10 @@ import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverEventPort;
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverPort;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEvent;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEventType;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 /**
  * Unit tests for {@link AgentObserverUseCase}.
@@ -296,5 +299,136 @@ class AgentObserverUseCaseTest {
         long result = useCase.getOutputDirectoryFileCount();
 
         assertThat(result).isZero();
+    }
+
+    // -- recordFilter tests --
+
+    @Test
+    void givenRecordFilter_WhenCalled_ThenDelegatesToPort() {
+        useCase.recordFilter("agent-1", "file.txt", ".*\\.java");
+
+        verify(metricsPort).recordFilter("agent-1", "file.txt", ".*\\.java");
+        verify(eventPort).publish(any(AgentObserverEvent.class));
+    }
+
+    @Test
+    void whenRecordFilter_ThenEventIsOfFilteredType() {
+        AtomicReference<AgentObserverEvent> capturedEvent = new AtomicReference<>();
+        doAnswer(inv -> {
+            capturedEvent.set(inv.getArgument(0));
+            return null;
+        }).when(eventPort).publish(any(AgentObserverEvent.class));
+
+        useCase.recordFilter("agent-1", "notes.md", ".*\\.java");
+
+        assertThat(capturedEvent.get()).isNotNull();
+        assertThat(capturedEvent.get().eventType()).isEqualTo(AgentObserverEventType.FILTERED);
+        assertThat(capturedEvent.get().agentId()).isEqualTo("agent-1");
+        assertThat(capturedEvent.get().fileName()).isEqualTo("notes.md");
+    }
+
+    // -- filter count query tests --
+
+    @Test
+    void whenGetFilterCount_ThenDelegatesToMetricsPort() {
+        when(metricsPort.getFilterCount("agent-1")).thenReturn(5L);
+
+        long result = useCase.getFilterCount("agent-1");
+
+        assertThat(result).isEqualTo(5L);
+        verify(metricsPort).getFilterCount("agent-1");
+    }
+
+    @Test
+    void whenGetFilterCount_NoEventPortInteraction() {
+        when(metricsPort.getFilterCount("agent-1")).thenReturn(0L);
+
+        useCase.getFilterCount("agent-1");
+
+        verifyNoMoreInteractions(eventPort);
+    }
+
+    // -- total filter count query tests --
+
+    @Test
+    void whenGetTotalFilterCount_ThenDelegatesToMetricsPort() {
+        when(metricsPort.getTotalFilterCount()).thenReturn(42L);
+
+        long result = useCase.getTotalFilterCount();
+
+        assertThat(result).isEqualTo(42L);
+        verify(metricsPort).getTotalFilterCount();
+    }
+
+    @Test
+    void whenGetTotalFilterCount_NoEventPortInteraction() {
+        when(metricsPort.getTotalFilterCount()).thenReturn(0L);
+
+        useCase.getTotalFilterCount();
+
+        verifyNoMoreInteractions(eventPort);
+    }
+
+    // -- last filtered entries query tests --
+
+    @Test
+    void whenGetLastFilteredEntries_ThenDelegatesToMetricsPort() {
+        List<RegexFilterEntry> entries = List.of(
+                RegexFilterEntry.rejected("agent-1", "file1.md", ".*\\.java"),
+                RegexFilterEntry.rejected("agent-1", "file2.md", ".*\\.java")
+        );
+        when(metricsPort.getLastFilteredEntries("agent-1")).thenReturn(entries);
+
+        List<RegexFilterEntry> result = useCase.getLastFilteredEntries("agent-1");
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).fileUrl()).isEqualTo("file1.md");
+        verify(metricsPort).getLastFilteredEntries("agent-1");
+    }
+
+    @Test
+    void whenGetLastFilteredEntries_NoEventPortInteraction() {
+        when(metricsPort.getLastFilteredEntries("agent-1")).thenReturn(List.of());
+
+        useCase.getLastFilteredEntries("agent-1");
+
+        verifyNoMoreInteractions(eventPort);
+    }
+
+    // -- AgentMetrics consolidated fetch tests --
+
+    @Test
+    void givenGetAgentMetrics_WhenCalled_ThenDelegatesToPort() {
+        AgentMetrics expected = AgentMetrics.empty();
+        when(metricsPort.getAgentMetrics("agent-1")).thenReturn(expected);
+
+        AgentMetrics result = useCase.getAgentMetrics("agent-1");
+
+        assertThat(result).isEqualTo(expected);
+        verify(metricsPort).getAgentMetrics("agent-1");
+    }
+
+    @Test
+    void whenGetAgentMetrics_NoEventPortInteraction() {
+        when(metricsPort.getAgentMetrics("agent-1")).thenReturn(AgentMetrics.empty());
+
+        useCase.getAgentMetrics("agent-1");
+
+        verifyNoMoreInteractions(eventPort);
+    }
+
+    @Test
+    void givenAgentMetricsWithData_WhenGetAgentMetrics_ThenReturnsCorrectData() {
+        List<RegexFilterEntry> entries = List.of(
+                RegexFilterEntry.rejected("agent-1", "notes.md", ".*\\.java")
+        );
+        AgentMetrics expected = new AgentMetrics(3L, 1L, entries);
+        when(metricsPort.getAgentMetrics("agent-1")).thenReturn(expected);
+
+        AgentMetrics result = useCase.getAgentMetrics("agent-1");
+
+        assertThat(result.dispatchCount()).isEqualTo(3L);
+        assertThat(result.filterCount()).isEqualTo(1L);
+        assertThat(result.lastFilteredEntries()).hasSize(1);
     }
 }

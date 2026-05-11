@@ -6,11 +6,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 /**
  * Unit tests for {@link AgentObserverService}.
@@ -217,5 +224,170 @@ class AgentObserverServiceTest {
         AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/output");
 
         assertThat(serviceWithDir.getOutputDirectoryFileCount()).isEqualTo(7L);
+    }
+
+    // -- filter counting tests --
+
+    @Test
+    void givenNoFilters_WhenGetFilterCount_ThenReturnsZero() {
+        assertThat(service.getFilterCount("agent-1")).isZero();
+    }
+
+    @Test
+    void givenOneFilter_WhenRecorded_ThenCountIsOne() {
+        service.recordFilter("agent-1", "file.txt", ".*\\.java");
+
+        assertThat(service.getFilterCount("agent-1")).isEqualTo(1);
+    }
+
+    @Test
+    void givenMultipleFilters_WhenRecorded_ThenCountIncrements() {
+        service.recordFilter("agent-1", "file1.md", ".*\\.java");
+        service.recordFilter("agent-1", "file2.md", ".*\\.java");
+        service.recordFilter("agent-1", "file3.md", ".*\\.java");
+
+        assertThat(service.getFilterCount("agent-1")).isEqualTo(3);
+    }
+
+    @Test
+    void givenMultipleAgents_WhenGetPerAgent_ThenReturnsCorrectCount() {
+        service.recordFilter("agent-a", "file1.md", ".*\\.java");
+        service.recordFilter("agent-a", "file2.md", ".*\\.java");
+        service.recordFilter("agent-b", "file3.md", ".*\\.txt");
+
+        assertThat(service.getFilterCount("agent-a")).isEqualTo(2);
+        assertThat(service.getFilterCount("agent-b")).isEqualTo(1);
+    }
+
+    @Test
+    void givenTotalFilters_WhenGetTotalFilterCount_ThenReturnsSum() {
+        service.recordFilter("agent-a", "file1.md", ".*\\.java");
+        service.recordFilter("agent-a", "file2.md", ".*\\.java");
+        service.recordFilter("agent-b", "file3.md", ".*\\.txt");
+
+        assertThat(service.getTotalFilterCount()).isEqualTo(3);
+    }
+
+    // -- ring buffer tests --
+
+    @Test
+    void givenTenEntries_WhenRecorded_ThenReturnsAllTen() {
+        for (int i = 0; i < 10; i++) {
+            service.recordFilter("agent-1", "file" + i + ".md", ".*\\.java");
+        }
+
+        List<RegexFilterEntry> entries = service.getLastFilteredEntries("agent-1");
+        assertThat(entries).hasSize(10);
+        for (int i = 0; i < 10; i++) {
+            assertThat(entries.get(i).fileUrl()).isEqualTo("file" + i + ".md");
+        }
+    }
+
+    @Test
+    void givenElevenEntries_WhenRecorded_ThenReturnsLastTen() {
+        for (int i = 0; i < 11; i++) {
+            service.recordFilter("agent-1", "file" + i + ".md", ".*\\.java");
+        }
+
+        List<RegexFilterEntry> entries = service.getLastFilteredEntries("agent-1");
+        assertThat(entries).hasSize(10);
+        // First entry (file0) should have been evicted
+        assertThat(entries.get(0).fileUrl()).isEqualTo("file1.md");
+        assertThat(entries.get(9).fileUrl()).isEqualTo("file10.md");
+    }
+
+    @Test
+    void givenMultipleAgents_WhenGetFilteredEntries_ThenReturnsCorrectAgentEntries() {
+        service.recordFilter("agent-a", "file-a1.md", ".*\\.java");
+        service.recordFilter("agent-a", "file-a2.md", ".*\\.java");
+        service.recordFilter("agent-b", "file-b1.txt", ".*\\.py");
+
+        List<RegexFilterEntry> entriesA = service.getLastFilteredEntries("agent-a");
+        List<RegexFilterEntry> entriesB = service.getLastFilteredEntries("agent-b");
+
+        assertThat(entriesA).hasSize(2);
+        assertThat(entriesA.get(0).agentId()).isEqualTo("agent-a");
+        assertThat(entriesA.get(1).agentId()).isEqualTo("agent-a");
+
+        assertThat(entriesB).hasSize(1);
+        assertThat(entriesB.get(0).agentId()).isEqualTo("agent-b");
+    }
+
+    // -- AgentMetrics tests --
+
+    @Test
+    void givenFreshAgent_WhenGetAgentMetrics_ThenAllZeroAndEmpty() {
+        AgentMetrics metrics = service.getAgentMetrics("new-agent");
+
+        assertThat(metrics.dispatchCount()).isZero();
+        assertThat(metrics.filterCount()).isZero();
+        assertThat(metrics.lastFilteredEntries()).isEmpty();
+    }
+
+    @Test
+    void givenFiltersAndDispatches_WhenGetAgentMetrics_ThenReturnsAllFields() {
+        service.recordDispatch("agent-1", "input.java");
+        service.recordDispatch("agent-1", "input2.java");
+        service.recordFilter("agent-1", "notes.md", ".*\\.java");
+
+        AgentMetrics metrics = service.getAgentMetrics("agent-1");
+
+        assertThat(metrics.dispatchCount()).isEqualTo(2);
+        assertThat(metrics.filterCount()).isEqualTo(1);
+        assertThat(metrics.lastFilteredEntries()).hasSize(1);
+        assertThat(metrics.lastFilteredEntries().get(0).fileUrl()).isEqualTo("notes.md");
+    }
+
+    @Test
+    void givenMultipleAgents_WhenGetAgentMetrics_ThenReturnsCorrectAgentData() {
+        service.recordDispatch("agent-a", "file1.java");
+        service.recordFilter("agent-a", "notes.md", ".*\\.java");
+        service.recordFilter("agent-a", "readme.txt", ".*\\.java");
+        service.recordDispatch("agent-b", "file1.py");
+        service.recordDispatch("agent-b", "file2.py");
+        service.recordDispatch("agent-b", "file3.py");
+
+        AgentMetrics metricsA = service.getAgentMetrics("agent-a");
+        AgentMetrics metricsB = service.getAgentMetrics("agent-b");
+
+        assertThat(metricsA.dispatchCount()).isEqualTo(1);
+        assertThat(metricsA.filterCount()).isEqualTo(2);
+        assertThat(metricsA.lastFilteredEntries()).hasSize(2);
+
+        assertThat(metricsB.dispatchCount()).isEqualTo(3);
+        assertThat(metricsB.filterCount()).isZero();
+        assertThat(metricsB.lastFilteredEntries()).isEmpty();
+    }
+
+    // -- filter concurrency test --
+
+    @Test
+    void givenConcurrentFilterAccess_WhenMultipleThreadsUpdate_ThenCountersConsistent()
+            throws InterruptedException {
+        String agentId = "concurrent-filter-agent";
+        int threadCount = 10;
+        int updatesPerThread = 100;
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CopyOnWriteArrayList<Runnable> tasks = new CopyOnWriteArrayList<>();
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            tasks.add(() -> {
+                for (int j = 0; j < updatesPerThread; j++) {
+                    service.recordFilter(agentId,
+                            "file-" + idx + "-" + j + ".md", ".*\\.java");
+                }
+            });
+        }
+
+        tasks.forEach(executor::submit);
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        assertThat(service.getFilterCount(agentId)).isEqualTo(threadCount * updatesPerThread);
+        assertThat(service.getTotalFilterCount()).isEqualTo(threadCount * updatesPerThread);
+        // Ring buffer should cap at 10
+        assertThat(service.getLastFilteredEntries(agentId)).hasSize(10);
     }
 }

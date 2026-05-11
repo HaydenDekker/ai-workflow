@@ -1,6 +1,10 @@
 package com.hdekker.ai_workflow.application.pipeline.port;
 
 import java.nio.file.Path;
+import java.util.List;
+
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 /**
  * Port interface for agent observer metrics recording.
@@ -69,4 +73,56 @@ public interface AgentObserverPort {
      * @return the number of files in the output directory, or 0 if not configured
      */
     long getOutputDirectoryFileCount();
+
+    // -- filter (regex rejection) methods --
+
+    /**
+     * Record that a file was rejected by an agent's input regex filter.
+     * <p>
+     * Increments the per-agent filter counter and appends an entry to the
+     * per-agent ring buffer (capacity 10).
+     *
+     * @param agentId the owning agent's ID
+     * @param fileUrl the URL of the rejected file
+     * @param regex   the regex pattern that rejected the file
+     */
+    void recordFilter(String agentId, String fileUrl, String regex);
+
+    /**
+     * Get the filter (regex rejection) count for a specific agent.
+     *
+     * @param agentId the owning agent's ID
+     * @return the number of filter rejections recorded for this agent
+     */
+    long getFilterCount(String agentId);
+
+    /**
+     * Get the total filter count across all agents.
+     *
+     * @return the sum of filter rejections across all agents
+     */
+    long getTotalFilterCount();
+
+    /**
+     * Get the last filtered (rejected) file entries for a specific agent.
+     * <p>
+     * Returns at most 10 entries (the ring buffer capacity), ordered
+     * oldest-first.
+     *
+     * @param agentId the owning agent's ID
+     * @return the last filtered entries, or an empty list if none
+     */
+    List<RegexFilterEntry> getLastFilteredEntries(String agentId);
+
+    /**
+     * Get a consolidated metrics snapshot for a specific agent.
+     * <p>
+     * Combines dispatch count, filter count, and last filtered entries
+     * into a single {@link AgentMetrics} record. Assembled from the
+     * service's own maps — no external calls.
+     *
+     * @param agentId the owning agent's ID
+     * @return a consolidated metrics snapshot for the agent
+     */
+    AgentMetrics getAgentMetrics(String agentId);
 }

@@ -43,4 +43,16 @@ public record AgentObserverEvent(
         return new AgentObserverEvent(agentId, AgentObserverEventType.STORED,
                 outputName, LocalDateTime.now());
     }
+
+    /**
+     * Create a FILTERED event for the given agent and file.
+     *
+     * @param agentId  the owning agent's ID
+     * @param fileUrl  the file URL that was rejected
+     * @return a new FILTERED event with the current timestamp
+     */
+    public static AgentObserverEvent filtered(String agentId, String fileUrl) {
+        return new AgentObserverEvent(agentId, AgentObserverEventType.FILTERED,
+                fileUrl, LocalDateTime.now());
+    }
 }

@@ -2,11 +2,14 @@ package com.hdekker.ai_workflow.application.pipeline;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverEventPort;
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverPort;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEvent;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEventType;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,5 +150,71 @@ public class AgentObserverUseCase {
      */
     public long getOutputDirectoryFileCount() {
         return metrics.getOutputDirectoryFileCount();
+    }
+
+    // -- filter (regex rejection) methods --
+
+    /**
+     * Record that a file was rejected by an agent's input regex filter.
+     * <p>
+     * Records the filter with the metrics port and publishes a
+     * {@link AgentObserverEventType#FILTERED} event through the event bus.
+     *
+     * @param agentId the owning agent's ID
+     * @param fileUrl the URL of the rejected file
+     * @param regex   the regex pattern that rejected the file
+     */
+    public void recordFilter(String agentId, String fileUrl, String regex) {
+        metrics.recordFilter(agentId, fileUrl, regex);
+        eventBus.publish(AgentObserverEvent.filtered(agentId, fileUrl));
+
+        log.debug("Recorded filter for agent {}: file={}, regex={}", agentId, fileUrl, regex);
+    }
+
+    /**
+     * Get the filter count for a specific agent.
+     * <p>
+     * Delegates to the metrics port only — no event publishing.
+     *
+     * @param agentId the owning agent's ID
+     * @return the number of filter rejections recorded for this agent
+     */
+    public long getFilterCount(String agentId) {
+        return metrics.getFilterCount(agentId);
+    }
+
+    /**
+     * Get the total filter count across all agents.
+     * <p>
+     * Delegates to the metrics port only — no event publishing.
+     *
+     * @return the sum of filter rejections across all agents
+     */
+    public long getTotalFilterCount() {
+        return metrics.getTotalFilterCount();
+    }
+
+    /**
+     * Get the last filtered (rejected) file entries for a specific agent.
+     * <p>
+     * Delegates to the metrics port only — no event publishing.
+     *
+     * @param agentId the owning agent's ID
+     * @return the last filtered entries (max 10), or an empty list if none
+     */
+    public List<RegexFilterEntry> getLastFilteredEntries(String agentId) {
+        return metrics.getLastFilteredEntries(agentId);
+    }
+
+    /**
+     * Get a consolidated metrics snapshot for a specific agent.
+     * <p>
+     * Delegates to the metrics port only — no event publishing.
+     *
+     * @param agentId the owning agent's ID
+     * @return a consolidated metrics snapshot for the agent
+     */
+    public AgentMetrics getAgentMetrics(String agentId) {
+        return metrics.getAgentMetrics(agentId);
     }
 }

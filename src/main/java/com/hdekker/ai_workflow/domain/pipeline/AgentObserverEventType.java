@@ -12,5 +12,8 @@ public enum AgentObserverEventType {
     DISPATCHED,
 
     /** The response was stored to the output directory. */
-    STORED
+    STORED,
+
+    /** The file was rejected by the agent's input regex filter. */
+    FILTERED
 }

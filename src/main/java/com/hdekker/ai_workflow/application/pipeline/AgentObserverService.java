@@ -1,10 +1,15 @@
 package com.hdekker.ai_workflow.application.pipeline;
 
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverPort;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +44,23 @@ public class AgentObserverService implements AgentObserverPort {
      * Thread-safe store of per-agent storage counters.
      */
     private final ConcurrentHashMap<String, Long> storageCounters = new ConcurrentHashMap<>();
+
+    /**
+     * Thread-safe store of per-agent filter (regex rejection) counters.
+     */
+    private final ConcurrentHashMap<String, Long> filterCounters = new ConcurrentHashMap<>();
+
+    /**
+     * Per-agent ring buffer of rejected-file entries.
+     * <p>
+     * Each {@link ArrayDeque} holds at most 10 entries (capacity constant).
+     * Thread safety is ensured by synchronizing on the deque reference.
+     */
+    private final ConcurrentHashMap<String, ArrayDeque<RegexFilterEntry>> filterHistory
+            = new ConcurrentHashMap<>();
+
+    /** Maximum number of filter entries kept per agent in the ring buffer. */
+    private static final int FILTER_HISTORY_CAPACITY = 10;
 
     /**
      * Output directory path for file count queries.
@@ -155,5 +177,93 @@ public class AgentObserverService implements AgentObserverPort {
             return 0;
         }
         return fileCounter.countFiles(outputDirectory);
+    }
+
+    // -- filter (regex rejection) methods --
+
+    /**
+     * Record that a file was rejected by an agent's input regex filter.
+     * <p>
+     * Atomically increments the filter counter and appends an entry to the
+     * per-agent ring buffer. Oldest entry is evicted when capacity (10) is exceeded.
+     *
+     * @param agentId the owning agent's ID
+     * @param fileUrl the URL of the rejected file
+     * @param regex   the regex pattern that rejected the file
+     */
+    @Override
+    public void recordFilter(String agentId, String fileUrl, String regex) {
+        filterCounters.merge(agentId, 1L, Long::sum);
+
+        RegexFilterEntry entry = RegexFilterEntry.rejected(agentId, fileUrl, regex);
+        ArrayDeque<RegexFilterEntry> deque = filterHistory.computeIfAbsent(
+                agentId, k -> new ArrayDeque<>(FILTER_HISTORY_CAPACITY));
+        synchronized (deque) {
+            deque.addLast(entry);
+            while (deque.size() > FILTER_HISTORY_CAPACITY) {
+                deque.removeFirst();
+            }
+        }
+
+        log.debug("Recorded filter rejection for agent {}: file={}, regex={}",
+                agentId, fileUrl, regex);
+    }
+
+    /**
+     * Get the filter (regex rejection) count for a specific agent.
+     *
+     * @param agentId the owning agent's ID
+     * @return the number of filter rejections recorded for this agent, or 0 if none
+     */
+    @Override
+    public long getFilterCount(String agentId) {
+        return filterCounters.getOrDefault(agentId, 0L);
+    }
+
+    /**
+     * Get the total filter count across all agents.
+     *
+     * @return the sum of filter rejections across all agents
+     */
+    @Override
+    public long getTotalFilterCount() {
+        return filterCounters.values().stream().mapToLong(Long::longValue).sum();
+    }
+
+    /**
+     * Get the last filtered (rejected) file entries for a specific agent.
+     * <p>
+     * Returns an unmodifiable copy of the ring buffer contents, ordered oldest-first.
+     *
+     * @param agentId the owning agent's ID
+     * @return the last filtered entries (max 10), or an empty list if none
+     */
+    @Override
+    public List<RegexFilterEntry> getLastFilteredEntries(String agentId) {
+        ArrayDeque<RegexFilterEntry> deque = filterHistory.get(agentId);
+        if (deque == null) {
+            return Collections.emptyList();
+        }
+        synchronized (deque) {
+            return Collections.unmodifiableList(new java.util.ArrayList<>(deque));
+        }
+    }
+
+    /**
+     * Get a consolidated metrics snapshot for a specific agent.
+     * <p>
+     * Assembles dispatch count, filter count, and last filtered entries
+     * from the service's own maps into a single {@link AgentMetrics} record.
+     * No external calls are made.
+     *
+     * @param agentId the owning agent's ID
+     * @return a consolidated metrics snapshot for the agent
+     */
+    @Override
+    public AgentMetrics getAgentMetrics(String agentId) {
+        long dispatches = getDispatchCount(agentId);
+        long filters = getFilterCount(agentId);
+        List<RegexFilterEntry> entries = getLastFilteredEntries(agentId);
+        return new AgentMetrics(dispatches, filters, entries);
     }
 }
