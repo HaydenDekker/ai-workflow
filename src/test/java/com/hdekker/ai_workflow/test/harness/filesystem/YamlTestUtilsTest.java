@@ -161,16 +161,17 @@ class YamlTestUtilsTest {
     }
 
     @Test
-    void testAgentDefinitionToYamlWithNullValues() {
-        AgentDefinition definitionWithNulls = new AgentDefinition(
-            null, "Title", null, null, null, "template.md", null
+    void testAgentDefinitionToYamlWithNullableFields() {
+        // Only outputStructure, outputFilenameTemplate, targetDirectory are nullable
+        AgentDefinition definition = new AgentDefinition(
+            ".*\\.java", "Title", "body", AgentType.MAP, null, null, null
         );
         
-        String yaml = YamlTestUtils.agentDefinitionToYaml(definitionWithNulls);
+        String yaml = YamlTestUtils.agentDefinitionToYaml(definition);
         
         assertNotNull(yaml);
-        // Should handle null values gracefully
-        assertDoesNotThrow(() -> YamlTestUtils.agentDefinitionToYaml(definitionWithNulls));
+        // Should handle null nullable fields gracefully
+        assertDoesNotThrow(() -> YamlTestUtils.agentDefinitionToYaml(definition));
     }
 
     @Test
