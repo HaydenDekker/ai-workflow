@@ -20,6 +20,7 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
@@ -224,7 +225,7 @@ public class AgentLifecycleServicePersistenceTest {
 	public void givenMultipleAgentsWithMixedStates_thenListShowsCorrectActiveFlags() {
 		// Arrange
 		AgentDefinition agent1 = TestData.basicPrompt();
-		AgentDefinition agent2 = new AgentDefinition(".*\\.md", "Agent2", "Body 2", "Map", "Out 2", "out2", "/tmp/dir2");
+		AgentDefinition agent2 = new AgentDefinition(".*\\.md", "Agent2", "Body 2", AgentType.MAP, "Out 2", "out2", "/tmp/dir2");
 
 		AgentInfo info1 = manager.addDynamicAgent(agent1, "/tmp/dir1");
 		AgentInfo info2 = manager.addDynamicAgent(agent2, "/tmp/dir2");

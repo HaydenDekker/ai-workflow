@@ -9,6 +9,7 @@ import java.time.Duration;
 import com.hdekker.ai_workflow.adapter.inbound.ui.component.AgentCreationDialog;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -83,8 +84,11 @@ public class AgentCreationTestView extends VerticalLayout {
         fileInputRegexField.setPlaceholder("Enter file input regex");
         fileInputRegexField.addClassName("test-form-field");
 
-        agentTypeCombo = new ComboBox<>("Agent Type", "Map", "Reduction", "Split");
-        agentTypeCombo.setValue("Map");
+        agentTypeCombo = new ComboBox<>("Agent Type",
+                AgentType.MAP.getAsString(),
+                AgentType.REDUCTION.getAsString(),
+                AgentType.SPLIT.getAsString());
+        agentTypeCombo.setValue(AgentType.MAP.getAsString());
         agentTypeCombo.setPlaceholder("Select agent type");
         agentTypeCombo.addClassName("test-form-field");
 
@@ -249,7 +253,7 @@ public class AgentCreationTestView extends VerticalLayout {
                 fileInputRegexField.getValue().trim(),
                 titleField.getValue().trim(),
                 bodyField.getValue().trim(),
-                agentTypeCombo.getValue(),
+                AgentType.fromString(agentTypeCombo.getValue()),
                 outputStructureField.getValue().trim(),
                 outputFilenameTemplateField.getValue().trim(),
                 targetDirectoryField.getValue().trim()
@@ -265,7 +269,7 @@ public class AgentCreationTestView extends VerticalLayout {
                 + "\"fileInputRegex\":\"" + escapeJson(def.fileInputRegex()) + "\","
                 + "\"title\":\"" + escapeJson(def.title()) + "\","
                 + "\"body\":\"" + escapeJson(def.body()) + "\","
-                + "\"agentType\":\"" + escapeJson(def.agentType()) + "\","
+                + "\"agentType\":\"" + escapeJson(def.agentType().getAsString()) + "\","
                 + "\"outputStructure\":\"" + escapeJson(def.outputStructure()) + "\","
                 + "\"outputFilenameTemplate\":\"" + escapeJson(def.outputFilenameTemplate()) + "\""
                 + "}";

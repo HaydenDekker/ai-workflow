@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.test.harness.factory.TestConfigurationFactory;
 
 class YamlTestUtilsTest {
@@ -130,7 +131,7 @@ class YamlTestUtilsTest {
         // Test with custom definition having null agentType
         AgentDefinition defWithNullType = TestConfigurationFactory.createDefaultMapAgentDefinition();
         AgentDefinition defWithEmptyType = new AgentDefinition(
-            ".*\\.java", "TITLE", "BODY", "", "STRUCTURE", "TEMPLATE", "/tmp/test"
+            ".*\\.java", "TITLE", "BODY", AgentType.MAP, "STRUCTURE", "TEMPLATE", "/tmp/test"
         );
         
         assertFalse(YamlTestUtils.areEqual(defWithNullType, defWithEmptyType));
@@ -152,7 +153,7 @@ class YamlTestUtilsTest {
     @Test
     void testRoundTripTestWithCustomDefinition() {
         AgentDefinition customDefinition = TestConfigurationFactory.createCustomDefinition(
-            ".*\\.md", "Custom Title", "Custom Body", "Custom AgentType", 
+            ".*\\.md", "Custom Title", "Custom Body", "Split", 
             "Custom Structure", "custom/${filename}.output"
         );
         
@@ -203,7 +204,7 @@ class YamlTestUtilsTest {
             ".*\\.(java|kt|scala)",  // Complex regex
             "Complex \"Title\" with 'quotes' and \n newlines",
             "Multi-line\nbody\nwith\nspecial\ncharacters: {}[]",
-            "Split",
+            AgentType.SPLIT,
             "JSON output with \"quotes\": {\"key\": \"value\", \"array\": [1,2,3]}",
             "output/${filename}-${timestamp}.md",
             "/tmp/test-dir"

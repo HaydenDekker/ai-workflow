@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -42,7 +43,10 @@ public class AgentCreationDialog extends Dialog {
 
     private static final Logger log = LoggerFactory.getLogger(AgentCreationDialog.class);
 
-    private static final String[] AGENT_TYPES = {"Map", "Reduction", "Split"};
+    private static final String[] AGENT_TYPES =
+            java.util.Arrays.stream(AgentType.values())
+                    .map(AgentType::getAsString)
+                    .toArray(String[]::new);
 
     private final TextField titleField;
     private final TextField targetDirectoryField;
@@ -161,7 +165,7 @@ public class AgentCreationDialog extends Dialog {
             titleField.setValue(existing.title());
             targetDirectoryField.setValue(existing.targetDirectory() != null ? existing.targetDirectory() : "");
             fileInputRegexField.setValue(existing.fileInputRegex());
-            agentTypeCombo.setValue(existing.agentType());
+            agentTypeCombo.setValue(existing.agentType().getAsString());
             bodyField.setValue(existing.body());
             outputStructureField.setValue(existing.outputStructure());
             outputFilenameTemplateField.setValue(existing.outputFilenameTemplate());
@@ -251,7 +255,7 @@ public class AgentCreationDialog extends Dialog {
                 fileInputRegexField.getValue().trim(),
                 titleField.getValue().trim(),
                 bodyField.getValue().trim(),
-                agentTypeCombo.getValue(),
+                AgentType.fromString(agentTypeCombo.getValue()),
                 outputStructureField.getValue().trim(),
                 outputFilenameTemplateField.getValue().trim(),
                 targetDirectoryField.getValue().trim()

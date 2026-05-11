@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
@@ -21,11 +22,11 @@ public class TestData {
 	static String fileContentStub = "This is the content of the input file.";
 	
 	public static AgentDefinition basicPrompt() {
-		return new AgentDefinition( 
+		return new AgentDefinition(
 				"(?:.*/)?(?<name>.*\\.txt)",
-				"BASIC PROMPT TEST", 
-				"STANDARD",
-				"This prompt is part of a basic pipeline stage configuration. You should simply confirm you've received this prompt.", 
+				"BASIC PROMPT TEST",
+				"This prompt is part of a basic pipeline stage configuration. You should simply confirm you've received this prompt.",
+				AgentType.MAP,
 				"Neat and tidy output is required.",
 				"output/${name}",
 				System.getProperty("java.io.tmpdir") + "/ai-workflow-test");

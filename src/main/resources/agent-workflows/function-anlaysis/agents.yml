@@ -9,7 +9,7 @@ agents:
   -
     fileInputRegex: .*output/function-analysis/analysis/(?<name>.*)\.(?<ext>md)
     title: FUNCTION_SUMMARY
-    agentType: Reduce
+    agentType: Reduction
     body: function-summary.md
     outputStructure: function-summary-output.md
     outputFilenameTemplate: output/function-analysis/summary.md

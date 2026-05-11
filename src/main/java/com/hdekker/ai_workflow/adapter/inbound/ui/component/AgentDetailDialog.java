@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -47,7 +48,10 @@ public class AgentDetailDialog extends Dialog {
 
     private static final Logger log = LoggerFactory.getLogger(AgentDetailDialog.class);
 
-    private static final String[] AGENT_TYPES = {"Map", "Reduction", "Split"};
+    private static final String[] AGENT_TYPES =
+            java.util.Arrays.stream(AgentType.values())
+                    .map(AgentType::getAsString)
+                    .toArray(String[]::new);
 
     private final TextField titleField;
     private final TextField targetDirectoryField;
@@ -181,7 +185,8 @@ public class AgentDetailDialog extends Dialog {
             titleField.setValue(def.title() != null ? def.title() : "");
             targetDirectoryField.setValue(def.targetDirectory() != null ? def.targetDirectory() : "");
             fileInputRegexField.setValue(def.fileInputRegex() != null ? def.fileInputRegex() : ".*");
-            agentTypeCombo.setValue(def.agentType() != null ? def.agentType() : "Map");
+            agentTypeCombo.setValue(def.agentType() != null
+                    ? def.agentType().getAsString() : AgentType.MAP.getAsString());
             bodyField.setValue(def.body() != null ? def.body() : "");
             outputStructureField.setValue(def.outputStructure() != null ? def.outputStructure() : "");
             outputFilenameTemplateField.setValue(def.outputFilenameTemplate() != null ? def.outputFilenameTemplate() : "output/${name}.md");
@@ -257,7 +262,7 @@ public class AgentDetailDialog extends Dialog {
                 fileInputRegexField.getValue().trim(),
                 titleField.getValue().trim(),
                 bodyField.getValue().trim(),
-                agentTypeCombo.getValue(),
+                AgentType.fromString(agentTypeCombo.getValue()),
                 outputStructureField.getValue().trim(),
                 outputFilenameTemplateField.getValue().trim(),
                 targetDirectoryField.getValue().trim()

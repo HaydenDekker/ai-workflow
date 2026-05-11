@@ -19,6 +19,7 @@ import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -54,7 +55,7 @@ public class AgentControllerTest {
 				".*\\.txt",
 				"Test Agent",
 				"This is a test prompt.",
-				"Map",
+				AgentType.MAP,
 				"Clean output",
 				"output/{filename}",
 				"/tmp/test-dir");
@@ -218,7 +219,7 @@ public class AgentControllerTest {
 	public void givenValidAgentId_whenUpdateAgent_thenReturnUpdatedAgent() throws Exception {
 		// Arrange
 		AgentDefinition updatedDef = new AgentDefinition(
-				".*\\.md", "Updated Agent", "Updated prompt", "Reduction", "Updated structure", "updated/{filename}", "/tmp/updated-dir");
+				".*\\.md", "Updated Agent", "Updated prompt", AgentType.REDUCTION, "Updated structure", "updated/{filename}", "/tmp/updated-dir");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo updatedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", updatedDef, LocalDateTime.now(), true, "DYNAMIC");
 		when(agentLifecycleService.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(updatedInfo);
 

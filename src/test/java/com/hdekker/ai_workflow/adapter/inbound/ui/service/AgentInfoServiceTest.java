@@ -17,6 +17,7 @@ import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import reactor.core.publisher.Mono;
 
@@ -96,7 +97,7 @@ public class AgentInfoServiceTest {
 	public void givenValidAgent_WhenCreateAgent_thenReturnAgentInfo() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(
-				".*\\.txt", "Test Agent", "Test prompt", "Map", "Structure",
+				".*\\.txt", "Test Agent", "Test prompt", AgentType.MAP, "Structure",
 				"output/{filename}", "/tmp/test-dir");
 		when(validationPort.validate(anyString())).thenReturn(
 				DirectoryValidationPort.ValidationResult.success());
@@ -119,7 +120,7 @@ public class AgentInfoServiceTest {
 	public void givenInvalidDir_WhenCreateAgent_thenReturnError() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(
-				".*\\.txt", "Test Agent", "Test prompt", "Map", "Structure",
+				".*\\.txt", "Test Agent", "Test prompt", AgentType.MAP, "Structure",
 				"output/{filename}", "");
 		when(validationPort.validate(anyString())).thenReturn(
 				DirectoryValidationPort.ValidationResult.failure("targetDirectory is required"));
@@ -146,7 +147,7 @@ public class AgentInfoServiceTest {
 	public void givenAgentIds_WhenListAgents_thenReturnAll() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(
-				".*\\.txt", "Test", "Prompt", "Map", "Structure",
+				".*\\.txt", "Test", "Prompt", AgentType.MAP, "Structure",
 				"output", "/tmp");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info1 =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
@@ -183,7 +184,7 @@ public class AgentInfoServiceTest {
 	public void givenAgentId_WhenRefreshAgent_thenReturnUpdatedInfo() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(
-				".*\\.txt", "Test", "Prompt", "Map", "Structure",
+				".*\\.txt", "Test", "Prompt", AgentType.MAP, "Structure",
 				"output", "/tmp");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
@@ -217,7 +218,7 @@ public class AgentInfoServiceTest {
 	public void givenAgentId_WhenUpdateAgent_thenReturnUpdatedInfo() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(
-				".*\\.txt", "Updated", "Prompt", "Map", "Structure",
+				".*\\.txt", "Updated", "Prompt", AgentType.MAP, "Structure",
 				"output", "/tmp");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
@@ -237,7 +238,7 @@ public class AgentInfoServiceTest {
 	public void givenNonExistentAgent_WhenUpdateAgent_thenThrowsError() {
 		// Arrange
 		AgentDefinition def = new AgentDefinition(
-				".*\\.txt", "Test", "Prompt", "Map", "Structure",
+				".*\\.txt", "Test", "Prompt", AgentType.MAP, "Structure",
 				"output", "/tmp");
 		when(lifecycleService.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(null);
 

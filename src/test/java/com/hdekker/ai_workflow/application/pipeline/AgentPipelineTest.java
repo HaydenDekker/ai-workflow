@@ -27,6 +27,7 @@ import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
 import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.domain.scanner.RawFileEvent;
@@ -133,8 +134,8 @@ public class AgentPipelineTest {
         AgentDefinition agentDef = new AgentDefinition(
                 "(?:.*/)?(?<name>[^/]+\\.md)",
                 "PIPELINE-INTEGRATION-AGENT",
-                "Map",
                 "Analyze the provided document and provide a structured summary.",
+                AgentType.MAP,
                 "Provide a concise analysis with key points.",
                 "analysis-${name}",
                 inputDir.toString());

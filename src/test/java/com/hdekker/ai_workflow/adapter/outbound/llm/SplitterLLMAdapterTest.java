@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
@@ -26,7 +27,7 @@ public class SplitterLLMAdapterTest {
                 ".*\\.java", // fileInputRegex
                 "SOLID_NON_COMPLIANCE", // title
                 "prompt body", // body
-                "Split", // agentType
+                AgentType.SPLIT, // agentType
                 "output structure", // outputStructure
                 "out-${name}.md", // outputFilenameTemplate
                 "/tmp/test-dir" // targetDirectory

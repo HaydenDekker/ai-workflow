@@ -128,7 +128,8 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setFlexGrow(1)
             .setSortable(true);
             
-        grid.addColumn(agent -> agent.definition() != null ? agent.definition().agentType() : "N/A")
+        grid.addColumn(agent -> agent.definition() != null
+                ? agent.definition().agentType().getAsString() : "N/A")
             .setHeader("Agent Type")
             .setAutoWidth(true)
             .setSortable(true);

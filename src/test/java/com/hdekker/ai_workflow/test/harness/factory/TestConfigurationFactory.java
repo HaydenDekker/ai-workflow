@@ -1,6 +1,7 @@
 package com.hdekker.ai_workflow.test.harness.factory;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 /**
  * Factory for creating test configurations for different LLM adapter types.
@@ -17,7 +18,7 @@ public class TestConfigurationFactory {
             ".*[/\\\\](?<name>[^.]+)\\.java$",  // Match full URL path and capture Java filename
             "FUNCTION_ANALYSIS",
             "Process this Java function and return a structured analysis.",
-            "Map",
+            AgentType.MAP,
             "Return a JSON object with function name, details, and category.",
             "output/function-analysis/analysis/${name}.md",
             "/tmp/test-dir"
@@ -33,7 +34,7 @@ public class TestConfigurationFactory {
             ".*[/\\\\](?<name>[^.]+)\\.java$",  // Match full URL path and capture Java filename
             "SOLID_NON_COMPLIANCE",
             "Analyze this Java code for SOLID principle violations and categorize them.",
-            "Split",
+            AgentType.SPLIT,
             "Split the analysis into different violation categories using --- ItemKey --- format.",
             "output/solid-priority/non-compliance/${name}.md",
             "/tmp/test-dir"
@@ -49,7 +50,7 @@ public class TestConfigurationFactory {
             ".*\\.md",   // Match markdown files
             "FUNCTION_SUMMARY",
             "Accumulate this new function analysis into the previous response.",
-            "Reduction",
+            AgentType.REDUCTION,
             "List all analyzed functions with their categories and provide a system summary.",
             "output/function-analysis/summary.md",
             "/tmp/test-dir"
@@ -64,7 +65,7 @@ public class TestConfigurationFactory {
             ".*[/\\\\](?<name>[^.]+)\\.java$",  // Match full URL path and capture Java filename
             "DEFAULT_PROCESSING",
             "Process this file and return a structured response.",
-            null, // null agentType should default to Map
+            AgentType.MAP, // MAP is the default agent type
             "Return a JSON object with processing results.",
             "output/default/${name}.md",
             "/tmp/test-dir"
@@ -99,7 +100,7 @@ public class TestConfigurationFactory {
             fileInputRegex,
             title,
             body,
-            prompt,
+            AgentType.fromString(prompt),
             outputStructure,
             outputFilenameTemplate,
             targetDirectory

@@ -20,6 +20,7 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
@@ -153,7 +154,7 @@ public class AgentLifecycleServiceTest {
     @Test
     public void givenMultipleAgents_ExpectAllListed() {
         AgentDefinition agent1 = TestData.basicPrompt();
-        AgentDefinition agent2 = new AgentDefinition(".*\\.txt", "TestAgent2", "Test body 2", "Map", "Test structure 2", "output-{filename}", "/tmp/test-dir-2");
+        AgentDefinition agent2 = new AgentDefinition(".*\\.txt", "TestAgent2", "Test body 2", AgentType.MAP, "Test structure 2", "output-{filename}", "/tmp/test-dir-2");
 
         AgentInfo info1 = manager.addDynamicAgent(agent1, "/tmp/test-dir-1");
         AgentInfo info2 = manager.addDynamicAgent(agent2, "/tmp/test-dir-2");
@@ -168,7 +169,7 @@ public class AgentLifecycleServiceTest {
     @Test
     public void givenYAMLandDynamicAgents_ExpectAllListed() {
         AgentDefinition yamlAgent = TestData.basicPrompt();
-        AgentDefinition dynamicAgent = new AgentDefinition(".*\\.md", "DynamicAgent", "Dynamic body", "Map", "Dynamic structure", "dynamic-{filename}", "/tmp/dynamic-dir");
+        AgentDefinition dynamicAgent = new AgentDefinition(".*\\.md", "DynamicAgent", "Dynamic body", AgentType.MAP, "Dynamic structure", "dynamic-{filename}", "/tmp/dynamic-dir");
 
         manager.initializeFromYAML(List.of(yamlAgent));
         manager.addDynamicAgent(dynamicAgent, "/tmp/dynamic-dir");
@@ -223,18 +224,18 @@ public class AgentLifecycleServiceTest {
     @Test
     public void givenDynamicAgentUpdated_ExpectAgentWithNewDefinition() {
         AgentDefinition original = TestData.basicPrompt();
-        original = new AgentDefinition(".*\\.txt", "OriginalAgent", "Original body", "Map", "Original structure", "original-{filename}", "/tmp/test-dir");
+        original = new AgentDefinition(".*\\.txt", "OriginalAgent", "Original body", AgentType.MAP, "Original structure", "original-{filename}", "/tmp/test-dir");
 
         AgentInfo info = manager.addDynamicAgent(original, "/tmp/test-dir");
         assertThat(manager.listAgents()).hasSize(1);
 
-        AgentDefinition updated = new AgentDefinition(".*\\.md", "UpdatedAgent", "Updated body", "Reduction", "Updated structure", "updated-{filename}", "/tmp/test-dir-updated");
+        AgentDefinition updated = new AgentDefinition(".*\\.md", "UpdatedAgent", "Updated body", AgentType.REDUCTION, "Updated structure", "updated-{filename}", "/tmp/test-dir-updated");
         AgentInfo updatedInfo = manager.updateAgent(info.id(), updated);
 
         assertThat(updatedInfo).isNotNull();
         // updateAgent uses remove+re-add, so a new UUID is generated
         assertThat(updatedInfo.definition().title()).isEqualTo("UpdatedAgent");
-        assertThat(updatedInfo.definition().agentType()).isEqualTo("Reduction");
+        assertThat(updatedInfo.definition().agentType()).isEqualTo(AgentType.REDUCTION);
         assertThat(updatedInfo.definition().body()).isEqualTo("Updated body");
         assertThat(updatedInfo.definition().targetDirectory()).isEqualTo("/tmp/test-dir-updated");
 

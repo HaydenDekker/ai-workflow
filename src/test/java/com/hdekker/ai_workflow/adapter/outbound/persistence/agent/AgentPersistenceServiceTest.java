@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.TestProfiles;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -53,7 +54,7 @@ public class AgentPersistenceServiceTest {
 				".*\\.txt",
 				"Test Agent",
 				"This is a test prompt body.",
-				"Map",
+				AgentType.MAP,
 				"Clean output required",
 				"output/{filename}",
 				"/tmp/test-dir");
@@ -79,7 +80,7 @@ public class AgentPersistenceServiceTest {
 				".*\\.md",
 				"Markdown Agent",
 				"Process markdown files",
-				"Split",
+				AgentType.SPLIT,
 				"Markdown structure",
 				"md-output/{filename}",
 				"/tmp/markdown-dir");
@@ -94,7 +95,7 @@ public class AgentPersistenceServiceTest {
 		assertThat(retrieved.title()).isEqualTo("Markdown Agent");
 		assertThat(retrieved.fileInputRegex()).isEqualTo(".*\\.md");
 		assertThat(retrieved.body()).isEqualTo("Process markdown files");
-		assertThat(retrieved.agentType()).isEqualTo("Split");
+		assertThat(retrieved.agentType()).isEqualTo(AgentType.SPLIT);
 	}
 
 	@Test
@@ -109,8 +110,8 @@ public class AgentPersistenceServiceTest {
 	@Test
 	public void givenMultipleAgents_whenListAll_thenReturnAllOrdered() throws InterruptedException {
 		// Arrange
-		AgentDefinition def1 = new AgentDefinition(".*\\.txt", "Agent 1", "Body 1", "Map", "Out 1", "out1", "/tmp/dir1");
-		AgentDefinition def2 = new AgentDefinition(".*\\.md", "Agent 2", "Body 2", "Split", "Out 2", "out2", "/tmp/dir2");
+		AgentDefinition def1 = new AgentDefinition(".*\\.txt", "Agent 1", "Body 1", AgentType.MAP, "Out 1", "out1", "/tmp/dir1");
+		AgentDefinition def2 = new AgentDefinition(".*\\.md", "Agent 2", "Body 2", AgentType.SPLIT, "Out 2", "out2", "/tmp/dir2");
 		persistenceService.saveAndGetEntity("list-1", def1, "YAML");
 		// Ensure distinct createdAt timestamps to avoid non-deterministic ordering
 		// when H2 assigns the same millisecond timestamp to both saves.
@@ -129,7 +130,7 @@ public class AgentPersistenceServiceTest {
 	@Test
 	public void givenAgentId_whenDeleted_thenNotListed() {
 		// Arrange
-		AgentDefinition def = new AgentDefinition(".*\\.txt", "Delete Me", "Body", "Map", "Out", "out", "/tmp/delete-me");
+		AgentDefinition def = new AgentDefinition(".*\\.txt", "Delete Me", "Body", AgentType.MAP, "Out", "out", "/tmp/delete-me");
 		persistenceService.saveAndGetEntity("del-1", def, "DYNAMIC");
 		assertThat(persistenceService.listAll()).hasSize(1);
 
@@ -143,7 +144,7 @@ public class AgentPersistenceServiceTest {
 	@Test
 	public void givenAgent_whenToggledOff_thenActiveIsFalse() {
 		// Arrange
-		AgentDefinition def = new AgentDefinition(".*\\.txt", "Toggle Agent", "Body", "Map", "Out", "out", "/tmp/toggle");
+		AgentDefinition def = new AgentDefinition(".*\\.txt", "Toggle Agent", "Body", AgentType.MAP, "Out", "out", "/tmp/toggle");
 		persistenceService.saveAndGetEntity("toggle-1", def, "YAML");
 
 		// Act
@@ -158,7 +159,7 @@ public class AgentPersistenceServiceTest {
 	@Test
 	public void givenDisabledAgent_whenToggledOn_thenActiveIsTrueWithLastStartedAt() {
 		// Arrange
-		AgentDefinition def = new AgentDefinition(".*\\.txt", "Toggle On Agent", "Body", "Map", "Out", "out", "/tmp/toggle-on");
+		AgentDefinition def = new AgentDefinition(".*\\.txt", "Toggle On Agent", "Body", AgentType.MAP, "Out", "out", "/tmp/toggle-on");
 		persistenceService.saveAndGetEntity("toggle-on-1", def, "YAML");
 		persistenceService.disable("toggle-on-1");
 
@@ -174,8 +175,8 @@ public class AgentPersistenceServiceTest {
 	@Test
 	public void givenEnabledAgents_whenFindAllActive_thenReturnOnlyActive() {
 		// Arrange
-		AgentDefinition activeDef = new AgentDefinition(".*\\.txt", "Active Agent", "Body", "Map", "Out", "out", "/tmp/active");
-		AgentDefinition inactiveDef = new AgentDefinition(".*\\.md", "Inactive Agent", "Body", "Split", "Out", "out", "/tmp/inactive");
+		AgentDefinition activeDef = new AgentDefinition(".*\\.txt", "Active Agent", "Body", AgentType.MAP, "Out", "out", "/tmp/active");
+		AgentDefinition inactiveDef = new AgentDefinition(".*\\.md", "Inactive Agent", "Body", AgentType.SPLIT, "Out", "out", "/tmp/inactive");
 		persistenceService.saveAndGetEntity("active-find-1", activeDef, "YAML");
 		persistenceService.saveAndGetEntity("inactive-find-1", inactiveDef, "DYNAMIC");
 		persistenceService.disable("inactive-find-1");
@@ -199,7 +200,7 @@ public class AgentPersistenceServiceTest {
 				".*\\.txt",
 				"Large Body Agent",
 				largeBody.toString(),
-				"Map",
+				AgentType.MAP,
 				"Output structure",
 				"output/{filename}",
 				"/tmp/large-body");

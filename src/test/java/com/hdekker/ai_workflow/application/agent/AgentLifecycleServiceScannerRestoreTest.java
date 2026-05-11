@@ -20,6 +20,7 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
@@ -189,7 +190,7 @@ public class AgentLifecycleServiceScannerRestoreTest {
         // Arrange — agent with null targetDirectory.
         // ScannerRegistry.createForAgent rejects null/invalid paths.
         AgentDefinition noTargetDef = new AgentDefinition(
-                ".*\\.txt", "No Target Agent", "prompt", "Map", "structure", "template", null);
+                ".*\\.txt", "No Target Agent", "prompt", AgentType.MAP, "structure", "template", null);
 
         when(mockPersistenceService.findAllActive()).thenReturn(List.of(noTargetDef));
         when(mockPersistenceService.findAllOrdered()).thenReturn(List.of());
@@ -249,7 +250,7 @@ public class AgentLifecycleServiceScannerRestoreTest {
 
     private AgentDefinition createDefinition(String title, String targetDirectory) {
         return new AgentDefinition(
-                ".*\\.txt", title, "prompt", "Map", "structure", "out/{filename}",
+                ".*\\.txt", title, "prompt", AgentType.MAP, "structure", "out/{filename}",
                 targetDirectory);
     }
 

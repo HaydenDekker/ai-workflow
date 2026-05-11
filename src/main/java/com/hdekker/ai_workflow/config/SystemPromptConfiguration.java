@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentWorkflow;
 import com.hdekker.ai_workflow.domain.shared.PathUtility;
 
@@ -156,8 +157,8 @@ public static AgentWorkflow extractContent(AgentWorkflowFiles agentWorkflowFiles
 				return new AgentDefinition(
 						pp.fileInputRegex(),
 						pp.title(),
+						bodyFileAsString,
 						pp.agentType(),
-						bodyFileAsString, 
 						outputFileAsString,
 						pp.outputFilenameTemplate(),
 						pp.targetDirectory());

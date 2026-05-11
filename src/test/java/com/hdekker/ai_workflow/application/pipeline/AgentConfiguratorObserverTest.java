@@ -23,6 +23,7 @@ import com.hdekker.ai_workflow.application.agent.port.FileWritePort;
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverEventPort;
 import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverPort;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEvent;
@@ -114,8 +115,8 @@ class AgentConfiguratorObserverTest {
         return new AgentDefinition(
                 "(?:.*/)?(?<name>.*\\.txt)",
                 "OBSERVER-TEST-AGENT",
-                "Map",
                 "Process the provided file.",
+                AgentType.MAP,
                 "Provide a concise analysis.",
                 "output/${name}",
                 inputDir.toString());

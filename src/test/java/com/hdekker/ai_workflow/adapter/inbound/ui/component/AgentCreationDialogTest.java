@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import com.vaadin.browserless.BrowserlessTest;
 import com.vaadin.browserless.ViewPackages;
@@ -38,7 +39,7 @@ class AgentCreationDialogTest extends BrowserlessTest {
     private AgentCreationDialog dialog;
     private AgentInfoService mockService;
     private static final AgentDefinition STUB_DEF = new AgentDefinition(
-            ".*", "stub", "stub", "Map", "stub", "output/${name}.md", "/tmp/stub");
+            ".*", "stub", "stub", AgentType.MAP, "stub", "output/${name}.md", "/tmp/stub");
     private static final AgentInfoDTO STUB_INFO = new AgentInfoDTO(
             "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST");
 
@@ -133,7 +134,7 @@ class AgentCreationDialogTest extends BrowserlessTest {
                 "(?:(.*/)?)(.*)",
                 "Test Agent Title",
                 "Test body content",
-                "Map",
+                AgentType.MAP,
                 "Test output structure",
                 "output/${name}-custom.md",
                 "/tmp/test-dir"
@@ -154,7 +155,7 @@ class AgentCreationDialogTest extends BrowserlessTest {
                 "(?:(.*/)?)(.*)",
                 "Existing Title",
                 "Existing body",
-                "Reduction",
+                AgentType.REDUCTION,
                 "Existing structure",
                 "output/${name}-existing.md",
                 "/tmp/existing-dir"

@@ -33,6 +33,7 @@ import com.hdekker.ai_workflow.application.scanner.ScannerMetricsService;
 import com.hdekker.ai_workflow.application.scanner.ScannerObservabilityUseCase;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
@@ -321,7 +322,7 @@ public class ScannerRegistryIntegrationTest {
                 ".*\\.txt$",
                 title,
                 "Process this text file.",
-                "Map",
+                AgentType.MAP,
                 "Return a structured analysis.",
                 "output/${name}.md",
                 "/tmp/test-dir");

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.prompt.PromptRequest;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
@@ -25,7 +26,7 @@ public class MapAgentLLMAdapterTest {
                 ".*\\.txt", // fileInputRegex
                 "Test", // title
                 "prompt body", // body
-                null, // agentType
+                AgentType.MAP, // agentType
                 "output structure", // outputStructure
                 "out-${title}.txt", // outputFilenameTemplate
                 "/tmp/test-dir" // targetDirectory
