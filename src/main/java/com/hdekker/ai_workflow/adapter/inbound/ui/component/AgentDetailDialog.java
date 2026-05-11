@@ -196,7 +196,7 @@ public class AgentDetailDialog extends Dialog {
                 createdAtField.setValue(existingAgent.createdAt().toString());
             }
             activeField.setValue(Boolean.toString(existingAgent.active()));
-            sourceField.setValue(existingAgent.source() != null ? existingAgent.source() : "N/A");
+            sourceField.setValue(existingAgent.source() != null ? existingAgent.source().getAsString() : "N/A");
         }
 
         super.open();

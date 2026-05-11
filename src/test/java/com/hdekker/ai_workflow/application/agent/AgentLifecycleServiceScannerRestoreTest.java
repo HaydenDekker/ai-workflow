@@ -20,8 +20,9 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
@@ -182,7 +183,7 @@ public class AgentLifecycleServiceScannerRestoreTest {
         assertThat(agents).hasSize(1);
         assertThat(agents.get(0).id()).isEqualTo("list-test-1");
         assertThat(agents.get(0).active()).isTrue();
-        assertThat(agents.get(0).source()).isEqualTo("YAML");
+        assertThat(agents.get(0).source()).isEqualTo(AgentSource.YAML);
     }
 
     @Test

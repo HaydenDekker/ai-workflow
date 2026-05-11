@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 /**
  * Port interface for agent persistence.
@@ -18,9 +19,9 @@ public interface AgentRepository {
      *
      * @param id         the unique agent identifier
      * @param definition the agent definition to persist
-     * @param source     the source type ("YAML" or "DYNAMIC")
+     * @param source     the source type (YAML or DYNAMIC)
      */
-    void save(String id, AgentDefinition definition, String source);
+    void save(String id, AgentDefinition definition, AgentSource source);
 
     /**
      * Load an agent definition by ID.

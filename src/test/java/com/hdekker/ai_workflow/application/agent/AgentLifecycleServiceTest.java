@@ -20,8 +20,9 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
@@ -114,7 +115,7 @@ public class AgentLifecycleServiceTest {
         assertThat(info.id()).isEqualTo(agent.title());
         assertThat(info.definition().title()).isEqualTo(agent.title());
         assertThat(info.definition().agentType()).isEqualTo(agent.agentType());
-        assertThat(info.source()).isEqualTo("YAML");
+        assertThat(info.source()).isEqualTo(AgentSource.YAML);
         assertThat(info.active()).isTrue();
     }
 
@@ -126,7 +127,7 @@ public class AgentLifecycleServiceTest {
 
         assertThat(info.definition().title()).isEqualTo(agent.title());
         assertThat(info.definition().agentType()).isEqualTo(agent.agentType());
-        assertThat(info.source()).isEqualTo("DYNAMIC");
+        assertThat(info.source()).isEqualTo(AgentSource.DYNAMIC);
         assertThat(info.active()).isTrue();
 
         List<AgentInfo> agents = manager.listAgents();
@@ -177,8 +178,8 @@ public class AgentLifecycleServiceTest {
         List<AgentInfo> agents = manager.listAgents();
         assertThat(agents).hasSize(2);
 
-        List<String> sources = agents.stream().map(AgentInfo::source).toList();
-        assertThat(sources).contains("YAML", "DYNAMIC");
+        List<AgentSource> sources = agents.stream().map(AgentInfo::source).toList();
+        assertThat(sources).contains(AgentSource.YAML, AgentSource.DYNAMIC);
     }
 
     @Test
@@ -252,6 +253,6 @@ public class AgentLifecycleServiceTest {
         AgentInfo result = manager.updateAgent("non-existent-id", updated);
         assertThat(result).isNotNull();
         assertThat(result.definition().title()).isEqualTo(TestData.basicPrompt().title());
-        assertThat(result.source()).isEqualTo("DYNAMIC");
+        assertThat(result.source()).isEqualTo(AgentSource.DYNAMIC);
     }
 }

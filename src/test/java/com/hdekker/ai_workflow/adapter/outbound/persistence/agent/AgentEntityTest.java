@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
@@ -31,7 +32,7 @@ public class AgentEntityTest {
 		entity.setId("test-agent-id");
 		entity.setAgentDefinitionJson("{\"title\":\"Test\"}");
 		entity.setTitle("Test Agent");
-		entity.setSource("YAML");
+		entity.setSource(AgentSource.YAML);
 		entity.setCreatedAt(now);
 		entity.setLastStartedAt(now);
 		entity.setActive(true);
@@ -40,7 +41,7 @@ public class AgentEntityTest {
 		assertThat(entity.getId()).isEqualTo("test-agent-id");
 		assertThat(entity.getAgentDefinitionJson()).isEqualTo("{\"title\":\"Test\"}");
 		assertThat(entity.getTitle()).isEqualTo("Test Agent");
-		assertThat(entity.getSource()).isEqualTo("YAML");
+		assertThat(entity.getSource()).isEqualTo(AgentSource.YAML);
 		assertThat(entity.getCreatedAt()).isEqualTo(now);
 		assertThat(entity.getLastStartedAt()).isEqualTo(now);
 		assertThat(entity.isActive()).isTrue();
@@ -59,7 +60,7 @@ public class AgentEntityTest {
 		// Assert
 		assertThat(entity.getId()).isEqualTo("agent-1");
 		assertThat(entity.getTitle()).isEqualTo("Test");
-		assertThat(entity.getSource()).isEqualTo("YAML");
+		assertThat(entity.getSource()).isEqualTo(AgentSource.YAML);
 		assertThat(entity.isActive()).isTrue();
 	}
 
@@ -69,7 +70,7 @@ public class AgentEntityTest {
 		AgentEntity entity = new AgentEntity();
 		entity.setId("agent-1");
 		entity.setTitle("Test Agent");
-		entity.setSource("DYNAMIC");
+		entity.setSource(AgentSource.DYNAMIC);
 		entity.setActive(false);
 
 		// Act

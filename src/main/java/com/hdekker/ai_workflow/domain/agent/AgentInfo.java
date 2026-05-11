@@ -13,6 +13,6 @@ public record AgentInfo(
         AgentDefinition definition,
         LocalDateTime createdAt,
         boolean active,
-        String source
+        AgentSource source
 ) {
 }

@@ -103,7 +103,7 @@ public class AgentInfoServiceTest {
 				DirectoryValidationPort.ValidationResult.success());
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
-						LocalDateTime.now(), true, "DYNAMIC");
+						LocalDateTime.now(), true, com.hdekker.ai_workflow.domain.agent.AgentSource.DYNAMIC);
 		when(lifecycleService.addDynamicAgent(def, "/tmp/test-dir")).thenReturn(info);
 
 		// Act
@@ -151,10 +151,10 @@ public class AgentInfoServiceTest {
 				"output", "/tmp");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info1 =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
-						LocalDateTime.now(), true, "YAML");
+						LocalDateTime.now(), true, com.hdekker.ai_workflow.domain.agent.AgentSource.YAML);
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info2 =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-2", def,
-						LocalDateTime.now().minusDays(1), true, "DYNAMIC");
+						LocalDateTime.now().minusDays(1), true, com.hdekker.ai_workflow.domain.agent.AgentSource.DYNAMIC);
 		when(lifecycleService.listAgents()).thenReturn(List.of(info1, info2));
 
 		// Act
@@ -188,7 +188,7 @@ public class AgentInfoServiceTest {
 				"output", "/tmp");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
-						LocalDateTime.now(), true, "DYNAMIC");
+						LocalDateTime.now(), true, com.hdekker.ai_workflow.domain.agent.AgentSource.DYNAMIC);
 		when(lifecycleService.refreshAgent(anyString())).thenReturn(info);
 
 		// Act
@@ -222,7 +222,7 @@ public class AgentInfoServiceTest {
 				"output", "/tmp");
 		com.hdekker.ai_workflow.domain.agent.AgentInfo info =
 				new com.hdekker.ai_workflow.domain.agent.AgentInfo("id-1", def,
-						LocalDateTime.now(), true, "DYNAMIC");
+						LocalDateTime.now(), true, com.hdekker.ai_workflow.domain.agent.AgentSource.DYNAMIC);
 		when(lifecycleService.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(info);
 
 		// Act

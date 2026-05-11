@@ -20,8 +20,9 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.application.scanner.ScannerService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
-import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
@@ -95,10 +96,10 @@ public class AgentLifecycleServicePersistenceTest {
 		// Assert
 		assertThat(info).isNotNull();
 		assertThat(info.active()).isTrue();
-		assertThat(info.source()).isEqualTo("DYNAMIC");
+		assertThat(info.source()).isEqualTo(AgentSource.DYNAMIC);
 
 		// Verify persistence was called
-		verify(mockPersistenceService).save(any(String.class), any(AgentDefinition.class), any(String.class));
+		verify(mockPersistenceService).save(any(String.class), any(AgentDefinition.class), any(AgentSource.class));
 	}
 
 	@Test

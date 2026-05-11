@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,7 +38,7 @@ public class AgentRepositoryAdapter implements AgentRepository {
 	// ── AgentRepository port implementation ─────────────────────────
 
 	@Override
-	public void save(String id, AgentDefinition definition, String source) {
+	public void save(String id, AgentDefinition definition, AgentSource source) {
 		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
 		entity.setId(id);
 		try {
@@ -117,10 +118,10 @@ public class AgentRepositoryAdapter implements AgentRepository {
 	 *
 	 * @param id          the agent ID
 	 * @param definition  the agent definition
-	 * @param source      the source ("YAML" or "DYNAMIC")
+	 * @param source      the source (YAML or DYNAMIC)
 	 * @return the persisted entity
 	 */
-	public AgentEntity saveAndGetEntity(String id, AgentDefinition definition, String source) {
+	public AgentEntity saveAndGetEntity(String id, AgentDefinition definition, AgentSource source) {
 		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
 		entity.setId(id);
 		try {

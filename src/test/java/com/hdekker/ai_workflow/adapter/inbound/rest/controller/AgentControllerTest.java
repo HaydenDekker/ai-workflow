@@ -20,6 +20,7 @@ import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentType;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -73,7 +74,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenValidAgent_whenCreateAgent_thenReturnCreatedAgent() throws Exception {
 		// Arrange
-		com.hdekker.ai_workflow.domain.agent.AgentInfo expectedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("test-id-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo expectedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("test-id-1", testAgent, LocalDateTime.now(), true, AgentSource.DYNAMIC);
 		when(agentLifecycleService.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(expectedInfo);
 
 		String jsonBody = "{"
@@ -100,8 +101,8 @@ public class AgentControllerTest {
 	@Test
 	public void givenAgents_whenListAgents_thenReturnAllAgents() throws Exception {
 		// Arrange
-		com.hdekker.ai_workflow.domain.agent.AgentInfo agent1 = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "YAML");
-		com.hdekker.ai_workflow.domain.agent.AgentInfo agent2 = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-2", testAgent, LocalDateTime.now().minusDays(1), true, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo agent1 = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, AgentSource.YAML);
+		com.hdekker.ai_workflow.domain.agent.AgentInfo agent2 = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-2", testAgent, LocalDateTime.now().minusDays(1), true, AgentSource.DYNAMIC);
 		when(agentLifecycleService.listAgents()).thenReturn(List.of(agent1, agent2));
 
 		// Act & Assert
@@ -126,7 +127,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenAgentId_whenEnableAgent_thenReturnOkWithUpdatedInfo() throws Exception {
 		// Arrange
-		com.hdekker.ai_workflow.domain.agent.AgentInfo enabledInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-123", testAgent, LocalDateTime.now(), true, "YAML");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo enabledInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-123", testAgent, LocalDateTime.now(), true, AgentSource.YAML);
 		when(agentLifecycleService.enableAgent(anyString())).thenReturn(enabledInfo);
 
 		// Act & Assert
@@ -159,8 +160,8 @@ public class AgentControllerTest {
 	@Test
 	public void givenCreateAndDisable_whenList_thenReturnInactiveAgent() throws Exception {
 		// Arrange
-		com.hdekker.ai_workflow.domain.agent.AgentInfo createdInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
-		com.hdekker.ai_workflow.domain.agent.AgentInfo listedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), false, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo createdInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, AgentSource.DYNAMIC);
+		com.hdekker.ai_workflow.domain.agent.AgentInfo listedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), false, AgentSource.DYNAMIC);
 
 		when(agentLifecycleService.addDynamicAgent(any(AgentDefinition.class), anyString())).thenReturn(createdInfo);
 		doNothing().when(agentLifecycleService).disableAgent(anyString());
@@ -196,7 +197,7 @@ public class AgentControllerTest {
 	@Test
 	public void givenActiveAgent_whenRefreshAgent_thenReturnOkWithUpdatedInfo() throws Exception {
 		// Arrange
-		com.hdekker.ai_workflow.domain.agent.AgentInfo refreshedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo refreshedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", testAgent, LocalDateTime.now(), true, AgentSource.DYNAMIC);
 		when(agentLifecycleService.refreshAgent(anyString())).thenReturn(refreshedInfo);
 
 		// Act & Assert
@@ -220,7 +221,7 @@ public class AgentControllerTest {
 		// Arrange
 		AgentDefinition updatedDef = new AgentDefinition(
 				".*\\.md", "Updated Agent", "Updated prompt", AgentType.REDUCTION, "Updated structure", "updated/{filename}", "/tmp/updated-dir");
-		com.hdekker.ai_workflow.domain.agent.AgentInfo updatedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", updatedDef, LocalDateTime.now(), true, "DYNAMIC");
+		com.hdekker.ai_workflow.domain.agent.AgentInfo updatedInfo = new com.hdekker.ai_workflow.domain.agent.AgentInfo("agent-1", updatedDef, LocalDateTime.now(), true, AgentSource.DYNAMIC);
 		when(agentLifecycleService.updateAgent(anyString(), any(AgentDefinition.class))).thenReturn(updatedInfo);
 
 		String jsonBody = "{" +

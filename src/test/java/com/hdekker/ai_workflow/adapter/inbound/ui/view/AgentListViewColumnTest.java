@@ -20,6 +20,7 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverService;
 import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentType;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 import com.vaadin.browserless.SpringBrowserlessTest;
 import com.vaadin.browserless.TreeOnFailureExtension;
@@ -60,7 +61,7 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
                 id,
                 new AgentDefinition(regex, title, "Body", AgentType.MAP, "Output", "out/${name}.md",
                         System.getProperty("java.io.tmpdir")),
-                LocalDateTime.now(), true, "TEST");
+                LocalDateTime.now(), true, AgentSource.YAML);
     }
 
     @BeforeEach

@@ -4,8 +4,12 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 /**
  * Entity for storing agent configuration and state.
@@ -23,7 +27,8 @@ public class AgentEntity {
 
 	private String title;
 
-	private String source; // "YAML" or "DYNAMIC"
+	@Enumerated(EnumType.STRING)
+	private AgentSource source;
 
 	private LocalDateTime createdAt;
 
@@ -60,11 +65,11 @@ public class AgentEntity {
 		this.title = title;
 	}
 
-	public String getSource() {
+	public AgentSource getSource() {
 		return source;
 	}
 
-	public void setSource(String source) {
+	public void setSource(AgentSource source) {
 		this.source = source;
 	}
 

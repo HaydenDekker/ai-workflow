@@ -13,6 +13,7 @@ import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentType;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 import com.vaadin.browserless.BrowserlessTest;
 import com.vaadin.browserless.ViewPackages;
@@ -41,7 +42,7 @@ class AgentCreationDialogTest extends BrowserlessTest {
     private static final AgentDefinition STUB_DEF = new AgentDefinition(
             ".*", "stub", "stub", AgentType.MAP, "stub", "output/${name}.md", "/tmp/stub");
     private static final AgentInfoDTO STUB_INFO = new AgentInfoDTO(
-            "test-id", STUB_DEF, LocalDateTime.now(), true, "TEST");
+            "test-id", STUB_DEF, LocalDateTime.now(), true, AgentSource.YAML);
 
     @BeforeEach
     void setup() {

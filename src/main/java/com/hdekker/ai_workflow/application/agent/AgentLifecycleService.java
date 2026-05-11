@@ -23,6 +23,7 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.application.pipeline.ScannerRegistry;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentInfo;
+import com.hdekker.ai_workflow.domain.agent.AgentSource;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -111,7 +112,7 @@ public class AgentLifecycleService {
                 log.warn("Agent {} has no valid targetDirectory: {}. Initialization halted.", id, result.reason());
                 // Persist to DB but skip scanner/flux/subscription
                 if (agentRepository != null) {
-                    agentRepository.save(id, agent, "YAML");
+                    agentRepository.save(id, agent, AgentSource.YAML);
                 }
                 return;
             }
@@ -124,13 +125,13 @@ public class AgentLifecycleService {
                 scannerRegistry.createForAgent(id, targetDir, 5);
             }
 
-            AgentRegistryEntry entry = new AgentRegistryEntry(id, agent, flux, LocalDateTime.now(), "YAML",
+            AgentRegistryEntry entry = new AgentRegistryEntry(id, agent, flux, LocalDateTime.now(), AgentSource.YAML,
                     subscription);
             agentRegistry.put(id, entry);
 
             // Persist to DB if repository is available
             if (agentRepository != null) {
-                agentRepository.save(id, agent, "YAML");
+                agentRepository.save(id, agent, AgentSource.YAML);
             }
 
             log.info("Initialized YAML agent: {}", id);
@@ -172,7 +173,7 @@ public class AgentLifecycleService {
                 Disposable subscription = flux.subscribe();
 
                 AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux, LocalDateTime.now(),
-                        "YAML", subscription);
+                        AgentSource.YAML, subscription);
                 agentRegistry.put(id, entry);
                 restoredCount++;
                 log.info("Restored active agent: {} (source: YAML)", id);
@@ -190,7 +191,7 @@ public class AgentLifecycleService {
                 continue; // Already restored as active
             }
             try {
-                DormantAgentEntry dormantEntry = new DormantAgentEntry(id, def, LocalDateTime.now(), "YAML");
+                DormantAgentEntry dormantEntry = new DormantAgentEntry(id, def, LocalDateTime.now(), AgentSource.YAML);
                 dormantAgents.put(id, dormantEntry);
                 dormantCount++;
                 log.info("Loaded dormant agent: {} (source: YAML)", id);
@@ -283,17 +284,17 @@ public class AgentLifecycleService {
 
         // 3. Track in registry
         AgentRegistryEntry entry = new AgentRegistryEntry(id, def, flux,
-                LocalDateTime.now(), "DYNAMIC", subscription);
+                LocalDateTime.now(), AgentSource.DYNAMIC, subscription);
         agentRegistry.put(id, entry);
 
         // 4. Persist agent
         if (agentRepository != null) {
-            agentRepository.save(id, def, "DYNAMIC");
+            agentRepository.save(id, def, AgentSource.DYNAMIC);
         }
 
         log.info("Added dynamic agent: {}", id);
 
-        return new AgentInfo(id, def, entry.createdAt(), true, "DYNAMIC");
+        return new AgentInfo(id, def, entry.createdAt(), true, AgentSource.DYNAMIC);
     }
 
     /**
@@ -563,10 +564,10 @@ public class AgentLifecycleService {
     }
 
     private record AgentRegistryEntry(String id, AgentDefinition agentDefinition, Flux<PromptResponse> flux,
-            LocalDateTime createdAt, String source, Disposable subscription) {
+            LocalDateTime createdAt, AgentSource source, Disposable subscription) {
     }
 
     private record DormantAgentEntry(String id, AgentDefinition agentDefinition, LocalDateTime createdAt,
-            String source) {
+            AgentSource source) {
     }
 }
