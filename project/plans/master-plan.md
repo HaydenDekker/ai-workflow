@@ -45,6 +45,7 @@ Rationale: Once a plan has been complete for a significant period, its status in
 
 | # | Plan | Status | Created |
 |---|------|--------|---------|
+| 11 | [Remove scanner.url Config](remove-scanner-url-config.md) | ⬜ Planned | 2026-05-11 |
 | 10 | [Improve Agent Domain Design](improve-agent-domain-design.md) | ⬜ Planned | 2026-05-11 |
 | 9 | [Agent Observer UseCase](agent-observer-usecase.md) | ✅ Complete | 2026-05-08 |
 | 8 | [Scanner Status & Observability Refactor](scanner-status-observability-refactor.md) | ✅ Complete | 2026-05-08 |
@@ -59,6 +60,14 @@ Rationale: Once a plan has been complete for a significant period, its status in
 ---
 
 ## Plan Overviews
+
+### 11. Remove scanner.url Config
+
+**Status:** ⬜ Planned
+**Created:** 2026-05-11
+**Goal:** Delete dead `scanner.url` config, `FileSystemScannerConfig` class, and all references to it.
+
+Full details in [remove-scanner-url-config.md](remove-scanner-url-config.md).
 
 ### 10. Improve Agent Domain Design
 
