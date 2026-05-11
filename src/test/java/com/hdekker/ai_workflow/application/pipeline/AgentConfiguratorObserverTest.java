@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,8 +28,10 @@ import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.file.FileHistory;
 import com.hdekker.ai_workflow.domain.file.FileMetadata;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEvent;
 import com.hdekker.ai_workflow.domain.pipeline.AgentObserverEventType;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 import com.hdekker.ai_workflow.domain.prompt.PromptResponse;
 import com.hdekker.ai_workflow.domain.shared.FileHash;
 import com.hdekker.ai_workflow.test.harness.mock.ChatClientMockBuilder;
@@ -572,6 +575,112 @@ class AgentConfiguratorObserverTest {
 
         // No response because the file was dropped, but no exception thrown
         assertThat(response).isNull();
+    }
+
+    // -- Phase 5: End-to-end filter verification --
+
+    @Test
+    void givenFileDroppedByRegex_WhenPipelineRuns_ThenMetricsShowFilterCountAndEntryAndEvent()
+            throws Exception {
+        // Given: real AgentObserverService + real AgentObserverEventBus
+        var fileCounterMock = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
+        AgentObserverService realService = new AgentObserverService(fileCounterMock, "/tmp/test-output");
+        AgentObserverEventBus realEventBus = new AgentObserverEventBus();
+
+        // Capture FILTERED events
+        CopyOnWriteArrayList<AgentObserverEvent> filteredEvents = new CopyOnWriteArrayList<>();
+        realEventBus.registerCallback(event -> {
+            if (event.eventType() == AgentObserverEventType.FILTERED) {
+                filteredEvents.add(event);
+            }
+        });
+
+        AgentObserverUseCase useCase = new AgentObserverUseCase(realService, realEventBus);
+
+        // Agent accepts only .java files
+        AgentDefinition agent = new AgentDefinition(
+                "(?:.*/)?(?<name>.*\\.java)",
+                "FILTER-E2E-AGENT",
+                "Process the provided file.",
+                AgentType.MAP,
+                "Provide a concise analysis.",
+                "output/${name}",
+                inputDir.toString());
+
+        // File with .txt extension — does NOT match .*\.java regex
+        FileHistory fileHistory = createFileHistory("rejected.txt", "This should be filtered out.");
+
+        AgentConfigurator configurator = createConfigurator(Flux.just(fileHistory), useCase);
+
+        // When: push file through pipeline
+        Flux<PromptResponse> pipeline = configurator.configure(agent);
+        PromptResponse response = pipeline.blockFirst(Duration.ofSeconds(5));
+
+        // Then: no response because file was dropped
+        assertThat(response).isNull();
+
+        // Then: getAgentMetrics shows filterCount == 1
+        AgentMetrics metrics = realService.getAgentMetrics(agent.title());
+        assertThat(metrics.filterCount()).isEqualTo(1);
+
+        // Then: entry exists in last-10 ring buffer
+        List<RegexFilterEntry> entries = metrics.lastFilteredEntries();
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).agentId()).isEqualTo(agent.title());
+        assertThat(entries.get(0).fileUrl()).isEqualTo(inputDir.resolve("rejected.txt").toString());
+        assertThat(entries.get(0).regex()).isEqualTo(agent.fileInputRegex());
+        assertThat(entries.get(0).timestamp()).isNotNull();
+
+        // Then: FILTERED event was published
+        assertThat(filteredEvents).hasSize(1);
+        AgentObserverEvent evt = filteredEvents.get(0);
+        assertThat(evt.eventType()).isEqualTo(AgentObserverEventType.FILTERED);
+        assertThat(evt.agentId()).isEqualTo(agent.title());
+        assertThat(evt.fileName()).isEqualTo(inputDir.resolve("rejected.txt").toString());
+        assertThat(evt.regex()).isEqualTo(agent.fileInputRegex());
+    }
+
+    @Test
+    void givenMultipleFilteredFiles_WhenPipelineRuns_ThenRingBufferCapsAtTen()
+            throws Exception {
+        // Given: real AgentObserverService
+        var fileCounterMock = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
+        AgentObserverService realService = new AgentObserverService(fileCounterMock, "/tmp/test-output");
+        AgentObserverEventBus realEventBus = new AgentObserverEventBus();
+        AgentObserverUseCase useCase = new AgentObserverUseCase(realService, realEventBus);
+
+        // Agent accepts only .java files
+        AgentDefinition agent = new AgentDefinition(
+                "(?:.*/)?(?<name>.*\\.java)",
+                "RING-BUFFER-AGENT",
+                "Process the provided file.",
+                AgentType.MAP,
+                "Provide a concise analysis.",
+                "output/${name}",
+                inputDir.toString());
+
+        // When: push 12 .txt files through pipeline (all rejected)
+        List<FileHistory> files = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            files.add(createFileHistory("file-" + i + ".txt", "Content " + i));
+        }
+
+        AgentConfigurator configurator = createConfigurator(Flux.fromIterable(files), useCase);
+        Flux<PromptResponse> pipeline = configurator.configure(agent);
+        java.util.List<PromptResponse> responses = pipeline.collectList().block(Duration.ofSeconds(10));
+
+        // Then: no responses (all filtered)
+        assertThat(responses).isEmpty();
+
+        // Then: filterCount == 12 but ring buffer has only 10 entries
+        AgentMetrics metrics = realService.getAgentMetrics(agent.title());
+        assertThat(metrics.filterCount()).isEqualTo(12);
+        assertThat(metrics.lastFilteredEntries()).hasSize(10);
+
+        // Then: first two entries evicted, entries are file-2 through file-11
+        List<RegexFilterEntry> entries = metrics.lastFilteredEntries();
+        assertThat(entries.get(0).fileUrl()).contains("file-2.txt");
+        assertThat(entries.get(9).fileUrl()).contains("file-11.txt");
     }
 
     // -- Multiple files through pipeline --
