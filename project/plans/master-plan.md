@@ -1,6 +1,6 @@
 # Master Plan — Project Index
 
-> **Last Updated:** 2026-05-11
+> **Last Updated:** 2026-05-11 (plan 12 added)
 
 ## How to Add a Plan Overview
 
@@ -45,6 +45,7 @@ Rationale: Once a plan has been complete for a significant period, its status in
 
 | # | Plan | Status | Created |
 |---|------|--------|---------|
+| 12 | [Regex Filter Observability](regex-filter-observability.md) | ⬜ Planned | 2026-05-11 |
 | 11 | [Remove scanner.url Config](remove-scanner-url-config.md) | ⬜ Planned | 2026-05-11 |
 | 10 | [Improve Agent Domain Design](improve-agent-domain-design.md) | ⬜ Planned | 2026-05-11 |
 | 9 | [Agent Observer UseCase](agent-observer-usecase.md) | ✅ Complete | 2026-05-08 |
@@ -60,6 +61,14 @@ Rationale: Once a plan has been complete for a significant period, its status in
 ---
 
 ## Plan Overviews
+
+### 12. Regex Filter Observability
+
+**Status:** ⬜ Planned
+**Created:** 2026-05-11
+**Goal:** Track files dropped by agent regex filters — per-agent count in grid, last-10 entries in detail dialog — using the existing `AgentObserverUseCase` pattern.
+
+Full details in [regex-filter-observability.md](regex-filter-observability.md).
 
 ### 11. Remove scanner.url Config
 
