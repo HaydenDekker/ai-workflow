@@ -57,8 +57,11 @@ ai-scanner:
   emission-delay-seconds: 20
 
 scanner:
-  url: file:${EXTERNAL_CONFIG_DIR}
-  
+  url: file:${EXTERNAL_CONFIG_DIR:default}
+
+# Directory where LLM output is persisted and counted.
+ai.workflow.output.directory: ${EXTERNAL_CONFIG_DIR:default}
+
 # user configured space. pre-packaged prompts will be copied here first. see src/main/resources/prompt-chains
 prompt-config:
   predefinedPromptFilePath: /test/prompts

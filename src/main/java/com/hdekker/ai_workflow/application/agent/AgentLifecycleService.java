@@ -84,7 +84,7 @@ public class AgentLifecycleService {
     @Autowired
     public AgentLifecycleService(ScannerRegistry scannerRegistry,
                                  FileWritePort fileWritePort,
-                                 @Value("${scanner.url:file:default}") Path outputDirectory,
+                                 @Value("${ai.workflow.output.directory:default}") Path outputDirectory,
                                  ChatClient chatClient,
                                  AgentRepository agentRepository,
                                  DirectoryValidationPort directoryValidationPort,

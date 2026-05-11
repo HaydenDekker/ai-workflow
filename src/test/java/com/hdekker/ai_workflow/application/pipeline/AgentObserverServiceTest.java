@@ -182,8 +182,7 @@ class AgentObserverServiceTest {
 
     @Test
     void givenNoOutputDirectory_WhenGetOutputDirectoryFileCount_ThenReturnsZero() {
-        FileCounterPort nullCounter = null;
-        AgentObserverService serviceWithoutDir = new AgentObserverService(nullCounter, null);
+        AgentObserverService serviceWithoutDir = new AgentObserverService(null, null);
 
         assertThat(serviceWithoutDir.getOutputDirectoryFileCount()).isZero();
     }
@@ -191,7 +190,7 @@ class AgentObserverServiceTest {
     @Test
     void givenOutputDirectoryWithFileCounter_WhenFileCountQueried_ThenDelegatesToFileCounter() {
         var fileCounter = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
-        when(fileCounter.countFiles("/tmp/output")).thenReturn(42L);
+        when(fileCounter.countFiles(anyString())).thenReturn(42L);
 
         AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/output");
 
@@ -203,7 +202,7 @@ class AgentObserverServiceTest {
     @Test
     void givenOutputDirectoryWithFileCounter_WhenNoFiles_ThenReturnsZero() {
         var fileCounter = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
-        when(fileCounter.countFiles("/tmp/empty-output")).thenReturn(0L);
+        when(fileCounter.countFiles(anyString())).thenReturn(0L);
 
         AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/empty-output");
 
@@ -213,7 +212,7 @@ class AgentObserverServiceTest {
     @Test
     void givenOutputDirectoryWithFileCounter_WhenMultipleFiles_ThenReturnsCorrectCount() {
         var fileCounter = mock(com.hdekker.ai_workflow.application.file.port.FileCounterPort.class);
-        when(fileCounter.countFiles("/tmp/output")).thenReturn(7L);
+        when(fileCounter.countFiles(anyString())).thenReturn(7L);
 
         AgentObserverService serviceWithDir = new AgentObserverService(fileCounter, "/tmp/output");
 

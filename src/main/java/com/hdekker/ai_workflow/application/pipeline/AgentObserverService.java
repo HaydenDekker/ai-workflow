@@ -52,6 +52,9 @@ public class AgentObserverService implements AgentObserverPort {
 
     /**
      * Construct the service with output directory and file counter for file count queries.
+     * <p>
+     * Uses {@code scanner.url} property (same as the persister) so both
+     * the file counter and the persister always reference the same directory.
      *
      * @param fileCounter     the file counter port for counting files (nullable)
      * @param outputDirectory the output directory path to count files in (nullable)
@@ -61,6 +64,8 @@ public class AgentObserverService implements AgentObserverPort {
                                 @Value("${ai.workflow.output.directory:default}") String outputDirectory) {
         this.fileCounter = fileCounter;
         this.outputDirectory = outputDirectory;
+        log.info("AgentObserverService initialized: outputDirectory={}, fileCounter={}",
+                this.outputDirectory, this.fileCounter != null ? "present" : "null");
     }
 
     /**

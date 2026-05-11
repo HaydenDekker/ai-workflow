@@ -37,6 +37,8 @@ import static org.mockito.Mockito.when;
 @ComponentScan(useDefaultFilters = false)
 public class AgentLifecycleServiceWiringTestConfig {
 
+    private static final Path TEST_OUTPUT_DIR = Path.of("/tmp/test-output");
+
     @Bean
     @Primary
     public FileCounterPort fileCounterPort() {
@@ -53,7 +55,7 @@ public class AgentLifecycleServiceWiringTestConfig {
     @Primary
     public AgentObserverPort agentObserverPort(
             FileCounterPort fileCounterPort,
-            @Value("${ai.workflow.output.directory:default}") String outputDirectory) {
+            @Value("${ai.workflow.output.directory:/tmp/test-output}") String outputDirectory) {
         return new AgentObserverService(fileCounterPort, outputDirectory);
     }
 
@@ -83,7 +85,7 @@ public class AgentLifecycleServiceWiringTestConfig {
         return new AgentLifecycleService(
                 scannerRegistry,
                 fileWritePort,
-                Path.of("/tmp/test-output"),
+                TEST_OUTPUT_DIR,
                 chatClient,
                 agentRepo,
                 validator,

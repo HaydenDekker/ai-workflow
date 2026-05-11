@@ -110,6 +110,9 @@ public class AgentConfigurator {
 		Flux<PromptResponse> withDispatch = basePipeline.doOnNext(response -> {
 			if (observer != null) {
 				observer.recordDispatch(agentDefinition.title(), response.fileName());
+				log.info("Dispatch recorded: agent={}, file={}", agentDefinition.title(), response.fileName());
+			} else {
+				log.warn("AgentObserverUseCase is null — dispatch NOT recorded for agent {}", agentDefinition.title());
 			}
 		});
 
@@ -118,6 +121,7 @@ public class AgentConfigurator {
 			effectivePersister.accept(response);
 			if (observer != null) {
 				observer.recordStorage(agentDefinition.title(), response.fileName(), null);
+				log.info("Storage recorded: agent={}, file={}", agentDefinition.title(), response.fileName());
 			}
 		});
 	}
