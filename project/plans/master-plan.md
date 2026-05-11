@@ -86,6 +86,16 @@ Full details in [remove-scanner-url-config.md](remove-scanner-url-config.md).
 
 Full details in [improve-agent-domain-design.md](improve-agent-domain-design.md).
 
+### 9. Agent Observer UseCase
+
+**Status:** ✅ Complete
+**Created:** 2026-05-08
+**Completed:** 2026-05-11
+**Goal:** Build `AgentObserverUseCase` orchestrating dispatch/storage metrics and events into the agent pipeline, with REST endpoints and UI grid columns.
+
+Full details in [agent-observer-usecase.md](agent-observer-usecase.md).
+Branch `refactor/agent-observer-usecase` merged to `main`.
+
 ### 8. Scanner Status & Observability Refactor
 
 **Status:** ✅ Complete
