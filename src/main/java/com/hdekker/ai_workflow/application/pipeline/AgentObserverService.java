@@ -8,6 +8,8 @@ import com.hdekker.ai_workflow.application.pipeline.port.AgentObserverPort;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,22 +51,14 @@ public class AgentObserverService implements AgentObserverPort {
     private final FileCounterPort fileCounter;
 
     /**
-     * Construct the service — no external dependencies needed.
-     * <p>
-     * Output directory file count will return 0 since no file counter is configured.
-     */
-    public AgentObserverService() {
-        this.outputDirectory = null;
-        this.fileCounter = null;
-    }
-
-    /**
      * Construct the service with output directory and file counter for file count queries.
      *
      * @param fileCounter     the file counter port for counting files (nullable)
      * @param outputDirectory the output directory path to count files in (nullable)
      */
-    public AgentObserverService(FileCounterPort fileCounter, String outputDirectory) {
+    @Autowired
+    public AgentObserverService(FileCounterPort fileCounter,
+                                @Value("${ai.workflow.output.directory:default}") String outputDirectory) {
         this.fileCounter = fileCounter;
         this.outputDirectory = outputDirectory;
     }

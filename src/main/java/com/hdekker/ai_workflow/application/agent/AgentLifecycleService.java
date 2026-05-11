@@ -11,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.hdekker.ai_workflow.application.agent.port.AgentRepository;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
@@ -63,33 +65,26 @@ public class AgentLifecycleService {
     private final AgentObserverUseCase observer;
 
     /**
-     * Default constructor for use outside Spring (no persistence, no scanner registry).
-     * Agents use a shared empty flux — suitable for unit tests only.
-     */
-    public AgentLifecycleService() {
-        this.scannerRegistry = null;
-        this.fileWritePort = null;
-        this.outputDirectory = null;
-        this.chatClient = null;
-        this.agentRepository = null;
-        this.directoryValidationPort = null;
-        this.observer = null;
-    }
-
-    /**
      * Full constructor with Spring-managed dependencies.
+     * <p>
+     * Spring's component scanning uses this single constructor to wire all dependencies.
+     * The no-arg constructor has been removed to eliminate constructor resolution ambiguity.
+     * <p>
+     * The {@code outputDirectory} is bound from the {@code scanner.url} property and
+     * converted to a {@link Path} by Spring's type conversion.
      *
      * @param scannerRegistry         registry for per-agent scanner instances
      * @param fileWritePort           file write port
-     * @param outputDirectory         default output directory
+     * @param outputDirectory         default output directory (bound from scanner.url)
      * @param chatClient              LLM chat client
      * @param agentRepository         agent persistence port (may be null)
      * @param directoryValidationPort target directory validator
      * @param observer                agent observer use case (nullable)
      */
+    @Autowired
     public AgentLifecycleService(ScannerRegistry scannerRegistry,
                                  FileWritePort fileWritePort,
-                                 Path outputDirectory,
+                                 @Value("${scanner.url:file:default}") Path outputDirectory,
                                  ChatClient chatClient,
                                  AgentRepository agentRepository,
                                  DirectoryValidationPort directoryValidationPort,

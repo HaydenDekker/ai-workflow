@@ -235,7 +235,7 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
         @Primary
         public AgentObserverUseCase agentObserverUseCase() {
             return new AgentObserverUseCase(
-                    new AgentObserverService(),
+                    new AgentObserverService(null, null),
                     new AgentObserverEventBus());
         }
 
@@ -256,12 +256,16 @@ class AgentListViewDeleteTest extends SpringBrowserlessTest {
 
     /**
      * Mock AgentLifecycleService using a shared test store for deletion.
+     * <p>
+     * Extends {@code AgentLifecycleService} and overrides listAgents/removeAgent
+     * to use the shared test store. Passes nulls for Spring-managed dependencies
+     * since they are not used by the overridden methods.
      */
     static class MockAgentLifecycleService extends AgentLifecycleService {
         private final ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> agents;
 
         MockAgentLifecycleService(ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> agents) {
-            super();
+            super(null, null, null, null, null, null, null);
             this.agents = agents;
         }
 

@@ -170,7 +170,7 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
         @Primary
         public AgentObserverUseCase agentObserverUseCase() {
             return new AgentObserverUseCase(
-                    new AgentObserverService(),
+                    new AgentObserverService(null, null),
                     new AgentObserverEventBus());
         }
 
@@ -191,12 +191,16 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
 
     /**
      * Test AgentLifecycleService using a shared test store.
+     * <p>
+     * Extends {@code AgentLifecycleService} and overrides listAgents/removeAgent
+     * to use the shared test store. Passes nulls for Spring-managed dependencies
+     * since they are not used by the overridden methods.
      */
     static class TestAgentLifecycleService extends AgentLifecycleService {
         private final ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> agents;
 
         TestAgentLifecycleService(ConcurrentHashMap<String, com.hdekker.ai_workflow.domain.agent.AgentInfo> agents) {
-            super();
+            super(null, null, null, null, null, null, null);
             this.agents = agents;
         }
 

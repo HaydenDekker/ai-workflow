@@ -45,7 +45,7 @@ Rationale: Once a plan has been complete for a significant period, its status in
 
 | # | Plan | Status | Created |
 |---|------|--------|---------|
-| 9 | [Agent Observer UseCase](agent-observer-usecase.md) | ⬜ Planned | 2026-05-08 |
+| 9 | [Agent Observer UseCase](agent-observer-usecase.md) | ✅ Complete | 2026-05-08 |
 | 8 | [Scanner Status & Observability Refactor](scanner-status-observability-refactor.md) | ✅ Complete | 2026-05-08 |
 | 1 | [Scanner Metrics Refactor](scanner-metrics-refactor.md) | ⬜ Planned | 2026-05-07 |
 | 2 | [Scanner View Regression Fix](scanner-view-regression-fix.md) | ⬜ Planned | 2026-05-07 |

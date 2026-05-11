@@ -10,6 +10,8 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.hdekker.ai_workflow.application.file.port.FileCounterPort;
+
 /**
  * Unit tests for {@link AgentObserverService}.
  * <p>
@@ -22,7 +24,7 @@ class AgentObserverServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AgentObserverService();
+        service = new AgentObserverService(mock(FileCounterPort.class), "/tmp/test-output");
     }
 
     // -- dispatch counting tests --
@@ -180,7 +182,8 @@ class AgentObserverServiceTest {
 
     @Test
     void givenNoOutputDirectory_WhenGetOutputDirectoryFileCount_ThenReturnsZero() {
-        AgentObserverService serviceWithoutDir = new AgentObserverService();
+        FileCounterPort nullCounter = null;
+        AgentObserverService serviceWithoutDir = new AgentObserverService(nullCounter, null);
 
         assertThat(serviceWithoutDir.getOutputDirectoryFileCount()).isZero();
     }
