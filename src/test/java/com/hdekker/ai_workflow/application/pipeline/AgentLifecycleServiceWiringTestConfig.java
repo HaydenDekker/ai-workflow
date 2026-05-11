@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +42,7 @@ public class AgentLifecycleServiceWiringTestConfig {
 
     @Bean
     @Primary
+    @ConditionalOnMissingBean
     public FileCounterPort fileCounterPort() {
         return new com.hdekker.ai_workflow.adapter.outbound.file.FileSystemFileCounter();
     }

@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hdekker.ai_workflow.TestProfiles;
-import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.application.pipeline.port.LLMAdapter;
 import com.hdekker.ai_workflow.adapter.outbound.llm.LLMReducerAdapter;
 import com.hdekker.ai_workflow.application.pipeline.AgentBuilder;
@@ -62,9 +61,6 @@ public class LLMAdapterIntegrationTest {
 	
 	@MockitoBean
 	private ChatClient mockChatClient;
-	
-	@Autowired
-	FileSystemScannerConfig fileSystemScannerConfig;
 	
 	@Autowired
 	ChatClientTestConfig chatClientTestConfig;

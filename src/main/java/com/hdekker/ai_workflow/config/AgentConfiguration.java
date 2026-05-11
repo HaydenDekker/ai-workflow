@@ -1,14 +1,11 @@
 package com.hdekker.ai_workflow.config;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hdekker.ai_workflow.adapter.outbound.file.FileSystemScannerConfig;
 import com.hdekker.ai_workflow.adapter.outbound.llm.LLMOutputParsingUtils;
 import com.hdekker.ai_workflow.application.agent.AgentLifecycleService;
 import com.hdekker.ai_workflow.application.pipeline.SplittableStrategy;
@@ -38,9 +35,6 @@ public class AgentConfiguration {
 	Logger log = LoggerFactory.getLogger(AgentConfiguration.class);
 	
 	@Autowired
-	FileSystemScannerConfig fileScannerConfig;
-	
-	@Autowired
 	PromptConfiguration promptConfiguration;
 	
 	ObjectMapper om = new ObjectMapper();
@@ -65,29 +59,18 @@ public class AgentConfiguration {
 
 	ChatClient chatClient;
 
-	// TODO component and pass in.
-	Path outputFolderPath;
-
 	@Autowired
 	AgentLifecycleService dynamicAgentManager;
 
 	public AgentConfiguration(
 			PromptConfiguration promptConfiguration,
 			SystemPromptConfiguration systemPromptConfiguration,
-			FileSystemScannerConfig fileScannerConfig,
 			ChatClient chatClient,
 			AgentLifecycleService dynamicAgentManager) {
 
 		this.promptConfiguration = promptConfiguration;
 		this.systemPromptConfiguration = systemPromptConfiguration;
-		this.fileScannerConfig = fileScannerConfig;
 		this.chatClient = chatClient;
-
-		try {
-			outputFolderPath = fileScannerConfig.getUrl().getFile().toPath();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 
 // Initialize YAML agents through manager
 		List<AgentDefinition> yamlAgents = systemPromptConfiguration.getAgentWorkflows()

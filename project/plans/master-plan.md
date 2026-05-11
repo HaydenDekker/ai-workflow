@@ -47,7 +47,7 @@ Rationale: Once a plan has been complete for a significant period, its status in
 |---|------|--------|---------|
 | 12 | [Regex Filter Observability](regex-filter-observability.md) | ⬜ Planned | 2026-05-11 |
 | 11 | [Remove scanner.url Config](remove-scanner-url-config.md) | ⬜ Planned | 2026-05-11 |
-| 10 | [Improve Agent Domain Design](improve-agent-domain-design.md) | ⬜ Planned | 2026-05-11 |
+| 10 | [Improve Agent Domain Design](improve-agent-domain-design.md) | ✅ Complete | 2026-05-11 |
 | 9 | [Agent Observer UseCase](agent-observer-usecase.md) | ✅ Complete | 2026-05-08 |
 | 8 | [Scanner Status & Observability Refactor](scanner-status-observability-refactor.md) | ✅ Complete | 2026-05-08 |
 | 1 | [Scanner Metrics Refactor](scanner-metrics-refactor.md) | ⬜ Planned | 2026-05-07 |
@@ -80,8 +80,9 @@ Full details in [remove-scanner-url-config.md](remove-scanner-url-config.md).
 
 ### 10. Improve Agent Domain Design
 
-**Status:** ⬜ Planned
+**Status:** ✅ Complete
 **Created:** 2026-05-11
+**Completed:** 2026-05-11
 **Goal:** Replace magic-string fields in `AgentDefinition` with typed value objects (`AgentType`, `AgentSource`), add constructor validation, fix `FilterResult` mutation bug, and introduce `AttributeConverter` for type-safe persistence.
 
 Full details in [improve-agent-domain-design.md](improve-agent-domain-design.md).
