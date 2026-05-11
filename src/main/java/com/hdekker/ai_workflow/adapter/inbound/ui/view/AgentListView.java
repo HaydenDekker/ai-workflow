@@ -1,6 +1,8 @@
 package com.hdekker.ai_workflow.adapter.inbound.ui.view;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +20,7 @@ import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
 import com.hdekker.ai_workflow.application.agent.AgentStatusService;
 import com.hdekker.ai_workflow.application.agent.port.LLMStatusRepository.LLMStatusRecord;
 import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -52,6 +55,9 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
     private final ProgressBar loadingIndicator;
     private final LlmStatusBadge llmStatusBadge;
     private ScheduledExecutorService refreshScheduler;
+
+    /** Cached metrics map keyed by agent ID, populated during reloadData(). */
+    private Map<String, AgentMetrics> metricsMap = new HashMap<>();
 
     @Autowired
     public AgentListView(AgentInfoService agentInfoService, AgentStatusService llmStatusService,
@@ -160,20 +166,27 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
             .setAutoWidth(true)
             .setSortable(true);
 
-        // Dispatch Count column — per-agent LLM dispatch count
+        // Dispatch Count column — per-agent LLM dispatch count from cached metrics
         grid.addColumn(agent -> {
             try {
-                String title = agent.definition() != null
-                        ? agent.definition().title()
-                        : agent.id();
-                long count = agentObserverUseCase != null
-                        ? agentObserverUseCase.getDispatchCount(title)
-                        : 0L;
+                AgentMetrics metrics = metricsMap.get(agent.id());
+                long count = metrics != null ? metrics.dispatchCount() : 0L;
                 return count > 0 ? count : "–";
             } catch (Exception e) {
                 return "–";
             }
         }).setHeader("Dispatches").setAutoWidth(true);
+
+        // Filtered column — per-agent regex rejection count from cached metrics
+        grid.addColumn(agent -> {
+            try {
+                AgentMetrics metrics = metricsMap.get(agent.id());
+                long count = metrics != null ? metrics.filterCount() : 0L;
+                return count > 0 ? count : "–";
+            } catch (Exception e) {
+                return "–";
+            }
+        }).setHeader("Filtered").setAutoWidth(true);
 
         // Output Files column — global output directory file count
         grid.addColumn(agent -> {
@@ -235,6 +248,13 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
         try {
             List<AgentInfoDTO> agentInfos = agentInfoService.getAllAgentInfos().block();
             log.info("Loaded {} agents", agentInfos.size());
+
+            // Fetch consolidated metrics for all agents in one batch
+            List<String> agentIds = agentInfos.stream()
+                    .map(AgentInfoDTO::id)
+                    .toList();
+            metricsMap = agentInfoService.getAllAgentMetrics(agentIds).block();
+
             grid.setItems(agentInfos);
         } catch (Exception error) {
             Notification.show("Error loading data: " + error.getMessage());
@@ -266,6 +286,15 @@ public class AgentListView extends VerticalLayout implements AfterNavigationObse
     private void showLoading(boolean show) {
         loadingIndicator.setVisible(show);
         grid.setEnabled(!show);
+    }
+
+    /**
+     * Get the cached metrics map for test verification.
+     *
+     * @return the current metrics map keyed by agent ID
+     */
+    Map<String, AgentMetrics> getMetricsMap() {
+        return metricsMap;
     }
 
 	@Override

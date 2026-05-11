@@ -1,6 +1,8 @@
 package com.hdekker.ai_workflow.adapter.inbound.ui.service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort;
 import com.hdekker.ai_workflow.application.agent.port.DirectoryValidationPort.ValidationResult;
 import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -132,6 +135,32 @@ public class AgentInfoService {
         } catch (Exception ex) {
             log.error("Error fetching output file count", ex);
             return Mono.just(0L);
+        }
+    }
+
+    /**
+     * Fetch consolidated metrics for all given agent IDs in a single batch call.
+     * <p>
+     * Delegates to the observer use case for each agent and collects results
+     * into a map keyed by agent ID. This enables the grid to fetch all metrics
+     * in one reload pass instead of per-column calls.
+     *
+     * @param agentIds the list of agent IDs to fetch metrics for
+     * @return a Mono containing a map of agent ID to {@link AgentMetrics}
+     */
+    public Mono<Map<String, AgentMetrics>> getAllAgentMetrics(List<String> agentIds) {
+        try {
+            Map<String, AgentMetrics> metricsMap = new HashMap<>();
+            for (String id : agentIds) {
+                AgentMetrics metrics = observer != null
+                        ? observer.getAgentMetrics(id)
+                        : AgentMetrics.empty();
+                metricsMap.put(id, metrics);
+            }
+            return Mono.just(metricsMap);
+        } catch (Exception ex) {
+            log.error("Error fetching agent metrics", ex);
+            return Mono.just(Map.of());
         }
     }
 }

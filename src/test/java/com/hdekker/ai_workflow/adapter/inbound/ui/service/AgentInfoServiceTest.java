@@ -4,10 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -249,5 +254,35 @@ public class AgentInfoServiceTest {
 		} catch (RuntimeException ex) {
 			assertThat(ex.getMessage()).isEqualTo("Agent not found: non-existent");
 		}
+	}
+
+	@Test
+	public void givenAgentIds_WhenGetAllAgentMetrics_ThenDelegatesToObserver() {
+		// Arrange
+		AgentMetrics metrics1 = AgentMetrics.empty();
+		AgentMetrics metrics2 = AgentMetrics.empty();
+		when(observer.getAgentMetrics("id-1")).thenReturn(metrics1);
+		when(observer.getAgentMetrics("id-2")).thenReturn(metrics2);
+
+		// Act
+		Mono<Map<String, AgentMetrics>> result = service.getAllAgentMetrics(List.of("id-1", "id-2"));
+		Map<String, AgentMetrics> metricsMap = result.block();
+
+		// Assert
+		assertThat(metricsMap).hasSize(2);
+		assertThat(metricsMap.containsKey("id-1")).isTrue();
+		assertThat(metricsMap.containsKey("id-2")).isTrue();
+		verify(observer).getAgentMetrics("id-1");
+		verify(observer).getAgentMetrics("id-2");
+	}
+
+	@Test
+	public void givenEmptyList_WhenGetAllAgentMetrics_thenReturnEmptyMap() {
+		// Act
+		Mono<Map<String, AgentMetrics>> result = service.getAllAgentMetrics(List.of());
+		Map<String, AgentMetrics> metricsMap = result.block();
+
+		// Assert
+		assertThat(metricsMap).isEmpty();
 	}
 }

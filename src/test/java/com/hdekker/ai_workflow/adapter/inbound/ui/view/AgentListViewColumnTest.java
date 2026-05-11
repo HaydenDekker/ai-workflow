@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import com.hdekker.ai_workflow.application.pipeline.AgentObserverUseCase;
 import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.hdekker.ai_workflow.domain.agent.AgentSource;
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
 
 import com.vaadin.browserless.SpringBrowserlessTest;
 import com.vaadin.browserless.TreeOnFailureExtension;
@@ -54,6 +56,9 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
     @Autowired
     private AgentInfoService agentInfoService;
 
+    @Autowired
+    private AgentObserverService agentObserverService;
+
     private AgentListView view;
 
     private static com.hdekker.ai_workflow.domain.agent.AgentInfo createDomainAgent(String id, String title, String regex) {
@@ -77,7 +82,7 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
      *
      * <p>Verifies that the columns appear in the order:
      * ID, Title, Agent Type, File Regex, Target Dir, Source, Created, Active,
-     * Dispatches, Output Files, Actions.</p>
+     * Dispatches, Filtered, Output Files, Actions.</p>
      */
     @Test
     void columnOrder_correctSequence() {
@@ -90,21 +95,24 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
                 .map(col -> col.getHeaderText())
                 .toList();
 
-        assertEquals(11, headers.size(), "Grid should have 11 columns");
+        assertEquals(12, headers.size(), "Grid should have 12 columns");
 
-        // Verify the new metrics columns appear between Active and Actions
+        // Verify the metrics columns appear in correct order between Active and Actions
         int activeIndex = headers.indexOf("Active");
         int dispatchesIndex = headers.indexOf("Dispatches");
+        int filteredIndex = headers.indexOf("Filtered");
         int outputFilesIndex = headers.indexOf("Output Files");
         int actionsIndex = headers.indexOf("Actions");
 
         assertTrue(activeIndex >= 0, "Active column should exist");
         assertTrue(dispatchesIndex >= 0, "Dispatches column should exist");
+        assertTrue(filteredIndex >= 0, "Filtered column should exist");
         assertTrue(outputFilesIndex >= 0, "Output Files column should exist");
         assertTrue(actionsIndex >= 0, "Actions column should exist");
 
         assertTrue(activeIndex < dispatchesIndex, "Dispatches should come after Active");
-        assertTrue(dispatchesIndex < outputFilesIndex, "Output Files should come after Dispatches");
+        assertTrue(dispatchesIndex < filteredIndex, "Filtered should come after Dispatches");
+        assertTrue(filteredIndex < outputFilesIndex, "Output Files should come after Filtered");
         assertTrue(outputFilesIndex < actionsIndex, "Actions should come after Output Files");
     }
 
@@ -148,6 +156,72 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
         assertTrue(headers.contains("Output Files"), "Output Files column should exist");
     }
 
+    /**
+     * Test: Filtered column exists.
+     *
+     * <p>Verifies that the "Filtered" column header is present in the grid.</p>
+     */
+    @Test
+    void filteredColumn_exists() {
+        // Arrange: Navigate and get grid columns
+        Grid<AgentInfoDTO> grid = view.grid;
+        roundTrip();
+
+        // Assert: Filtered column exists
+        List<String> headers = grid.getColumns().stream()
+                .map(col -> col.getHeaderText())
+                .toList();
+        assertTrue(headers.contains("Filtered"), "Filtered column should exist");
+    }
+
+    /**
+     * Test: Filtered column displays count after filtering.
+     *
+     * <p>Records a filter rejection via the observer, reloads the grid,
+     * and asserts the count appears in the Filtered column.</p>
+     */
+    @Test
+    void filteredColumn_displaysCountAfterFiltering() {
+        // Arrange: Record a filter rejection for the test agent
+        String agentId = "agent-1";
+        agentObserverService.recordFilter(agentId, "test.md", ".*\\.java");
+        roundTrip();
+
+        // Act: Reload grid which fetches metrics
+        view.reloadData();
+
+        // Assert: Verify metrics map contains the filter count
+        Map<String, AgentMetrics> metricsMap = view.getMetricsMap();
+        AgentMetrics metrics = metricsMap.get(agentId);
+        assertEquals(1L, metrics.filterCount(), "Filter count should be 1");
+        assertEquals(0L, metrics.dispatchCount(), "Dispatch count should be 0");
+    }
+
+    /**
+     * Test: Columns use AgentMetrics via AgentInfoService (single call per row).
+     *
+     * <p>Verifies that metrics are fetched via agentInfoService.getAllAgentMetrics()
+     * during reload, not via per-column observer calls.</p>
+     */
+    @Test
+    void columnsUseAgentMetrics_WhenReloaded_ThenSingleCallPerRow() {
+        // Arrange
+        roundTrip();
+
+        // Act: Reload grid
+        view.reloadData();
+
+        // Assert: Metrics map is populated for all agents
+        Map<String, AgentMetrics> metricsMap = view.getMetricsMap();
+        assertEquals(1, metricsMap.size(), "Metrics map should have 1 entry");
+        assertTrue(metricsMap.containsKey("agent-1"), "Metrics map should contain agent-1");
+
+        // The metrics should come from the real observer service
+        AgentMetrics metrics = metricsMap.get("agent-1");
+        assertEquals(0L, metrics.dispatchCount(), "Fresh metrics should have 0 dispatches");
+        assertEquals(0L, metrics.filterCount(), "Fresh metrics should have 0 filters");
+    }
+
     // --- Test Configuration ---
 
     /**
@@ -170,9 +244,15 @@ class AgentListViewColumnTest extends SpringBrowserlessTest {
 
         @Bean
         @Primary
-        public AgentObserverUseCase agentObserverUseCase() {
+        public AgentObserverService agentObserverService() {
+            return new AgentObserverService(null, null);
+        }
+
+        @Bean
+        @Primary
+        public AgentObserverUseCase agentObserverUseCase(AgentObserverService observerService) {
             return new AgentObserverUseCase(
-                    new AgentObserverService(null, null),
+                    observerService,
                     new AgentObserverEventBus());
         }
 
