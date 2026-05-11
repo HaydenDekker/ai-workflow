@@ -188,9 +188,11 @@ public class ScannerRegistry implements DisposableBean {
     public Flux<com.hdekker.ai_workflow.domain.file.FileHistory> getScannerFlux(String scannerId) {
         ScannerService scanner = scanners.get(scannerId);
         if (scanner == null) {
-            log.warn("No scanner found for flux lookup: {}", scannerId);
+            log.warn("No scanner found for flux lookup: {}. Available scanners: {}. Pipeline will produce NO output.",
+                    scannerId, scanners.keySet());
             return Flux.empty();
         }
+        log.info("Got scanner flux for agent: {} (folder={})", scannerId, scanner.getFolderPath());
         return scanner.flux();
     }
 

@@ -5,7 +5,12 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class RegexInputFileFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(RegexInputFileFilter.class);
 	
 	public record FilterResult(boolean matches, Map<String, String> groups) {
 		
@@ -28,6 +33,8 @@ public class RegexInputFileFilter {
 	
 	public static FilterResult matches(String input, String regex) {
         if (input == null || regex == null) {
+            log.info("FILTER: Regex match rejected - input={}, regex={} (null values cause ALL files to be dropped)",
+                    input, regex);
             return new FilterResult(false, null);
         }
         

@@ -35,7 +35,17 @@ public class SplitterLLMAdapter implements LLMAdapter {
                         .stream()
                         .content()
                         .reduce((a, b) -> a + b)
-                        .flatMapMany(fullResponse -> parseAndEmitResponses(fpe, fullResponse));
+                        .doOnNext(s -> {
+                            if (s == null || s.isBlank()) {
+                                log.warn("LLM (Splitter) returned EMPTY response for file: {}", fpe.fileURL());
+                            } else {
+                                log.info("LLM (Splitter) response received for file: {} (length={})", fpe.fileURL(), s.length());
+                            }
+                        })
+                        .flatMapMany(fullResponse -> parseAndEmitResponses(fpe, fullResponse))
+                        .doOnError(error -> {
+                            log.error("LLM (Splitter) call FAILED for file {}: {}", fpe.fileURL(), error.getMessage(), error);
+                        });
         });
     }
 
@@ -46,7 +56,8 @@ public class SplitterLLMAdapter implements LLMAdapter {
         String[] parts = fullResponse.split("---");
 
         if (parts.length < 3) {
-            log.warn("Not enough parts found for splitting, expected at least 3 parts (intro, key, content)");
+            log.warn("SPLITTER: Not enough parts found for splitting file {}. Expected at least 3 parts (intro, key, content), got {}. Response will be SILENTLY DROPPED. Response preview: {}",
+                    fpe.fileURL(), parts.length, fullResponse.length() > 200 ? fullResponse.substring(0, 200) : fullResponse);
             return Flux.fromIterable(responses);
         }
 
@@ -63,9 +74,17 @@ public class SplitterLLMAdapter implements LLMAdapter {
                 String modifiedFileName = fpe.fileURL() + "-" + normalizedKey;
                 PromptResponse response = new PromptResponse(agentDefinition, modifiedFileName, fpe.file(), content);
                 responses.add(response);
+            } else {
+                log.info("SPLITTER: Skipping empty content for key '{}' on file {}", key, fpe.fileURL());
             }
         }
 
+        if (responses.isEmpty()) {
+            log.warn("SPLITTER: Parsed 0 responses from {} split parts for file {}. Response will be SILENTLY DROPPED.",
+                    parts.length, fpe.fileURL());
+        } else {
+            log.info("SPLITTER: Parsed {} response(s) for file {}", responses.size(), fpe.fileURL());
+        }
         return Flux.fromIterable(responses);
     }
 }

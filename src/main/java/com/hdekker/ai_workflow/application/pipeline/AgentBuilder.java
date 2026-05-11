@@ -72,6 +72,13 @@ public class AgentBuilder {
 		@Override
 		public PromptMapped withTrigger(Flux<PromptRequest> trigger) {
 			this.trigger = trigger
+					.doOnNext(pr -> {
+						boolean matches = agentDefinition.inputRegexMatches(pr.fileURL());
+						if (!matches) {
+							log.info("DROPPED file by regex filter: agent={}, fileURL={}, regex={}",
+									agentDefinition.title(), pr.fileURL(), agentDefinition.fileInputRegex());
+						}
+					})
 					.filter(pr -> agentDefinition.inputRegexMatches(pr.fileURL()))
 					.doOnNext(pr -> log.info("Agent: {} accepted file {}", agentDefinition.title(), pr.fileURL()));
 			return this;

@@ -39,9 +39,19 @@ public class LLMReducerAdapter implements LLMAdapter {
 				.stream()
 				.content()
 				.reduce((a,b)-> a+b)
+				.doOnNext(s -> {
+					if (s == null || s.isBlank()) {
+						log.warn("LLM (Reducer) returned EMPTY response for file: {}", pp.fileURL());
+					} else {
+						log.info("LLM (Reducer) response received for file: {} (length={})", pp.fileURL(), s.length());
+					}
+				})
 				.map(s-> new PromptResponse(agentDefinition, pp.fileURL(), fileContent, s))
 					.doOnNext(p -> {
 						latestResponse = p.response();
+					})
+					.doOnError(error -> {
+						log.error("LLM (Reducer) call FAILED for file {}: {}", pp.fileURL(), error.getMessage(), error);
 					});
 			
 		});

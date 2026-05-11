@@ -30,7 +30,17 @@ public class MapAgentLLMAdapter implements LLMAdapter {
                         .stream()
                         .content()
                         .reduce((a, b) -> a + b)
-                        .map(s -> new PromptResponse(agentDefinition, fpe.fileURL(), fpe.file(), s));
+                        .doOnNext(s -> {
+                            if (s == null || s.isBlank()) {
+                                log.warn("LLM returned EMPTY response for file: {}", fpe.fileURL());
+                            } else {
+                                log.info("LLM response received for file: {} (length={})", fpe.fileURL(), s.length());
+                            }
+                        })
+                        .map(s -> new PromptResponse(agentDefinition, fpe.fileURL(), fpe.file(), s))
+                        .doOnError(error -> {
+                            log.error("LLM call FAILED for file {}: {}", fpe.fileURL(), error.getMessage(), error);
+                        });
         });
     }
 }

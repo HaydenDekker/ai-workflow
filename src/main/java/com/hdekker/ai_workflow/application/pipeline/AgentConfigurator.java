@@ -88,6 +88,10 @@ public class AgentConfigurator {
 	 */
 	public Flux<PromptResponse> configure(AgentDefinition agentDefinition) {
 
+		log.info("Configuring pipeline for agent '{}' (agentType={}, inputRegex={}, targetDir={})",
+				agentDefinition.title(), agentDefinition.agentType(),
+				agentDefinition.fileInputRegex(), agentDefinition.targetDirectory());
+
 		LLMAdapter adapter = LLMAdapterFactory.create(chatClient, agentDefinition);
 
 		// Use FileWritePort if available, otherwise use direct persister
@@ -123,6 +127,8 @@ public class AgentConfigurator {
 				observer.recordStorage(agentDefinition.title(), response.fileName(), null);
 				log.info("Storage recorded: agent={}, file={}", agentDefinition.title(), response.fileName());
 			}
+		}).doOnError(error -> {
+			log.error("PIPELINE ERROR for agent '{}': {}", agentDefinition.title(), error.getMessage(), error);
 		});
 	}
 }
