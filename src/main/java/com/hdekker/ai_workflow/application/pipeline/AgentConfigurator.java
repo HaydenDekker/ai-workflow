@@ -106,9 +106,21 @@ public class AgentConfigurator {
 		Flux<com.hdekker.ai_workflow.domain.prompt.PromptRequest> trigger = fileInputFlux != null
 				? fileInputFlux.map(fh -> fh.to())
 				: Flux.empty();
+
+		// Filter hook fires before AgentBuilder.withTrigger() — records regex rejections
+		Flux<com.hdekker.ai_workflow.domain.prompt.PromptRequest> triggerWithFilterLog = trigger
+				.doOnNext(pr -> {
+					if (!agentDefinition.inputRegexMatches(pr.fileURL())) {
+						if (observer != null) {
+							observer.recordFilter(agentDefinition.title(),
+									pr.fileURL(), agentDefinition.fileInputRegex());
+						}
+					}
+				});
+
 		Flux<PromptResponse> basePipeline = AgentBuilder.instance()
 				.withDefinition(agentDefinition)
-				.withTrigger(trigger)
+				.withTrigger(triggerWithFilterLog)
 				.prompting(adapter::call)
 				.persist(response -> { })
 				.split(SplittableStrategy.noSPLT())
