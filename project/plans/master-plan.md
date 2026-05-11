@@ -1,6 +1,6 @@
 # Master Plan — Project Index
 
-> **Last Updated:** 2026-05-11 (plan 12 added)
+> **Last Updated:** 2026-05-11 (plan 13 added)
 
 ## How to Add a Plan Overview
 
@@ -45,6 +45,7 @@ Rationale: Once a plan has been complete for a significant period, its status in
 
 | # | Plan | Status | Created |
 |---|------|--------|---------|
+| 13 | [Orchestrator Improvements](orchestrator-improvements.md) | ⬜ Planned | 2026-05-11 |
 | 12 | [Regex Filter Observability](regex-filter-observability.md) | ⬜ Planned | 2026-05-11 |
 | 11 | [Remove scanner.url Config](remove-scanner-url-config.md) | ⬜ Planned | 2026-05-11 |
 | 10 | [Improve Agent Domain Design](improve-agent-domain-design.md) | ✅ Complete | 2026-05-11 |
@@ -61,6 +62,14 @@ Rationale: Once a plan has been complete for a significant period, its status in
 ---
 
 ## Plan Overviews
+
+### 13. Orchestrator Improvements
+
+**Status:** ⬜ Planned
+**Created:** 2026-05-11
+**Goal:** Harden the orchestrator against false failures, path issues, dirty trees, and unparseable test output — with a unit test harness.
+
+Full details in [orchestrator-improvements.md](orchestrator-improvements.md).
 
 ### 12. Regex Filter Observability
 
