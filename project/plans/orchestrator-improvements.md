@@ -22,22 +22,24 @@ Running plans 11 and 12 with the orchestrator exposed several process defects: f
 ## Existing Tests
 | Test Class | What it covers | Status |
 |------------|---------------|--------|
-| *(orchestrator is Python, not Java — no existing test suite)* | — | ⚠️ Untested |
+| `tests/test_orchestrator.py` | `--help` runs, stdlib-only check | ✅ Green (2 tests) |
 
 ## Test Gaps
 
-- No unit tests for the orchestrator Python script at all
-- No test for phase detection, branch creation, compile/test commands
+- No unit tests for the orchestrator logic (phase parsing, branch creation, build/test commands, failure extraction, dirty tree handling)
 - No integration test for the full spawn-verify-commit cycle
+- All gaps above are in `~/.pi/orchestrator/tests/`
 
 ## Phases
 
+All changes target `~/.pi/orchestrator/orchestrator.py`. After each phase, copy the updated file to `~/.agents/skills/plan-orchestrator/orchestrator.py`. Tests go in `~/.pi/orchestrator/tests/` and run with `python -m pytest tests/ -v`.
+
 ### Phase 0: Baseline test check before spawning
-- [ ] Add `./mvnw test -q` on clean working tree before Phase 0 spawn
+- [ ] Add `./mvnw test -q` on clean working tree before Phase 0 spawn in `orchestrator.py`
 - [ ] If baseline fails, abort with clear message listing which test(s) failed
 - [ ] If baseline passes, continue normally
 - [ ] Make baseline check skippable via `--skip-baseline` flag
-- [ ] Add a simple Python unit test: verify baseline check runs when tests exist
+- [ ] Add Python unit test in `~/.pi/orchestrator/tests/`: verify baseline check runs when tests exist
 
 ### Phase 1: Commit sub-agent changes before verification
 - [ ] After sub-agent finishes (success or stall), run `git add -A && git diff --staged --quiet`
@@ -50,12 +52,12 @@ Running plans 11 and 12 with the orchestrator exposed several process defects: f
 ### Phase 2: Improved test failure reporting
 - [ ] Capture full test output and extract failure summary (class name, method name, failure reason)
 - [ ] Print a concise failure block (top 3 failures) instead of raw Maven output
-- [ ] Save full output to a timestamped file in `project/orchestrator-logs/` for deep inspection
+- [ ] Save full output to a timestamped file in the project root (`orchestrator-run-<timestamp>.log`) for deep inspection
 - [ ] Show the failure summary in the abort message
 - [ ] Add Python unit test: parse sample Maven failure output and extract test names
 
 ### Phase 3: Correct mvnw path injection
-- [ ] Detect shell at startup (bash vs cmd vs pwsh)
+- [ ] Detect shell at startup (bash vs cmd vs pwsh) — check `os.name` and `sys.platform`
 - [ ] Set `BUILD_CMD` and `TEST_CMD` to use `./mvnw` prefix (works in bash/MSYS) or `.\mvnw.cmd` (works in cmd)
 - [ ] Inject the resolved path into the sub-agent system prompt so it never tries `mvnw.cmd` in bash
 - [ ] Add `--shell auto|bash|cmd|pwsh` flag for manual override
@@ -76,11 +78,11 @@ Running plans 11 and 12 with the orchestrator exposed several process defects: f
 - [ ] If `auto`: run `git rebase main` and abort on conflict
 - [ ] Add Python unit test: verify rebase detection logic
 
-### Phase 6: Unit test harness for the orchestrator
-- [ ] Add `project/skills/plan-orchestrator/tests/` with pytest-style tests
-- [ ] Test fixtures: sample plan markdown, sample Maven output (success + failure)
-- [ ] Test coverage: phase parsing, branch naming, build command resolution, failure extraction
-- [ ] Wire `pytest` as a pre-flight check the orchestrator can run on itself (`--self-test`)
+### Phase 6: Integration test suite + `--self-test`
+- [ ] Flesh out `~/.pi/orchestrator/tests/` with fixtures: sample plan markdown, sample Maven output (success + failure)
+- [ ] Test coverage: phase parsing, branch naming, build command resolution, failure extraction, dirty tree detection
+- [ ] Wire `--self-test` flag into `orchestrator.py` — runs `python -m pytest tests/` from the orchestrator's own directory
+- [ ] Update `~/.pi/orchestrator/README.md` with test instructions
 
 ## Notes
 
