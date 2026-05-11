@@ -166,7 +166,7 @@ public class AgentObserverUseCase {
      */
     public void recordFilter(String agentId, String fileUrl, String regex) {
         metrics.recordFilter(agentId, fileUrl, regex);
-        eventBus.publish(AgentObserverEvent.filtered(agentId, fileUrl));
+        eventBus.publish(AgentObserverEvent.filtered(agentId, fileUrl, regex));
 
         log.debug("Recorded filter for agent {}: file={}, regex={}", agentId, fileUrl, regex);
     }

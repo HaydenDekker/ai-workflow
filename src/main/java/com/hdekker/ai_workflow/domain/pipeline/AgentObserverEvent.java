@@ -5,19 +5,22 @@ import java.time.LocalDateTime;
 /**
  * Domain event representing an agent observer metric change.
  * <p>
- * Captures when a prompt is dispatched to the LLM or a response is stored
- * to the output directory. Used by {@link AgentObserverEventPort} for push
- * notification to subscribers (UI, logging, dashboards).
+ * Captures when a prompt is dispatched to the LLM, a response is stored
+ * to the output directory, or a file is rejected by an input regex filter.
+ * Used by {@link com.hdekker.ai_workflow.application.pipeline.port.AgentObserverEventPort}
+ * for push notification to subscribers (UI, logging, dashboards).
  *
  * @param agentId     the owning agent's ID
- * @param eventType   the type of observer event (DISPATCHED or STORED)
- * @param fileName    the file name associated with the event (nullable for STORED)
+ * @param eventType   the type of observer event
+ * @param fileName    the file name associated with the event
+ * @param regex       the regex that rejected the file (null for DISPATCHED/STORED)
  * @param timestamp   when the event occurred
  */
 public record AgentObserverEvent(
         String agentId,
         AgentObserverEventType eventType,
         String fileName,
+        String regex,
         LocalDateTime timestamp) {
 
     /**
@@ -29,7 +32,7 @@ public record AgentObserverEvent(
      */
     public static AgentObserverEvent dispatched(String agentId, String fileName) {
         return new AgentObserverEvent(agentId, AgentObserverEventType.DISPATCHED,
-                fileName, LocalDateTime.now());
+                fileName, null, LocalDateTime.now());
     }
 
     /**
@@ -41,7 +44,7 @@ public record AgentObserverEvent(
      */
     public static AgentObserverEvent stored(String agentId, String outputName) {
         return new AgentObserverEvent(agentId, AgentObserverEventType.STORED,
-                outputName, LocalDateTime.now());
+                outputName, null, LocalDateTime.now());
     }
 
     /**
@@ -49,10 +52,11 @@ public record AgentObserverEvent(
      *
      * @param agentId  the owning agent's ID
      * @param fileUrl  the file URL that was rejected
+     * @param regex    the regex pattern that rejected the file (nullable)
      * @return a new FILTERED event with the current timestamp
      */
-    public static AgentObserverEvent filtered(String agentId, String fileUrl) {
+    public static AgentObserverEvent filtered(String agentId, String fileUrl, String regex) {
         return new AgentObserverEvent(agentId, AgentObserverEventType.FILTERED,
-                fileUrl, LocalDateTime.now());
+                fileUrl, regex, LocalDateTime.now());
     }
 }
