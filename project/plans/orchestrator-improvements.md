@@ -6,6 +6,8 @@
 
 Running plans 11 and 12 with the orchestrator exposed several process defects: false failures from partial working trees, wasted tool calls on path resolution, unparseable test failure output, no baseline checks, and no awareness of sibling merges. The orchestrator is the primary tool for multi-phase work — its reliability directly affects how much manual intervention is needed.
 
+**This is a cross-cutting concern** — improvements live in `~/.pi/orchestrator/` (standalone git repo). The `orchestrator.py` from there syncs to `~/.agents/skills/plan-orchestrator/orchestrator.py` and any `project/skills/plan-orchestrator/orchestrator.py` copy.
+
 ## Target
 
 - **Baseline check**: Verify tests pass on clean tree before spawning sub-agent (prevents false failures from pre-existing issues)
@@ -82,7 +84,8 @@ Running plans 11 and 12 with the orchestrator exposed several process defects: f
 
 ## Notes
 
-- The orchestrator is a standalone Python script — no Maven build needed for its own tests
-- pytest is the standard; the orchestrator currently uses stdlib only. Adding pytest as a test dependency is fine (it's not used at runtime)
+- **Repo**: `~/.pi/orchestrator/` — standalone git repo, `python -m pytest tests/ -v`
+- **Sync**: After each phase, copy `orchestrator.py` → `~/.agents/skills/plan-orchestrator/`
+- The orchestrator is stdlib-only at runtime. pytest is test-only dependency
 - Each phase's Python unit test validates its own change, keeping the pattern self-referential
 - After this plan, the orchestrator should have basic test coverage for the logic paths that failed during plans 11/12
