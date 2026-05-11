@@ -22,7 +22,11 @@ The two other scanner-related properties (`ai-scanner.emission-delay-seconds` an
 - Test files updated where they register `scanner.url` dynamically
 - Full compile + existing tests green
 
-## Implementation Status: ⬜ Draft
+## Implementation Status: ✅ Complete (2026-05-12)
+
+> **Branch:** `refactor/remove-scanner-url-config` — merged to main, branch deleted
+> **Tests:** 461 tests pass, 0 failures, 2 skipped
+> **Commits:** 2 (one per phase)
 
 ## Existing Tests
 | Test Class | What it covers | Status |
@@ -37,21 +41,25 @@ The two other scanner-related properties (`ai-scanner.emission-delay-seconds` an
 
 ## Phases
 
-### Phase 0: Remove FileSystemScannerConfig and AgentConfiguration dependency
-- [ ] Delete `src/test/java/.../LLMAdapterIntegrationTest.java` — remove the `@Autowired FileSystemScannerConfig` field and import
-- [ ] Delete `src/main/java/.../adapter/outbound/file/FileSystemScannerConfig.java`
-- [ ] Remove from `AgentConfiguration.java`: the `@Autowired FileSystemScannerConfig` field, the constructor parameter, the `outputFolderPath` field, and the try/catch block that sets it
-- [ ] Compile: `./mvnw compile -q`
+### Phase 0: Remove FileSystemScannerConfig and AgentConfiguration dependency ✅ Done
+- [x] Deleted `LLMAdapterIntegrationTest.java` — removed the `@Autowired FileSystemScannerConfig` field and import
+- [x] Deleted `FileSystemScannerConfig.java` from `adapter/outbound/file/`
+- [x] Removed from `AgentConfiguration.java`: the `@Autowired FileSystemScannerConfig` field, the constructor parameter, the `outputFolderPath` field, and the try/catch block
+- [x] Compiled: `./mvnw compile -q` — BUILD SUCCESS
+- [x] Fixed pre-existing test NPEs discovered during compilation (unrelated to this plan but required for green build)
+- [x] Fixed BeanDefinitionOverrideException — resolved duplicate bean conflict (unrelated to this plan)
 
-### Phase 1: Remove scanner.url from config files and test properties
-- [ ] Remove `scanner:` block from `src/main/resources/application.yml`
-- [ ] Remove `scanner:` block from `src/test/resources/application.yml`
-- [ ] Remove `scanner:` block from `src/test/resources/config/application-PROMPT_TEST.yml`
-- [ ] Remove `scanner:` block from `src/test/resources/config/application-RESOURCES_TEST_FOLDER.yml`
-- [ ] Remove `registry.add("scanner.url", ...)` from `FileIntegrationFlowTest.java`
-- [ ] Remove `registry.add("scanner.url", ...)` from `FileSystemWorkflowIntegrationTest.java`
-- [ ] Compile: `./mvnw compile -q`
-- [ ] Run affected tests: `./mvnw test -Dtest=LLMAdapterIntegrationTest -q`, `./mvnw test -Dtest=FileIntegrationFlowTest -q`, `./mvnw test -Dtest=FileSystemWorkflowIntegrationTest -q`
+### Phase 1: Remove scanner.url from config files and test properties ✅ Done
+- [x] Removed `scanner:` block from `src/main/resources/application.yml`
+- [x] Removed `scanner:` block from `src/test/resources/application.yml`
+- [x] Removed `scanner:` block from `src/test/resources/config/application-PROMPT_TEST.yml`
+- [x] Removed `scanner:` block from `src/test/resources/config/application-RESOURCES_TEST_FOLDER.yml`
+- [x] Removed `registry.add("scanner.url", ...)` from `FileIntegrationFlowTest.java`
+- [x] Removed `registry.add("scanner.url", ...)` from `FileSystemWorkflowIntegrationTest.java`
+- [x] Compiled: `./mvnw compile -q` — BUILD SUCCESS
+- [x] All affected tests pass green
+
+**Notes:** The `scanner.url` config was indeed dead — the `outputFolderPath` field in `AgentConfiguration` was never read after assignment. Scanner target directories are correctly derived from each agent's `targetDirectory()` at runtime.
 
 ## Notes
 _No implementation notes yet._

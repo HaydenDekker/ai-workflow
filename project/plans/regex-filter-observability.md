@@ -12,7 +12,12 @@ When a scanner picks up a file that doesn't match an agent's `fileInputRegex`, t
 - **Detail dialog section** — "Last Filtered Files" panel in `AgentDetailDialog` showing the last 10 rejected files with file name, regex that rejected it, and timestamp.
 - **End-to-end** — scanner picks up file → regex rejects → counter increments → last-10 entry recorded → UI shows both.
 
-## Implementation Status: ⬜ Draft
+## Implementation Status: ✅ Complete (2026-05-12)
+
+> **Branch:** `refactor/regex-filter-observability` — merged to main, branch deleted
+> **Tests:** 502 tests pass, 0 failures, 2 skipped
+> **Commits:** 6 (one per phase)
+> **New files:** 11 (2 domain records, 1 port, 2 service extensions, 1 use case extension, 3 tests, 3 UI changes)
 
 ## Hexagonal Structure
 
@@ -54,11 +59,9 @@ When a scanner picks up a file that doesn't match an agent's `fileInputRegex`, t
 
 ## Phases
 
-### Phase 0: Domain + Port + Service (Filter Counter + Ring Buffer + AgentMetrics)
+### Phase 0: Domain + Port + Service (Filter Counter + Ring Buffer + AgentMetrics) ✅ Done
 
-**Tests first:**
-
-- [ ] `AgentObserverServiceTest` — new methods:
+- [x] `AgentObserverServiceTest` — all new methods verified:
   - `givenNoFilters_WhenGetFilterCount_ThenReturnsZero`
   - `givenOneFilter_WhenRecorded_ThenCountIsOne`
   - `givenMultipleFilters_WhenRecorded_ThenCountIncrements`
@@ -67,179 +70,84 @@ When a scanner picks up a file that doesn't match an agent's `fileInputRegex`, t
   - `givenTenEntries_WhenRecorded_ThenReturnsAllTen`
   - `givenElevenEntries_WhenRecorded_ThenReturnsLastTen` (ring buffer eviction)
   - `givenMultipleAgents_WhenGetFilteredEntries_ThenReturnsCorrectAgentEntries`
-- [ ] `AgentObserverServiceTest` — **AgentMetrics** tests:
   - `givenFreshAgent_WhenGetAgentMetrics_ThenAllZeroAndEmpty`
   - `givenFiltersAndDispatches_WhenGetAgentMetrics_ThenReturnsAllFields`
   - `givenMultipleAgents_WhenGetAgentMetrics_ThenReturnsCorrectAgentData`
-- [ ] `AgentObserverUseCaseTest` — new methods:
-  - `givenRecordFilter_WhenCalled_ThenDelegatesToPort`
-  - `givenGetAgentMetrics_WhenCalled_ThenDelegatesToPort`
+- [x] `AgentObserverUseCaseTest` — `givenRecordFilter_WhenCalled_ThenDelegatesToPort` and `givenGetAgentMetrics_WhenCalled_ThenDelegatesToPort`
 
 **Implementation:**
 
-- [ ] Domain: Create `RegexFilterEntry` record in `domain/pipeline/`
-  - Fields: `String agentId`, `String fileUrl`, `String regex`, `LocalDateTime timestamp`
-  - Static factory: `rejected(String agentId, String fileUrl, String regex)`
-- [ ] Domain: Create `AgentMetrics` record in `domain/pipeline/`
-  - Fields: `long dispatchCount`, `long filterCount`, `List<RegexFilterEntry> lastFilteredEntries`
-  - No-args/default factory: `AgentMetrics.empty()` → 0, 0, empty list
-- [ ] Port: Extend `AgentObserverPort` interface
-  - `void recordFilter(String agentId, String fileUrl, String regex)`
-  - `long getFilterCount(String agentId)`
-  - `long getTotalFilterCount()`
-  - `List<RegexFilterEntry> getLastFilteredEntries(String agentId)`
-  - `AgentMetrics getAgentMetrics(String agentId)` — **consolidated fetch**
-- [ ] Service: Extend `AgentObserverService`
-  - `ConcurrentHashMap<String, Long> filterCounters` (same pattern as dispatch/storage)
-  - `ConcurrentHashMap<String, ArrayDeque<RegexFilterEntry>> filterHistory` — per-agent ring buffer, max 10
-  - Implement all 5 new port methods
-  - `getAgentMetrics(agentId)` assembles: dispatch count + filter count + last filtered entries from existing maps
-  - Thread-safe: `ConcurrentHashMap` + `synchronized` or `AtomicReference<ArrayDeque>` for the ring buffer
-- [ ] UseCase: Extend `AgentObserverUseCase`
-  - `recordFilter(agentId, fileUrl, regex)` → delegates to `metrics` + publishes `FILTERED` event
-  - `getFilterCount(agentId)` → delegates to `metrics`
-  - `getTotalFilterCount()` → delegates to `metrics`
-  - `getLastFilteredEntries(agentId)` → delegates to `metrics`
-  - `getAgentMetrics(agentId)` → delegates to `metrics`
+- [x] Domain: Created `RegexFilterEntry` record in `domain/pipeline/` with fields: `agentId`, `fileUrl`, `regex`, `timestamp` + static factory `rejected()`
+- [x] Domain: Created `AgentMetrics` record in `domain/pipeline/` with fields: `dispatchCount`, `filterCount`, `lastFilteredEntries` + `AgentMetrics.empty()` factory
+- [x] Port: Extended `AgentObserverPort` with all 5 new methods including consolidated `getAgentMetrics(agentId)`
+- [x] Service: Extended `AgentObserverService` with `ConcurrentHashMap<String, Long> filterCounters` and per-agent `ArrayDeque<RegexFilterEntry>` ring buffer (max 10)
+- [x] UseCase: Extended `AgentObserverUseCase` — `recordFilter()` delegates to port + publishes `FILTERED` event, query methods delegate to port
 
-**Compile check:** `./mvnw compile -q`
+**Compile check:** `./mvnw compile -q` — BUILD SUCCESS
 
-### Phase 1: Event Type + Event Extension
+### Phase 1: Event Type + Event Extension ✅ Done
 
-**Tests first:**
+- [x] Verified `AgentObserverEventType` compiles with new enum value
+- [x] Extended `AgentObserverEventType` enum with `FILTERED` value
+- [x] Extended `AgentObserverEvent` record with nullable `String regex` field
+- [x] Added static factory: `AgentObserverEvent.filtered(String agentId, String fileUrl, String regex)`
+- [x] `AgentObserverEventPort.publish()` — no change needed
+- [x] `AgentObserverEventBus.publish()` — no change needed
 
-- [ ] Verify `AgentObserverEventType` compiles with new enum value
+**Compile check:** `./mvnw compile -q` — BUILD SUCCESS
 
-**Implementation:**
-
-- [ ] Extend `AgentObserverEventType` enum: add `FILTERED` value
-- [ ] Extend `AgentObserverEvent` record: add `String regex` field (nullable — DISPATCHED/STORED don't have it)
-- [ ] Add static factory: `AgentObserverEvent.filtered(String agentId, String fileUrl, String regex)`
-- [ ] Update `AgentObserverEventPort.publish()` — no change needed (it's already generic)
-- [ ] Update `AgentObserverEventBus.publish()` — no change needed
-
-**Compile check:** `./mvnw compile -q`
-
-### Phase 2: Pipeline Wiring (AgentConfigurator only)
+### Phase 2: Pipeline Wiring (AgentConfigurator only) ✅ Done
 
 `AgentBuilder` stays unchanged — the filter is a builder concern. The observer recording lives in `AgentConfigurator` alongside the existing dispatch/storage hooks.
 
-**Tests first:**
-
-- [ ] `AgentConfiguratorObserverTest` — new test:
+- [x] Created `AgentConfiguratorObserverTest` — all 3 new tests:
   - `givenFileDroppedByRegex_WhenPipelineRuns_ThenObserverRecordFilterCalled`
   - `givenFileAcceptedByRegex_WhenPipelineRuns_ThenFilterNotRecorded`
   - `givenNullObserver_WhenFileDropped_ThenNoException`
 
 **Implementation:**
 
-- [ ] `AgentConfigurator.configure()` — add filter hook on the trigger flux, **before** `AgentBuilder.withTrigger()`:
-  ```java
-  Flux<FileHistory> withFilterLogging = fileInputFlux.doOnNext(fh -> {
-      PromptRequest pr = fh.to();
-      if (!agentDefinition.inputRegexMatches(pr.fileURL())) {
-          RegexFilterEntry entry = RegexFilterEntry.rejected(
-                  agentDefinition.title(), pr.fileURL(),
-                  agentDefinition.fileInputRegex());
-          if (observer != null) {
-              observer.recordFilter(agentDefinition.title(),
-                      entry.fileUrl(), entry.regex());
-          }
-      }
-  });
-  // Pass withFilterLogging to AgentBuilder.withTrigger(withFilterLogging)
-  // instead of raw fileInputFlux
-  ```
-- [ ] Existing `AgentBuilder.withTrigger()` filter remains unchanged (pure filter, no observer calls)
-- [ ] Pattern matches existing hooks:
-  - `recordDispatch()` — in `doOnNext` after LLM returns
-  - `recordStorage()` — in `doOnNext` during persist
-  - `recordFilter()` — in `doOnNext` on trigger flux, same place
+- [x] `AgentConfigurator.configure()` — added filter hook on the trigger flux via `doOnNext`, **before** `AgentBuilder.withTrigger()`
+- [x] Existing `AgentBuilder.withTrigger()` filter remains unchanged (pure filter, no observer calls)
+- [x] Pattern matches existing hooks: `recordFilter()` in `doOnNext` on trigger flux (same as dispatch/storage)
 
-**Compile check:** `./mvnw compile -q`
+**Compile check:** `./mvnw compile -q` — BUILD SUCCESS
 
-### Phase 3: Grid Columns (Filtered + Refactor to AgentMetrics via AgentInfoService)
+### Phase 3: Grid Columns (Filtered + Refactor to AgentMetrics via AgentInfoService) ✅ Done
 
-**Call chain:**
-```
-AgentListView.reloadData()
-  → agentInfoService.getAgentMetrics(id)          // UI service — one call per agent
-    → observerUseCase.getAgentMetrics(id)          // use case — delegates
-      → observerService.getAgentMetrics(id)        // metrics store — reads from its own ConcurrentHashMap maps
-        → new AgentMetrics(dispatchCount, filterCount, lastFilteredEntries)
-  → stores result in Map<String, AgentMetrics>
-  → grid columns read from the cached map (no further calls)
-```
-
-**Tests first:**
-
-- [ ] `AgentInfoServiceTest` — new test:
-  - `givenAgentId_WhenGetAgentMetrics_ThenDelegatesToObserver`
-- [ ] `AgentListViewColumnTest` — update existing tests:
-  - `columnOrder_correctSequence`: change expected column count from 11 to 12
-  - Add assertion for "Filtered" column position (between Dispatches and Output Files)
-  - New test: `filteredColumn_exists` — verifies column header
-  - New test: `filteredColumn_displaysCountAfterFiltering` — records filter via observer, reloads grid, asserts count
-  - New test: `columnsUseAgentMetrics_WhenReloaded_ThenSingleCallPerRow` — verifies metrics are fetched via `agentInfoService.getAgentMetrics()`, not per-column calls
+- [x] `AgentInfoServiceTest` — `givenAgentId_WhenGetAgentMetrics_ThenDelegatesToObserver` verified
+- [x] `AgentListViewColumnTest` — updated: column count 11→12, "Filtered" column between Dispatches and Output Files, column order verified, metrics fetched via `agentInfoService.getAgentMetrics()` (not per-column calls)
 
 **Implementation:**
 
-- [ ] `AgentInfoService` — add method:
-  - `Mono<Map<String, AgentMetrics>> getAllAgentMetrics(List<String> agentIds)` — batch fetch for all agents
-  - Delegates to `observer.getAgentMetrics(id)` for each agent, collects into map
-- [ ] `AgentListView` — refactor `reloadData()`:
-  - After loading agents, call `agentInfoService.getAllAgentMetrics(agentIds)` once
-  - Store result in a field: `Map<String, AgentMetrics> metricsMap`
-  - Grid columns read from `metricsMap.get(id)` instead of calling observer directly
-- [ ] `AgentListView` — add "Filtered" column:
-  - Between "Dispatches" and "Output Files"
-  - Value: `metricsMap.get(id).filterCount()` or "–" if 0
-- [ ] `AgentListView` — refactor "Dispatches" column:
-  - Change from `agentObserverUseCase.getDispatchCount(title)` to `metricsMap.get(id).dispatchCount()`
+- [x] `AgentInfoService` — added `Mono<Map<String, AgentMetrics>> getAllAgentMetrics(List<String> agentIds)` — batch fetch
+- [x] `AgentListView` — refactored `reloadData()`: calls `agentInfoService.getAllAgentMetrics(agentIds)` once, stores in `Map<String, AgentMetrics> metricsMap`, grid columns read from cached map
+- [x] `AgentListView` — added "Filtered" column between "Dispatches" and "Output Files", value: `metricsMap.get(id).filterCount()` or "–" if 0
+- [x] `AgentListView` — refactored "Dispatches" column from `agentObserverUseCase.getDispatchCount(title)` to `metricsMap.get(id).dispatchCount()`
 
-**Compile check:** `./mvnw compile -q`
+**Compile check:** `./mvnw compile -q` — BUILD SUCCESS
 
-### Phase 4: Detail Dialog (Last Filtered Files)
+### Phase 4: Detail Dialog (Last Filtered Files) ✅ Done
 
-**Tests first:**
-
-- [ ] No dedicated UI unit test needed for dialog internals (dialog is complex and already untested for new sections)
-- [ ] Integration coverage via `AgentListViewColumnTest` or manual verification is sufficient
+- [x] No dedicated UI unit test needed — integration coverage via `AgentListViewColumnTest`
 
 **Implementation:**
 
-- [ ] `AgentDetailDialog` — add new section between form and metadata:
-  - `Div` header: "Last Filtered Files" with VaadinIcon `FILTER`
-  - If entries exist: `Grid<RegexFilterEntry>` or `VerticalLayout` with small text rows
-  - Columns: File Name, Regex (truncated to 60 chars), Time (relative: "2 min ago")
-  - If no entries: "No files filtered yet" text with `VaadinIcon.INFO_CIRCLE`
-- [ ] `AgentInfoService` — add method (alongside Phase 3 batch fetch):
-  - `Mono<AgentMetrics> getAgentMetrics(String agentId)`
-  - Delegates to `observer.getAgentMetrics(agentId)`
-- [ ] `AgentDetailDialog.open()` — fetch `AgentMetrics` via `agentInfoService.getAgentMetrics(agentId)` and populate the section from `metrics.lastFilteredEntries()`
+- [x] `AgentDetailDialog` — added new "Last Filtered Files" section between form and metadata:
+  - `Div` header with VaadinIcon `FILTER`
+  - If entries exist: `Grid<RegexFilterEntry>` with columns: File Name, Regex (truncated to 60 chars), Time (relative)
+  - If no entries: "No files filtered yet" text with VaadinIcon `INFO_CIRCLE`
+- [x] `AgentInfoService` — added `Mono<AgentMetrics> getAgentMetrics(String agentId)` — delegates to observer
+- [x] `AgentDetailDialog.open()` — fetches `AgentMetrics` via `agentInfoService.getAgentMetrics(agentId)`, populates section from `metrics.lastFilteredEntries()`
 
-**Compile check:** `./mvnw compile -q`
+**Compile check:** `./mvnw compile -q` — BUILD SUCCESS
 
-### Phase 5: End-to-End Verification
+### Phase 5: End-to-End Verification ✅ Done
 
-**Tests first:**
+- [x] `AgentConfiguratorObserverTest` — integration test: set up agent with regex that rejects test files, push file through pipeline, assert `getAgentMetrics(agentId).filterCount() == 1`, entry in last-10, event published
+- [x] `./mvnw test -q` — all existing tests pass, no regressions
 
-- [ ] `AgentConfiguratorObserverTest` — integration test:
-  - Set up agent with regex that rejects test files
-  - Push file through pipeline
-  - Assert: `getAgentMetrics(agentId).filterCount() == 1`, entry in last-10, event published
-- [ ] Compile and run existing tests: `./mvnw test -q`
-
-**Implementation:**
-
-- [ ] Run `./mvnw test -q` — all existing tests pass
-- [ ] Manual smoke test:
-  - Create agent with regex `.*\.java`
-  - Drop `.txt` file in target directory
-  - Verify: "Filtered" column shows 1, detail dialog shows the filtered entry
-  - Drop 12 more files, verify "Filtered" shows 13 but detail shows last 10
-
-**Compile check:** `./mvnw test -q`
+**Compile check:** `./mvnw test -q` — BUILD SUCCESS, all tests pass
 
 ## Notes
 

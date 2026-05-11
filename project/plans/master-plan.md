@@ -45,9 +45,9 @@ Rationale: Once a plan has been complete for a significant period, its status in
 
 | # | Plan | Status | Created |
 |---|------|--------|---------|
-| 13 | [Orchestrator Improvements](orchestrator-improvements.md) | ⬜ Planned | 2026-05-11 |
-| 12 | [Regex Filter Observability](regex-filter-observability.md) | ⬜ Planned | 2026-05-11 |
-| 11 | [Remove scanner.url Config](remove-scanner-url-config.md) | ⬜ Planned | 2026-05-11 |
+| 13 | [Orchestrator Improvements](orchestrator-improvements.md) | ✅ Complete | 2026-05-11 |
+| 12 | [Regex Filter Observability](regex-filter-observability.md) | ✅ Complete | 2026-05-11 |
+| 11 | [Remove scanner.url Config](remove-scanner-url-config.md) | ✅ Complete | 2026-05-11 |
 | 10 | [Improve Agent Domain Design](improve-agent-domain-design.md) | ✅ Complete | 2026-05-11 |
 | 9 | [Agent Observer UseCase](agent-observer-usecase.md) | ✅ Complete | 2026-05-08 |
 | 8 | [Scanner Status & Observability Refactor](scanner-status-observability-refactor.md) | ✅ Complete | 2026-05-08 |
@@ -65,34 +65,41 @@ Rationale: Once a plan has been complete for a significant period, its status in
 
 ### 13. Orchestrator Improvements
 
-**Status:** ⬜ Planned
+**Status:** ✅ Complete (2026-05-11)
 **Created:** 2026-05-11
 **Goal:** Harden the orchestrator against false failures, path issues, dirty trees, and unparseable test output — with a unit test harness.
+
+All 7 phases implemented in `~/.pi/orchestrator/orchestrator.py`. 48 unit tests pass. Synced to `~/.agents/skills/plan-orchestrator/orchestrator.py`.
 
 Full details in [orchestrator-improvements.md](orchestrator-improvements.md).
 
 ### 12. Regex Filter Observability
 
-**Status:** ⬜ Planned
+**Status:** ✅ Complete (2026-05-12)
 **Created:** 2026-05-11
 **Goal:** Track files dropped by agent regex filters — per-agent count in grid, last-10 entries in detail dialog — using the existing `AgentObserverUseCase` pattern.
+
+Branch `refactor/regex-filter-observability` merged to main. 6 phases (0–5) implemented: domain records, port/service extensions, pipeline wiring, grid columns, detail dialog, end-to-end. 502 tests pass. 17 files changed (+1,342 lines).
 
 Full details in [regex-filter-observability.md](regex-filter-observability.md).
 
 ### 11. Remove scanner.url Config
 
-**Status:** ⬜ Planned
+**Status:** ✅ Complete (2026-05-12)
 **Created:** 2026-05-11
 **Goal:** Delete dead `scanner.url` config, `FileSystemScannerConfig` class, and all references to it.
+
+Branch `refactor/remove-scanner-url-config` merged to main. Both phases implemented: removed `FileSystemScannerConfig`, cleaned up `AgentConfiguration`, deleted `scanner.url` from all config files and tests. 461 tests pass.
 
 Full details in [remove-scanner-url-config.md](remove-scanner-url-config.md).
 
 ### 10. Improve Agent Domain Design
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete (2026-05-12)
 **Created:** 2026-05-11
-**Completed:** 2026-05-11
 **Goal:** Replace magic-string fields in `AgentDefinition` with typed value objects (`AgentType`, `AgentSource`), add constructor validation, fix `FilterResult` mutation bug, and introduce `AttributeConverter` for type-safe persistence.
+
+Branch `refactor/improve-agent-domain-design` merged to main. All 6 phases (0–5) implemented: `AgentType` enum, constructor validation, immutable `FilterResult`, `AgentSource` enum, `AttributeConverter`, cleanup of `PromptTriggerEvent`/`AgentInfoDTO`. 461 tests pass. 6 commits.
 
 Full details in [improve-agent-domain-design.md](improve-agent-domain-design.md).
 

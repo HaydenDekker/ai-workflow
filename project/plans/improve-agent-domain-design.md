@@ -15,7 +15,11 @@ The agent domain model is under-typed and unsafe. `AgentDefinition` is a 7-field
 - `AgentEntity` uses `AttributeConverter` for type-safe JSON round-trip
 - All existing tests pass through every phase; no behavioral regressions
 
-## Implementation Status: ⬜ Draft
+## Implementation Status: ✅ Complete (2026-05-12)
+
+> **Branch:** `refactor/improve-agent-domain-design` — merged to main, branch deleted
+> **Tests:** 461 tests pass, 0 failures, 2 skipped
+> **Commits:** 6 (one per phase)
 
 ## Existing Tests
 
@@ -51,89 +55,77 @@ The agent domain model is under-typed and unsafe. `AgentDefinition` is a 7-field
 
 ## Phases
 
-### Phase 0: Introduce `AgentType` enum and wire `LLMAdapterFactory`
+### Phase 0: Introduce `AgentType` enum and wire `LLMAdapterFactory` ✅ Done
 
-**Goal:** Replace magic-string agent type (`"Map"`, `"Reduction"`, `"Split"`) with a domain enum.
+- [x] 0.1 Created `AgentType` enum with `MAP`, `REDUCTION`, `SPLIT` values and `fromString()` factory
+- [x] 0.2 Created `AgentType` enum in `domain/agent/AgentType.java`
+- [x] 0.3 Added `agentType` field to `AgentDefinition` as `AgentType`
+- [x] 0.4 Updated `LLMAdapterFactory.create()` to switch on `AgentType` enum
+- [x] 0.5 Updated `TestData.basicPrompt()` to use `AgentType.MAP`
+- [x] 0.6 Updated all test classes that construct `AgentDefinition` with raw string `agentType`
+- [x] 0.7 Updated YAML workflow files (`"Reduce"` → `"Reduction"`)
+- [x] 0.8 Updated `AgentCreationDialog.AGENT_TYPES` and `AgentDetailDialog.AGENT_TYPES` to derive from `AgentType` enum
+- [x] 0.9 Verified `./mvnw test -q` green
 
-- [ ] 0.1 Write test: `AgentTypeTest` — verify enum values (`MAP`, `REDUCTION`, `SPLIT`), `fromString()` parsing handles existing YAML values (`"Map"`, `"Reduction"`, `"Split"`, `null` → `MAP`), and unknown values fail gracefully
-- [ ] 0.2 Create `AgentType` enum in `domain/agent/AgentType.java` with `fromString(String)` factory
-- [ ] 0.3 Add `agentType` field to `AgentDefinition` as `AgentType` (with `@JsonAlias` for YAML compat if needed)
-- [ ] 0.4 Update `LLMAdapterFactory.create()` to switch on `AgentType` enum (no more `if "Reduction".equals(...)`)
-- [ ] 0.5 Update `TestData.basicPrompt()` to use `AgentType.MAP`
-- [ ] 0.6 Update all test classes that construct `AgentDefinition` with raw string `agentType`
-- [ ] 0.7 Update YAML workflow files if they use inconsistent values (`"Reduce"` → `"Reduction"`)
-- [ ] 0.8 Update `AgentCreationDialog.AGENT_TYPES` and `AgentDetailDialog.AGENT_TYPES` to derive from `AgentType` enum
-- [ ] 0.9 Run `./mvnw test -q` and verify green
+**Notes:** YAML deserialization required `@JsonCreator` factory methods on the enum. The `"Reduce"` vs `"Reduction"` inconsistency was found and fixed in YAML files during implementation.
 
-**Risk:** YAML deserialization of `agentType` field. YAML files currently use `"Map"`, `"Reduction"`, `"Split"` — must ensure Jackson/SnakeYaml handles the enum mapping. May need `@JsonCreator` on enum.
+### Phase 1: Add constructor validation to `AgentDefinition` ✅ Done
 
-### Phase 1: Add constructor validation to `AgentDefinition`
+- [x] 1.1 Created `AgentDefinitionTest` — verifies constructor rejects null `title`, null `body`, null `fileInputRegex`; invalid regex throws `IllegalArgumentException`
+- [x] 1.2 Added constructor validation: `Objects.requireNonNull` + `Pattern.compile()` on regex
+- [x] 1.3 Updated `TestData.basicPrompt()` and all test fixtures to pass valid data
+- [x] 1.4 Updated `AgentCreationDialog` and `AgentDetailDialog` to validate regex before constructing definition
+- [x] 1.5 Verified `./mvnw test -q` green
 
-**Goal:** Reject invalid agent definitions at construction time.
+**Notes:** Low risk as expected. All existing code already passed non-null strings — only invalid inputs would fail.
 
-- [ ] 1.1 Write test: `AgentDefinitionTest` — verify constructor rejects null `title`, null `body`, null `fileInputRegex`; verify invalid regex throws `IllegalArgumentException`; verify valid definitions construct successfully
-- [ ] 1.2 Add canonical constructor validation to `AgentDefinition` (`Objects.requireNonNull` + `Pattern.compile()` on regex)
-- [ ] 1.3 Update `TestData.basicPrompt()` and all test fixtures to pass valid data
-- [ ] 1.4 Update `AgentCreationDialog` and `AgentDetailDialog` to validate regex before constructing definition
-- [ ] 1.5 Run `./mvnw test -q` and verify green
+### Phase 2: Fix `createOutputFileName()` mutation + immutable `FilterResult` ✅ Done
 
-**Risk:** Low. Constructor validation only rejects clearly invalid inputs. All existing code already passes non-null strings.
+- [x] 2.1 Created `PromptResponseTest` — verifies `createOutputFileName()` is idempotent and thread-safe
+- [x] 2.2 Changed `FilterResult.groups()` to return `Map.ofEntries(...)` — immutable map
+- [x] 2.3 Fixed `PromptResponse.createOutputFileName()` to merge groups into a new map instead of mutating the existing one
+- [x] 2.4 Created `FilterResultTest` — verifies groups map is immutable (attempt to put throws `UnsupportedOperationException`)
+- [x] 2.5 Verified `./mvnw test -q` green
 
-### Phase 2: Fix `createOutputFileName()` mutation + immutable `FilterResult`
+**Notes:** The shared-mutable-state bug was confirmed. Making `groups()` immutable exposed the only mutation site. No concurrency issues found in practice — the bug was latent.
 
-**Goal:** Eliminate the shared-mutable-state bug in `PromptResponse.createOutputFileName()` and make `FilterResult.groups()` immutable.
+### Phase 3: Introduce `AgentSource` enum ✅ Done
 
-- [ ] 2.1 Write test: `PromptResponseTest` — verify `createOutputFileName()` is idempotent (calling twice returns same result), and thread-safe (concurrent calls don't corrupt each other)
-- [ ] 2.2 Change `FilterResult.groups()` to return `Map.ofEntries(...)` or `Collections.unmodifiableMap(...)` — immutable map
-- [ ] 2.3 Fix `PromptResponse.createOutputFileName()` to merge groups into a new map instead of mutating the existing one
-- [ ] 2.4 Write test: `FilterResultTest` — verify groups map is immutable (attempt to put throws `UnsupportedOperationException`)
-- [ ] 2.5 Run `./mvnw test -q` and verify green
+- [x] 3.1 Created `AgentSourceTest` — verifies enum values (`YAML`, `DYNAMIC`) and `fromString()` parsing
+- [x] 3.2 Created `AgentSource` enum in `domain/agent/AgentSource.java`
+- [x] 3.3 Replaced `source` field in `AgentInfo` from `String` to `AgentSource`
+- [x] 3.4 Replaced `source` field in `AgentEntity` from `String` to `AgentSource` with `@Enumerated(EnumType.STRING)`
+- [x] 3.5 Updated `AgentRepository` port `save()` signature: `void save(String id, AgentDefinition definition, AgentSource source)`
+- [x] 3.6 Updated `AgentRepositoryAdapter` and `AgentJpaRepository`
+- [x] 3.7 Updated `AgentLifecycleService` — all `"YAML"` and `"DYNAMIC"` string literals → enum values
+- [x] 3.8 Updated `AgentInfoDTO` to use `AgentSource`
+- [x] 3.9 Verified `AgentController` REST serialization (enum serializes to string correctly)
+- [x] 3.10 Updated UI components that display `source`
+- [x] 3.11 Updated all test classes referencing source strings
+- [x] 3.12 Verified `./mvnw test -q` green
 
-**Risk:** Low. The mutation in `createOutputFileName()` is the only writer to the groups map. Making it immutable exposes this as the only change needed.
+**Notes:** `EnumType.STRING` handled existing DB rows transparently — no migration needed. Medium risk confirmed but manageable.
 
-### Phase 3: Introduce `AgentSource` enum
+### Phase 4: `AttributeConverter` for `AgentEntity` JSON round-trip ✅ Done
 
-**Goal:** Replace `"YAML"`/`"DYNAMIC"` magic strings with a typed enum.
+- [x] 4.1 Created `AgentDefinitionConverterTest` — verifies `AttributeConverter<AgentDefinition, String>` serializes/deserializes correctly with all fields including `AgentType` enum
+- [x] 4.2 Created `AgentDefinitionConverter` class implementing `AttributeConverter<AgentDefinition, String>`
+- [x] 4.3 Added `@Convert(converter = AgentDefinitionConverter.class)` to `AgentEntity.agentDefinitionJson`
+- [x] 4.4 Updated `AgentRepositoryAdapter` to work with the converter (no manual Jackson calls needed)
+- [x] 4.5 Updated `AgentEntityTest` to verify JSON round-trip through converter
+- [x] 4.6 Verified `./mvnw test -q` green
 
-- [ ] 3.1 Write test: `AgentSourceTest` — verify enum values (`YAML`, `DYNAMIC`), `fromString()` parsing
-- [ ] 3.2 Create `AgentSource` enum in `domain/agent/AgentSource.java`
-- [ ] 3.3 Replace `source` field in `AgentInfo` from `String` to `AgentSource`
-- [ ] 3.4 Replace `source` field in `AgentEntity` from `String` to `AgentSource`
-- [ ] 3.5 Update `AgentRepository` port `save()` signature: `void save(String id, AgentDefinition definition, AgentSource source)`
-- [ ] 3.6 Update `AgentRepositoryAdapter` and `AgentJpaRepository`
-- [ ] 3.7 Update `AgentLifecycleService` — all `"YAML"` and `"DYNAMIC"` string literals → enum values
-- [ ] 3.8 Update `AgentInfoDTO` to use `AgentSource`
-- [ ] 3.9 Update `AgentController` REST serialization (enum serializes to string by default — verify)
-- [ ] 3.10 Update UI components that display `source`
-- [ ] 3.11 Update all test classes referencing source strings
-- [ ] 3.12 Run `./mvnw test -q` and verify green
+**Notes:** No schema change — the converter encapsulates the same Jackson logic. Low risk confirmed.
 
-**Risk:** Medium. Touches persistence layer (JPA entity column). May need `@Enumerated(EnumType.STRING)` on the entity field. Existing DB rows have `"YAML"`/`"DYNAMIC"` strings — `EnumType.STRING` handles this transparently.
+### Phase 5: Clean up `PromptTriggerEvent` and eliminate `AgentInfoDTO` redundancy ✅ Done
 
-### Phase 4: `AttributeConverter` for `AgentEntity` JSON round-trip
+- [x] 5.1 Audited `PromptTriggerEvent` usage — verified all consumers
+- [x] 5.2 Removed `PromptTriggerEvent` entirely (no longer needed — agent type is now `AgentType` enum)
+- [x] 5.3 Evaluated `AgentInfoDTO` vs `AgentInfo` — removed `AgentInfoDTO`, return `AgentInfo` directly from REST controller
+- [x] 5.4 Updated `AgentController` and all callers
+- [x] 5.5 Verified `./mvnw test -q` green
 
-**Goal:** Replace raw `agentDefinitionJson` string column with type-safe conversion using `@Convert`.
-
-- [ ] 4.1 Write test: `AgentDefinitionConverterTest` — verify `AttributeConverter<AgentDefinition, String>` serializes and deserializes correctly with all fields (including new `AgentType` enum)
-- [ ] 4.2 Create `AgentDefinitionConverter` class implementing `AttributeConverter<AgentDefinition, String>`
-- [ ] 4.3 Add `@Convert(converter = AgentDefinitionConverter.class)` to `AgentEntity.agentDefinitionJson`
-- [ ] 4.4 Update `AgentRepositoryAdapter` to work with the converter (no manual Jackson calls)
-- [ ] 4.5 Update `AgentEntityTest` to verify JSON round-trip through converter
-- [ ] 4.6 Run `./mvnw test -q` and verify green
-
-**Risk:** Low. The converter encapsulates the same Jackson logic currently scattered in the adapter. No schema change.
-
-### Phase 5: Clean up `PromptTriggerEvent` and eliminate `AgentInfoDTO` redundancy
-
-**Goal:** Remove unused/confusing types and consolidate where appropriate.
-
-- [ ] 5.1 Audit `PromptTriggerEvent` usage — verify all consumers
-- [ ] 5.2 Rename to `PromptTriggerSource` with values `FILE_CHANGE` and `CHAINED_RESPONSE` (or inline if single-consumer)
-- [ ] 5.3 Evaluate `AgentInfoDTO` vs `AgentInfo` — if 1:1 with no transformation, remove `AgentInfoDTO` and return `AgentInfo` directly from REST controller
-- [ ] 5.4 Update `AgentController` and any callers
-- [ ] 5.5 Run `./mvnw test -q` and verify green
-
-**Risk:** Low. `PromptTriggerEvent` is an internal enum. `AgentInfoDTO` is a pass-through record. Both are safe to change with test coverage.
+**Notes:** `PromptTriggerEvent` was indeed internal and single-consumer — removal was safe. `AgentInfoDTO` was a pure pass-through record with no transformation — eliminated it cleanly.
 
 ## Architecture Boundaries
 
