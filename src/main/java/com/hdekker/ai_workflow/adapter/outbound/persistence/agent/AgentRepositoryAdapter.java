@@ -41,11 +41,7 @@ public class AgentRepositoryAdapter implements AgentRepository {
 	public void save(String id, AgentDefinition definition, AgentSource source) {
 		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
 		entity.setId(id);
-		try {
-			entity.setAgentDefinitionJson(objectMapper.writeValueAsString(definition));
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException("Failed to serialize AgentDefinition for agent: " + id, e);
-		}
+		entity.setAgentDefinitionJson(definition);
 		entity.setTitle(definition.title());
 		entity.setSource(source);
 		if (entity.getCreatedAt() == null) {
@@ -124,11 +120,7 @@ public class AgentRepositoryAdapter implements AgentRepository {
 	public AgentEntity saveAndGetEntity(String id, AgentDefinition definition, AgentSource source) {
 		AgentEntity entity = agentRepository.findById(id).orElseGet(AgentEntity::new);
 		entity.setId(id);
-		try {
-			entity.setAgentDefinitionJson(objectMapper.writeValueAsString(definition));
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException("Failed to serialize AgentDefinition for agent: " + id, e);
-		}
+		entity.setAgentDefinitionJson(definition);
 		entity.setTitle(definition.title());
 		entity.setSource(source);
 		if (entity.getCreatedAt() == null) {
@@ -190,10 +182,6 @@ public class AgentRepositoryAdapter implements AgentRepository {
 	}
 
 	private Optional<AgentDefinition> deserializeDefinition(AgentEntity entity) {
-		try {
-			return Optional.of(objectMapper.readValue(entity.getAgentDefinitionJson(), AgentDefinition.class));
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException("Failed to deserialize AgentDefinition for agent: " + entity.getId(), e);
-		}
+		return Optional.ofNullable(entity.getAgentDefinitionJson());
 	}
 }

@@ -68,8 +68,8 @@ public class AgentPersistenceServiceTest {
 		assertThat(entity.getId()).isEqualTo("persist-1");
 		assertThat(entity.getTitle()).isEqualTo("Test Agent");
 		assertThat(entity.getSource()).isEqualTo(AgentSource.DYNAMIC);
-		assertThat(entity.getAgentDefinitionJson()).contains("Test Agent");
-		assertThat(entity.getAgentDefinitionJson()).contains("fileInputRegex");
+		assertThat(entity.getAgentDefinitionJson().title()).isEqualTo("Test Agent");
+		assertThat(entity.getAgentDefinitionJson()).isNotNull();
 		assertThat(entity.isActive()).isTrue();
 		assertThat(entity.getCreatedAt()).isNotNull();
 	}
@@ -214,21 +214,10 @@ public class AgentPersistenceServiceTest {
 		assertThat(retrieved.get().body()).isEqualTo(largeBody.toString());
 	}
 
-	@Test
-	public void givenInvalidJson_whenGetDefinition_thenReturnEmpty() {
-		// Arrange — manually insert invalid JSON
-		agentRepository.save(createEntityWithJson("invalid-json-1", "NOT VALID JSON {"));
-
-		// Act & Assert
-		assertThatThrownBy(() -> persistenceService.getDefinition("invalid-json-1"))
-				.isInstanceOf(RuntimeException.class)
-				.hasMessageContaining("Failed to deserialize");
-	}
-
-	private AgentEntity createEntityWithJson(String id, String json) {
+	private AgentEntity createEntityWithJson(String id, AgentDefinition def) {
 		AgentEntity entity = new AgentEntity();
 		entity.setId(id);
-		entity.setAgentDefinitionJson(json);
+		entity.setAgentDefinitionJson(def);
 		entity.setTitle("Test");
 		entity.setSource(AgentSource.DYNAMIC);
 		entity.setCreatedAt(java.time.LocalDateTime.now());

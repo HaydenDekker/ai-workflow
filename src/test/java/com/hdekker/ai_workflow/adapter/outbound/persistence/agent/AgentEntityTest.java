@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentSource;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
@@ -30,7 +32,7 @@ public class AgentEntityTest {
 
 		// Act
 		entity.setId("test-agent-id");
-		entity.setAgentDefinitionJson("{\"title\":\"Test\"}");
+		entity.setAgentDefinitionJson(new AgentDefinition(".*", "Test", "Body", AgentType.MAP, null, null, null));
 		entity.setTitle("Test Agent");
 		entity.setSource(AgentSource.YAML);
 		entity.setCreatedAt(now);
@@ -39,7 +41,7 @@ public class AgentEntityTest {
 
 		// Assert
 		assertThat(entity.getId()).isEqualTo("test-agent-id");
-		assertThat(entity.getAgentDefinitionJson()).isEqualTo("{\"title\":\"Test\"}");
+		assertThat(entity.getAgentDefinitionJson().title()).isEqualTo("Test");
 		assertThat(entity.getTitle()).isEqualTo("Test Agent");
 		assertThat(entity.getSource()).isEqualTo(AgentSource.YAML);
 		assertThat(entity.getCreatedAt()).isEqualTo(now);
@@ -49,8 +51,9 @@ public class AgentEntityTest {
 
 	@Test
 	public void givenEntity_whenDeserializedFromJson_thenReturnCorrectObject() throws JsonProcessingException {
-		// Arrange
-		String json = "{\"id\":\"agent-1\",\"agentDefinitionJson\":\"{\\\"title\\\":\\\"Test\\\"}\","
+		// Arrange — agentDefinitionJson is now an AgentDefinition object, not a JSON string
+		String json = "{\"id\":\"agent-1\","
+				+ "\"agentDefinitionJson\":{\"fileInputRegex\":\".*\",\"title\":\"Test\",\"body\":\"Body\",\"agentType\":\"Map\",\"outputStructure\":null,\"outputFilenameTemplate\":null,\"targetDirectory\":null},"
 				+ "\"title\":\"Test\",\"source\":\"YAML\",\"createdAt\":\"2026-01-01T00:00:00\","
 				+ "\"lastStartedAt\":\"2026-01-02T00:00:00\",\"active\":true}";
 

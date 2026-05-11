@@ -9,7 +9,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.hdekker.ai_workflow.TestProfiles;
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentSource;
+import com.hdekker.ai_workflow.domain.agent.AgentType;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -36,7 +38,7 @@ public class AgentRepositoryTest {
 		// Arrange
 		AgentEntity entity = new AgentEntity();
 		entity.setId("test-agent-1");
-		entity.setAgentDefinitionJson("{\"fileInputRegex\":\".*\",\"title\":\"Test\",\"body\":\"Hello\",\"agentType\":\"Map\",\"outputStructure\":\"clean\",\"outputFilenameTemplate\":\"output.txt\"}");
+		entity.setAgentDefinitionJson(new AgentDefinition(".*", "Test", "Hello", AgentType.MAP, "clean", "output.txt", null));
 		entity.setTitle("Test Agent");
 		entity.setSource(AgentSource.YAML);
 		entity.setCreatedAt(LocalDateTime.now());
@@ -59,7 +61,7 @@ public class AgentRepositoryTest {
 		// Arrange
 		AgentEntity entity = new AgentEntity();
 		entity.setId("find-me-1");
-		entity.setAgentDefinitionJson("{}");
+		entity.setAgentDefinitionJson(new AgentDefinition(".*", "Test", "Body", AgentType.MAP, null, null, null));
 		entity.setTitle("Find Me");
 		entity.setSource(AgentSource.DYNAMIC);
 		entity.setCreatedAt(LocalDateTime.now());
@@ -78,7 +80,7 @@ public class AgentRepositoryTest {
 		// Arrange
 		AgentEntity entity = new AgentEntity();
 		entity.setId("update-me-1");
-		entity.setAgentDefinitionJson("{}");
+		entity.setAgentDefinitionJson(new AgentDefinition(".*", "Test", "Body", AgentType.MAP, null, null, null));
 		entity.setTitle("Original Title");
 		entity.setSource(AgentSource.YAML);
 		entity.setCreatedAt(LocalDateTime.now());
@@ -107,7 +109,7 @@ public class AgentRepositoryTest {
 		// Arrange
 		AgentEntity entity = new AgentEntity();
 		entity.setId("delete-me-1");
-		entity.setAgentDefinitionJson("{}");
+		entity.setAgentDefinitionJson(new AgentDefinition(".*", "Test", "Body", AgentType.MAP, null, null, null));
 		entity.setTitle("To Delete");
 		entity.setSource(AgentSource.YAML);
 		entity.setCreatedAt(LocalDateTime.now());
@@ -128,7 +130,7 @@ public class AgentRepositoryTest {
 		// Arrange
 		AgentEntity older = new AgentEntity();
 		older.setId("older-1");
-		older.setAgentDefinitionJson("{}");
+		older.setAgentDefinitionJson(new AgentDefinition(".*", "Older", "Body", AgentType.MAP, null, null, null));
 		older.setTitle("Older Agent");
 		older.setSource(AgentSource.YAML);
 		older.setCreatedAt(LocalDateTime.now().minusDays(1));
@@ -136,7 +138,7 @@ public class AgentRepositoryTest {
 
 		AgentEntity newer = new AgentEntity();
 		newer.setId("newer-1");
-		newer.setAgentDefinitionJson("{}");
+		newer.setAgentDefinitionJson(new AgentDefinition(".*", "Newer", "Body", AgentType.MAP, null, null, null));
 		newer.setTitle("Newer Agent");
 		newer.setSource(AgentSource.DYNAMIC);
 		newer.setCreatedAt(LocalDateTime.now());
@@ -156,7 +158,7 @@ public class AgentRepositoryTest {
 		// Arrange
 		AgentEntity active = new AgentEntity();
 		active.setId("active-1");
-		active.setAgentDefinitionJson("{}");
+		active.setAgentDefinitionJson(new AgentDefinition(".*", "Active", "Body", AgentType.MAP, null, null, null));
 		active.setTitle("Active Agent");
 		active.setSource(AgentSource.YAML);
 		active.setCreatedAt(LocalDateTime.now());
@@ -165,7 +167,7 @@ public class AgentRepositoryTest {
 
 		AgentEntity inactive = new AgentEntity();
 		inactive.setId("inactive-1");
-		inactive.setAgentDefinitionJson("{}");
+		inactive.setAgentDefinitionJson(new AgentDefinition(".*", "Active", "Body", AgentType.MAP, null, null, null));
 		inactive.setTitle("Inactive Agent");
 		inactive.setSource(AgentSource.YAML);
 		inactive.setCreatedAt(LocalDateTime.now());
@@ -198,7 +200,7 @@ public class AgentRepositoryTest {
 	private AgentEntity createAgent(String id, boolean active) {
 		AgentEntity entity = new AgentEntity();
 		entity.setId(id);
-		entity.setAgentDefinitionJson("{}");
+		entity.setAgentDefinitionJson(new AgentDefinition(".*", "Test", "Body", AgentType.MAP, null, null, null));
 		entity.setTitle("Count Agent " + id);
 		entity.setSource(AgentSource.YAML);
 		entity.setCreatedAt(LocalDateTime.now());

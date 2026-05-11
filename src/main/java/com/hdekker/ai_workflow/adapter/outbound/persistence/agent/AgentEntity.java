@@ -3,12 +3,14 @@ package com.hdekker.ai_workflow.adapter.outbound.persistence.agent;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import com.hdekker.ai_workflow.domain.agent.AgentDefinition;
 import com.hdekker.ai_workflow.domain.agent.AgentSource;
 
 /**
@@ -23,7 +25,8 @@ public class AgentEntity {
 	private String id;
 
 	@Column(columnDefinition = "TEXT")
-	private String agentDefinitionJson;
+	@Convert(converter = AgentDefinitionConverter.class)
+	private AgentDefinition agentDefinitionJson;
 
 	private String title;
 
@@ -49,11 +52,11 @@ public class AgentEntity {
 		this.id = id;
 	}
 
-	public String getAgentDefinitionJson() {
+	public AgentDefinition getAgentDefinitionJson() {
 		return agentDefinitionJson;
 	}
 
-	public void setAgentDefinitionJson(String agentDefinitionJson) {
+	public void setAgentDefinitionJson(AgentDefinition agentDefinitionJson) {
 		this.agentDefinitionJson = agentDefinitionJson;
 	}
 
