@@ -56,9 +56,6 @@ ai-scanner:
   # before the next one arrives. Set to 0 for fast-scanning agents.
   emission-delay-seconds: 20
 
-scanner:
-  url: file:${EXTERNAL_CONFIG_DIR:default}
-
 # Directory where LLM output is persisted and counted.
 ai.workflow.output.directory: ${EXTERNAL_CONFIG_DIR:default}
 

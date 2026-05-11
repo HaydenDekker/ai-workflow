@@ -57,9 +57,9 @@ public class FileSystemWorkflowIntegrationTest {
     @DynamicPropertySource
     static void registerTempDirs(DynamicPropertyRegistry registry) {
         registry.add("prompt-config.predefinedPromptFilePath", () -> tempDir.toAbsolutePath().toString());
-        registry.add("scanner.url", () -> "file:/" + inputDir.toAbsolutePath().toString());
     }
-        
+    
+    
     /**
      * Parameterized end-to-end test for complete workflow execution.
      * 

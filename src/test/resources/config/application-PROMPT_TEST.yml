@@ -20,5 +20,3 @@ app:
   ai:
     endpoint: http://127.0.0.1:11434
     model: gemma3:4b
-scanner:
-  url: file:/test/project-root

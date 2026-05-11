@@ -101,10 +101,14 @@ public class AgentConfigurator {
 
 		// Build pipeline without real persister — we add dispatch/storage hooks
 		// separately below. No-op consumer satisfies the Persistable interface.
+		// Defensive: use empty trigger if fileInputFlux is null (e.g. test contexts
+		// where the scanner infrastructure is not wired).
+		Flux<com.hdekker.ai_workflow.domain.prompt.PromptRequest> trigger = fileInputFlux != null
+				? fileInputFlux.map(fh -> fh.to())
+				: Flux.empty();
 		Flux<PromptResponse> basePipeline = AgentBuilder.instance()
 				.withDefinition(agentDefinition)
-				.withTrigger(fileInputFlux
-						.map(fh -> fh.to()))
+				.withTrigger(trigger)
 				.prompting(adapter::call)
 				.persist(response -> { })
 				.split(SplittableStrategy.noSPLT())
