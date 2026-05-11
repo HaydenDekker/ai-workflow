@@ -1,5 +1,6 @@
 package com.hdekker.ai_workflow.domain.shared;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -15,16 +16,19 @@ public class RegexInputFileFilter {
 	public record FilterResult(boolean matches, Map<String, String> groups) {
 		
 		public String path() {
+			if (groups == null) return "";
 			String path = groups.get("path");
 			return (path!=null)? path: "";
 		}
 		
 		public String name() {
+			if (groups == null) return "";
 			String name = groups.get("name");
 			return (name!=null)? name: "";
 		}
 
 		public String ext() {
+			if (groups == null) return "";
 			String ext = groups.get("ext");
 			return (ext!=null)? ext: "";
 		}
@@ -44,8 +48,10 @@ public class RegexInputFileFilter {
         Matcher matcher = pattern.matcher(normalizedInput);
         
         Map<String, String> groups = new HashMap<>();
+        boolean matched = false;
 
         if (matcher.matches()) {
+            matched = true;
             // Extract groups safely, checking if the named groups exist in the regex
         	// TODO variables as enum.
             if(hasGroup(matcher, "path")){
@@ -57,11 +63,10 @@ public class RegexInputFileFilter {
             if(hasGroup(matcher, "ext")) {
             	groups.put("ext", matcher.group("ext"));
             }
-            
-            return new FilterResult(true, groups);
         }
 
-        return new FilterResult(false, groups);
+        // Return immutable map — callers must copy if they need to mutate
+        return new FilterResult(matched, Collections.unmodifiableMap(groups));
     }
 
     private static boolean hasGroup(Matcher matcher, String groupName) {
