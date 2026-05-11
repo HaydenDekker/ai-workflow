@@ -8,11 +8,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -284,5 +286,58 @@ public class AgentInfoServiceTest {
 
 		// Assert
 		assertThat(metricsMap).isEmpty();
+	}
+
+	@Test
+	public void givenAgentId_WhenGetAgentMetrics_ThenDelegatesToObserver() {
+		// Arrange
+		List<RegexFilterEntry> entries = List.of(
+			RegexFilterEntry.rejected("id-1", "file:///tmp/test.txt", ".*\\.java"));
+		AgentMetrics expected = new AgentMetrics(5L, 2L, entries);
+		when(observer.getAgentMetrics("id-1")).thenReturn(expected);
+
+		// Act
+		Mono<AgentMetrics> result = service.getAgentMetrics("id-1");
+		AgentMetrics metrics = result.block();
+
+		// Assert
+		assertThat(metrics).isNotNull();
+		assertThat(metrics.dispatchCount()).isEqualTo(5L);
+		assertThat(metrics.filterCount()).isEqualTo(2L);
+		assertThat(metrics.lastFilteredEntries()).hasSize(1);
+		assertThat(metrics.lastFilteredEntries().get(0).regex()).isEqualTo(".*\\.java");
+		verify(observer).getAgentMetrics("id-1");
+	}
+
+	@Test
+	public void givenNullObserver_WhenGetAgentMetrics_thenReturnEmpty() {
+		// Arrange
+		service = new AgentInfoService(lifecycleService, validationPort, null);
+
+		// Act
+		Mono<AgentMetrics> result = service.getAgentMetrics("id-1");
+		AgentMetrics metrics = result.block();
+
+		// Assert
+		assertThat(metrics).isNotNull();
+		assertThat(metrics.dispatchCount()).isZero();
+		assertThat(metrics.filterCount()).isZero();
+		assertThat(metrics.lastFilteredEntries()).isEmpty();
+	}
+
+	@Test
+	public void givenObserverThrows_WhenGetAgentMetrics_thenReturnEmpty() {
+		// Arrange
+		when(observer.getAgentMetrics(anyString())).thenThrow(new RuntimeException("Store error"));
+
+		// Act
+		Mono<AgentMetrics> result = service.getAgentMetrics("id-1");
+		AgentMetrics metrics = result.block();
+
+		// Assert
+		assertThat(metrics).isNotNull();
+		assertThat(metrics.dispatchCount()).isZero();
+		assertThat(metrics.filterCount()).isZero();
+		assertThat(metrics.lastFilteredEntries()).isEmpty();
 	}
 }

@@ -139,6 +139,27 @@ public class AgentInfoService {
     }
 
     /**
+     * Fetch consolidated metrics for a single agent.
+     * <p>
+     * Delegates to the observer use case. Returns an empty metrics record
+     * when the observer is not available.
+     *
+     * @param agentId the agent ID to fetch metrics for
+     * @return a Mono containing the {@link AgentMetrics} for the agent
+     */
+    public Mono<AgentMetrics> getAgentMetrics(String agentId) {
+        try {
+            AgentMetrics metrics = observer != null
+                    ? observer.getAgentMetrics(agentId)
+                    : AgentMetrics.empty();
+            return Mono.just(metrics);
+        } catch (Exception ex) {
+            log.error("Error fetching metrics for agent: {}", agentId, ex);
+            return Mono.just(AgentMetrics.empty());
+        }
+    }
+
+    /**
      * Fetch consolidated metrics for all given agent IDs in a single batch call.
      * <p>
      * Delegates to the observer use case for each agent and collects results

@@ -1,10 +1,16 @@
 package com.hdekker.ai_workflow.adapter.inbound.ui.component;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.function.Consumer;
 
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hdekker.ai_workflow.domain.pipeline.AgentMetrics;
+import com.hdekker.ai_workflow.domain.pipeline.RegexFilterEntry;
 
 import com.hdekker.ai_workflow.adapter.inbound.rest.dto.AgentInfoDTO;
 import com.hdekker.ai_workflow.adapter.inbound.ui.service.AgentInfoService;
@@ -21,8 +27,11 @@ import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 
@@ -67,6 +76,11 @@ public class AgentDetailDialog extends Dialog {
     private final Button cancelButton;
     private final Button saveButton;
     private final Button deleteButton;
+
+    // -- Last Filtered Files section --
+    private final Div filteredHeader;
+    private final VerticalLayout filteredEntriesLayout;
+    private final Div filteredEmptyMessage;
 
     private final AgentInfoService agentInfoService;
     private final AgentInfoDTO existingAgent;
@@ -164,6 +178,24 @@ public class AgentDetailDialog extends Dialog {
             headerTitle.setText("Edit Agent");
         }
 
+        // Build Last Filtered Files section
+        filteredHeader = new Div();
+        filteredHeader.addClassName("filtered-section-header");
+        filteredHeader.add(new Icon(VaadinIcon.FILTER), new Span("Last Filtered Files"));
+
+        filteredEntriesLayout = new VerticalLayout();
+        filteredEntriesLayout.addClassName("filtered-entries-list");
+        filteredEntriesLayout.setPadding(false);
+        filteredEntriesLayout.setSpacing(false);
+
+        filteredEmptyMessage = new Div();
+        filteredEmptyMessage.addClassName("filtered-empty-message");
+        filteredEmptyMessage.add(new Icon(VaadinIcon.INFO_CIRCLE), new Span("No files filtered yet"));
+
+        Div filteredSection = new Div();
+        filteredSection.addClassName("filtered-files-section");
+        filteredSection.add(filteredHeader, filteredEntriesLayout, filteredEmptyMessage);
+
         // Build button bar
         HorizontalLayout buttonBar = new HorizontalLayout(cancelButton, saveButton, deleteButton);
         buttonBar.addClassName("dialog-button-bar");
@@ -171,7 +203,7 @@ public class AgentDetailDialog extends Dialog {
         buttonBar.setAlignItems(Alignment.BASELINE);
 
         // Add components to dialog content
-        add(headerTitle, formLayout, new Hr(), metadataLayout, buttonBar);
+        add(headerTitle, formLayout, new Hr(), filteredSection, new Hr(), metadataLayout, buttonBar);
     }
 
     /**
@@ -189,17 +221,126 @@ public class AgentDetailDialog extends Dialog {
                     ? def.agentType().getAsString() : AgentType.MAP.getAsString());
             bodyField.setValue(def.body() != null ? def.body() : "");
             outputStructureField.setValue(def.outputStructure() != null ? def.outputStructure() : "");
-            outputFilenameTemplateField.setValue(def.outputFilenameTemplate() != null ? def.outputFilenameTemplate() : "output/${name}.md");
+            outputFilenameTemplateField.setValue(def.outputFilenameTemplate() != null
+                    ? def.outputFilenameTemplate() : "output/${name}.md");
 
             // Pre-populate read-only metadata
             if (existingAgent.createdAt() != null) {
                 createdAtField.setValue(existingAgent.createdAt().toString());
             }
             activeField.setValue(Boolean.toString(existingAgent.active()));
-            sourceField.setValue(existingAgent.source() != null ? existingAgent.source().getAsString() : "N/A");
+            sourceField.setValue(existingAgent.source() != null
+                    ? existingAgent.source().getAsString() : "N/A");
+        }
+
+        // Fetch and populate Last Filtered Files section
+        if (existingAgent != null && existingAgent.id() != null) {
+            AgentMetrics metrics = agentInfoService.getAgentMetrics(existingAgent.id()).block();
+            populateFilteredSection(metrics);
         }
 
         super.open();
+    }
+
+    /**
+     * Populate the Last Filtered Files section from agent metrics.
+     *
+     * @param metrics the agent metrics containing filtered entries
+     */
+    private void populateFilteredSection(AgentMetrics metrics) {
+        filteredEntriesLayout.removeAll();
+
+        if (metrics == null || metrics.lastFilteredEntries() == null
+                || metrics.lastFilteredEntries().isEmpty()) {
+            filteredEntriesLayout.setVisible(false);
+            filteredEmptyMessage.setVisible(true);
+            return;
+        }
+
+        filteredEntriesLayout.setVisible(true);
+        filteredEmptyMessage.setVisible(false);
+
+        List<RegexFilterEntry> entries = metrics.lastFilteredEntries();
+        for (RegexFilterEntry entry : entries) {
+            filteredEntriesLayout.add(createFilteredEntryRow(entry));
+        }
+    }
+
+    /**
+     * Create a single row for a filtered entry.
+     *
+     * @param entry the filter entry to display
+     * @return a HorizontalLayout with file name, regex, and relative time
+     */
+    private HorizontalLayout createFilteredEntryRow(RegexFilterEntry entry) {
+        String fileName = entry.fileUrl();
+        int lastSlash = fileName.lastIndexOf('/');
+        if (lastSlash >= 0) {
+            fileName = fileName.substring(lastSlash + 1);
+        }
+        int lastBackslash = fileName.lastIndexOf('\\');
+        if (lastBackslash > lastSlash && lastBackslash >= 0) {
+            fileName = fileName.substring(lastBackslash + 1);
+        }
+
+        String regex = entry.regex();
+        if (regex.length() > 60) {
+            regex = regex.substring(0, 57) + "...";
+        }
+
+        String time = formatRelativeTime(entry.timestamp());
+
+        Span fileSpan = new Span(fileName);
+        fileSpan.addClassName("filtered-entry-file");
+        fileSpan.getStyle().set("flex-grow", "2");
+
+        Span regexSpan = new Span(regex);
+        regexSpan.addClassName("filtered-entry-regex");
+        regexSpan.getStyle().set("flex-grow", "2");
+        regexSpan.getStyle().set("font-family", "monospace");
+
+        Span timeSpan = new Span(time);
+        timeSpan.addClassName("filtered-entry-time");
+        timeSpan.getStyle().set("flex-grow", "1");
+        timeSpan.getStyle().set("text-align", "right");
+
+        HorizontalLayout row = new HorizontalLayout(fileSpan, regexSpan, timeSpan);
+        row.addClassName("filtered-entry-row");
+        row.setSpacing(true);
+        row.setPadding(false);
+        row.setAlignItems(Alignment.BASELINE);
+        row.setJustifyContentMode(JustifyContentMode.START);
+        row.getStyle().set("padding", "4px 0");
+        row.getStyle().set("font-size", "0.85em");
+
+        return row;
+    }
+
+    /**
+     * Format a timestamp as a relative time string (e.g., "2 min ago").
+     *
+     * @param timestamp the timestamp to format
+     * @return a human-readable relative time string
+     */
+    private String formatRelativeTime(LocalDateTime timestamp) {
+        Duration duration = Duration.between(timestamp, LocalDateTime.now());
+        long seconds = Math.abs(duration.getSeconds());
+
+        String prefix = duration.isNegative() ? " in " : " ago";
+
+        if (seconds < 60) {
+            return seconds + "s" + prefix;
+        }
+        long minutes = seconds / 60;
+        if (minutes < 60) {
+            return minutes + " min" + prefix;
+        }
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + "h" + prefix;
+        }
+        long days = hours / 24;
+        return days + "d" + prefix;
     }
 
     /**
